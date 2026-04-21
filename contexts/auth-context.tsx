@@ -27,6 +27,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Pi SDK 초기화
+    if (typeof window !== 'undefined' && window.Pi) {
+      window.Pi.init({ version: '2.0', sandbox: false })
+    }
     // 로컬스토리지에서 유저 복원
     const saved = localStorage.getItem('pilink_user')
     if (saved) setUser(JSON.parse(saved))

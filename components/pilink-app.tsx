@@ -25,7 +25,7 @@ export default function PiLinkApp() {
     <div className="flex flex-col min-h-screen max-w-2xl mx-auto">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center gap-2">
-        <span className="text-xl font-bold text-violet-600">PiLink</span>
+        <span className="text-xl font-bold text-violet-600">LinkPi</span>
         <span className="text-xs text-muted-foreground flex-1">Pi Node 운영자 커뮤니티</span>
         {!isLoading && (
           user ? (

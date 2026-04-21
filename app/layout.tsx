@@ -9,7 +9,7 @@ import { AuthProvider } from '@/contexts/auth-context'
 const geist = Geist({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'PiLink — Pi Node 운영자 커뮤니티',
+  title: 'LinkPi — Pi Node 운영자 커뮤니티',
   description: 'Pi Node 운영자들을 위한 모니터링 & 커뮤니티 플랫폼',
   manifest: '/manifest.json',
 }

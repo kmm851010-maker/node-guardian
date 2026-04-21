@@ -1,6 +1,6 @@
 {
-  "name": "PiLink",
-  "short_name": "PiLink",
+  "name": "LinkPi",
+  "short_name": "LinkPi",
   "description": "Pi Node 운영자 커뮤니티",
   "start_url": "/",
   "display": "standalone",

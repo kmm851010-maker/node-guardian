@@ -1,9 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
+import webpush from 'web-push'
+
+webpush.setVapidDetails(
+  process.env.VAPID_EMAIL!,
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+  process.env.VAPID_PRIVATE_KEY!,
+)
+
+// severity별 알림 제목
+const PUSH_TITLE: Record<string, string> = {
+  critical: '🚨 노드 이상 감지',
+  warning:  '⚠️ 노드 경고',
+  recovery: '✅ 노드 복구',
+  info:     '🟢 노드 정보',
+}
+
+async function sendPushToUser(pi_uid: string, severity: string, message: string) {
+  const { data: subs } = await supabaseServer
+    .from('push_subscriptions')
+    .select('*')
+    .eq('pi_uid', pi_uid)
+
+  if (!subs || subs.length === 0) return
+
+  const payload = JSON.stringify({
+    title: PUSH_TITLE[severity] ?? '📡 PiLink',
+    body: message,
+  })
+
+  await Promise.allSettled(
+    subs.map(sub =>
+      webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload,
+      ).catch(async (err) => {
+        // 만료된 구독 삭제
+        if (err.statusCode === 410) {
+          await supabaseServer
+            .from('push_subscriptions')
+            .delete()
+            .eq('id', sub.id)
+        }
+      })
+    )
+  )
+}
 
 // Node Guardian → PiLink: 이벤트 수신
 export async function POST(req: NextRequest) {
-  // API 시크릿 인증
   const secret = req.headers.get('x-pilink-secret')
   if (secret !== process.env.PILINK_API_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -49,6 +94,11 @@ export async function POST(req: NextRequest) {
   if (event_type === 'startup') statusUpdate.uptime_start = new Date().toISOString()
 
   await supabaseServer.from('node_status').upsert(statusUpdate, { onConflict: 'pi_uid' })
+
+  // startup, info 이벤트는 푸시 알림 제외 (중요 이벤트만)
+  if (severity !== 'info') {
+    await sendPushToUser(pi_uid, severity, message)
+  }
 
   return NextResponse.json({ ok: true })
 }

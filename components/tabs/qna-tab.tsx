@@ -23,7 +23,11 @@ function timeAgo(iso: string) {
   return `${Math.floor(diff / 86400)}일 전`
 }
 
-export default function QnaTab() {
+interface Props {
+  user: { uid: string; username: string } | null
+}
+
+export default function QnaTab({ user }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'open' | 'resolved'>('all')

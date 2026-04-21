@@ -39,7 +39,11 @@ function timeAgo(iso: string) {
   return `${Math.floor(diff / 86400)}일 전`
 }
 
-export default function CommunityTab() {
+interface Props {
+  user: { uid: string; username: string } | null
+}
+
+export default function CommunityTab({ user }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
 

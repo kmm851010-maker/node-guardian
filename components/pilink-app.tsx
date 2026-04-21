@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Monitor, Users, Trophy, MessageCircle } from 'lucide-react'
+import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut } from 'lucide-react'
+import { useAuth } from '@/contexts/auth-context'
 import DashboardTab from './tabs/dashboard-tab'
 import CommunityTab from './tabs/community-tab'
 import RankingTab from './tabs/ranking-tab'
@@ -18,21 +19,40 @@ const TABS = [
 
 export default function PiLinkApp() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
+  const { user, isLoading, login, logout } = useAuth()
 
   return (
     <div className="flex flex-col min-h-screen max-w-2xl mx-auto">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center gap-2">
         <span className="text-xl font-bold text-violet-600">PiLink</span>
-        <span className="text-xs text-muted-foreground">Pi Node 운영자 커뮤니티</span>
+        <span className="text-xs text-muted-foreground flex-1">Pi Node 운영자 커뮤니티</span>
+        {!isLoading && (
+          user ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">@{user.username}</span>
+              <button onClick={logout} className="text-muted-foreground hover:text-foreground">
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={login}
+              className="flex items-center gap-1 text-xs bg-violet-600 text-white px-3 py-1.5 rounded-full hover:bg-violet-700 transition-colors"
+            >
+              <LogIn size={14} />
+              Pi 로그인
+            </button>
+          )
+        )}
       </header>
 
       {/* 탭 컨텐츠 */}
       <main className="flex-1 overflow-y-auto pb-20">
         {activeTab === 'dashboard'  && <DashboardTab />}
-        {activeTab === 'community'  && <CommunityTab />}
+        {activeTab === 'community'  && <CommunityTab user={user} />}
         {activeTab === 'ranking'    && <RankingTab />}
-        {activeTab === 'qna'        && <QnaTab />}
+        {activeTab === 'qna'        && <QnaTab user={user} />}
       </main>
 
       {/* 하단 탭 바 */}

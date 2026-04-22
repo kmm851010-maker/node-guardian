@@ -48,15 +48,17 @@ async function sendPushToUser(pi_uid: string, severity: string, message: string)
   )
 }
 
-async function sendTelegramToUser(pi_uid: string, message: string) {
+async function sendTelegramToUser(pi_uid: string, severity: string, message: string) {
   const { data } = await supabaseServer
     .from('telegram_subscriptions')
     .select('chat_id')
     .eq('pi_uid', pi_uid)
     .maybeSingle()
   if (data?.chat_id) {
-    const fullMessage = `${message}\n\n👉 <a href="https://pilink.vercel.app">pilink.vercel.app</a> 에서 상세 확인`
-    await sendTelegramMessage(data.chat_id, fullMessage)
+    const footer = severity === 'critical'
+      ? '\n\n💬 비슷한 문제? QnA에서 도움받기\n📋 이벤트 전체 기록\n👉 <a href="https://pilink.vercel.app">pilink.vercel.app</a>'
+      : '\n\n📋 이벤트 전체 기록 → <a href="https://pilink.vercel.app">pilink.vercel.app</a>'
+    await sendTelegramMessage(data.chat_id, message + footer)
   }
 }
 
@@ -113,7 +115,7 @@ export async function POST(req: NextRequest) {
   if (severity !== 'info') {
     await Promise.allSettled([
       sendPushToUser(pi_uid, severity, message),
-      sendTelegramToUser(pi_uid, message),
+      sendTelegramToUser(pi_uid, severity, message),
     ])
   }
 

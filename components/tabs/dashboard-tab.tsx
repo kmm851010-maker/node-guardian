@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Cpu, Network } from 'lucide-react'
+import { Clock, Cpu, Network, BarChart2 } from 'lucide-react'
 
 interface NodeEvent {
   id: string
@@ -19,6 +19,12 @@ interface NodeStatus {
   port_status: string
   last_seen: string
   port_detail: Record<string, boolean> | null
+}
+
+interface NodeStats {
+  uptime_percent: number
+  daily: { date: string; worst: string }[]
+  event_counts: Record<string, number>
 }
 
 const severityColor: Record<string, string> = {
@@ -40,6 +46,12 @@ function timeAgo(iso: string) {
   return `${Math.floor(diff / 86400)}일 전`
 }
 
+function dayLabel(isoDate: string) {
+  const d = new Date(isoDate)
+  const days = ['일', '월', '화', '수', '목', '금', '토']
+  return days[d.getDay()]
+}
+
 const statusBadge = (status: string) => {
   if (status === 'healthy') return <Badge className="bg-green-500 text-white">정상</Badge>
   if (status === 'warning') return <Badge className="bg-yellow-500 text-white">경고</Badge>
@@ -47,9 +59,16 @@ const statusBadge = (status: string) => {
   return <Badge variant="secondary">알 수 없음</Badge>
 }
 
+const dayColor: Record<string, string> = {
+  healthy:  'bg-green-400',
+  warning:  'bg-yellow-400',
+  critical: 'bg-red-500',
+}
+
 export default function DashboardTab({ user }: { user: { uid: string; username: string } | null }) {
   const [events, setEvents] = useState<NodeEvent[]>([])
   const [status, setStatus] = useState<NodeStatus | null>(null)
+  const [stats, setStats] = useState<NodeStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -62,11 +81,13 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
     Promise.all([
       fetch(`/api/node-events?pi_uid=${encodeURIComponent(user.username)}&limit=20&offset=0`).then(r => r.json()),
       fetch(`/api/node-status?pi_uid=${encodeURIComponent(user.username)}`).then(r => r.json()),
-    ]).then(([eventData, statusData]) => {
+      fetch(`/api/node-stats?pi_uid=${encodeURIComponent(user.username)}`).then(r => r.json()),
+    ]).then(([eventData, statusData, statsData]) => {
       setEvents(eventData.data ?? [])
       setHasMore((eventData.data ?? []).length === 20)
       setOffset(20)
       setStatus(statusData.data ?? null)
+      setStats(statsData)
       setLoading(false)
     })
   }, [user])
@@ -160,6 +181,87 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
           )}
         </CardContent>
       </Card>
+
+      {/* 주간 통계 */}
+      {stats && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <BarChart2 size={14} className="text-violet-500" /> 주간 가동률
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* 가동률 바 */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-muted-foreground">최근 7일</span>
+                <span className={`text-sm font-bold ${
+                  stats.uptime_percent >= 99 ? 'text-green-600'
+                  : stats.uptime_percent >= 95 ? 'text-yellow-600'
+                  : 'text-red-600'
+                }`}>
+                  {stats.uptime_percent.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    stats.uptime_percent >= 99 ? 'bg-green-500'
+                    : stats.uptime_percent >= 95 ? 'bg-yellow-500'
+                    : 'bg-red-500'
+                  }`}
+                  style={{ width: `${stats.uptime_percent}%` }}
+                />
+              </div>
+            </div>
+
+            {/* 7일 타임라인 */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">일별 상태</p>
+              <div className="grid grid-cols-7 gap-1">
+                {stats.daily.map(d => (
+                  <div key={d.date} className="flex flex-col items-center gap-1">
+                    <div className={`w-full h-6 rounded ${dayColor[d.worst] ?? 'bg-gray-200'}`} />
+                    <span className="text-xs text-muted-foreground">{dayLabel(d.date)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 mt-2">
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" /> 정상
+                </span>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-yellow-400 inline-block" /> 경고
+                </span>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> 중단
+                </span>
+              </div>
+            </div>
+
+            {/* 이벤트 건수 요약 */}
+            {Object.keys(stats.event_counts).length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {stats.event_counts.critical > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                    위험 {stats.event_counts.critical}건
+                  </span>
+                )}
+                {stats.event_counts.warning > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                    경고 {stats.event_counts.warning}건
+                  </span>
+                )}
+                {stats.event_counts.recovery > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                    복구 {stats.event_counts.recovery}건
+                  </span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 이벤트 기록 */}
       <Card>

@@ -85,6 +85,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('pilink_user', JSON.stringify(piUser))
       setUser(piUser)
 
+      // Pi Browser 로그인 기록
+      await fetch('/api/user-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pi_uid: piUser.uid, nickname: piUser.username }),
+      })
+
       // 푸시 알림 구독 요청
       await subscribePush(piUser.uid)
     } catch (e) {

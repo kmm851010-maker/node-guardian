@@ -1,0 +1,1 @@
+ALTER TABLE node_status ADD COLUMN IF NOT EXISTS last_web_login TIMESTAMPTZ;

@@ -12,6 +12,8 @@ interface NodeStatus {
   port_status: string
   last_seen: string
   uptime_start: string | null
+  node_key: string | null
+  last_web_login: string | null
 }
 
 interface NodeEvent {
@@ -67,7 +69,14 @@ export default function DashboardTab() {
 
   const onlineCount = statuses.filter(s => {
     const diff = (Date.now() - new Date(s.last_seen).getTime()) / 1000
-    return diff < 120  // 2분 이내 = 온라인
+    return diff < 120
+  }).length
+
+  const totalCount = statuses.filter(s => {
+    if (!s.node_key) return false
+    if (!s.last_web_login) return false
+    const diff = (Date.now() - new Date(s.last_web_login).getTime()) / 1000
+    return diff < 72 * 3600
   }).length
 
   if (loading) return <div className="p-4 text-center text-muted-foreground">불러오는 중...</div>
@@ -89,7 +98,7 @@ export default function DashboardTab() {
           <CardContent className="p-4 flex items-center gap-3">
             <Activity className="text-violet-500" size={24} />
             <div>
-              <p className="text-2xl font-bold">{statuses.length}</p>
+              <p className="text-2xl font-bold">{totalCount}</p>
               <p className="text-xs text-muted-foreground">전체 운영자</p>
             </div>
           </CardContent>

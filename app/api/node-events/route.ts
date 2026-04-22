@@ -55,7 +55,8 @@ async function sendTelegramToUser(pi_uid: string, message: string) {
     .eq('pi_uid', pi_uid)
     .maybeSingle()
   if (data?.chat_id) {
-    await sendTelegramMessage(data.chat_id, message)
+    const fullMessage = `${message}\n\n👉 <a href="https://pilink.vercel.app">pilink.vercel.app</a> 에서 상세 확인`
+    await sendTelegramMessage(data.chat_id, fullMessage)
   }
 }
 

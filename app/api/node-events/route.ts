@@ -123,13 +123,14 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const pi_uid = searchParams.get('pi_uid')
-  const limit = parseInt(searchParams.get('limit') ?? '50')
+  const limit = parseInt(searchParams.get('limit') ?? '20')
+  const offset = parseInt(searchParams.get('offset') ?? '0')
 
   let query = supabaseServer
     .from('node_events')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .range(offset, offset + limit - 1)
 
   if (pi_uid) query = query.eq('pi_uid', pi_uid)
 

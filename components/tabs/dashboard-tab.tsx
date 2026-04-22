@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Cpu, Network } from 'lucide-react'
@@ -51,19 +51,45 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
   const [events, setEvents] = useState<NodeEvent[]>([])
   const [status, setStatus] = useState<NodeStatus | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [offset, setOffset] = useState(0)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!user) { setLoading(false); return }
 
     Promise.all([
-      fetch(`/api/node-events?pi_uid=${user.uid}&limit=30`).then(r => r.json()),
+      fetch(`/api/node-events?pi_uid=${user.uid}&limit=20&offset=0`).then(r => r.json()),
       fetch(`/api/node-status?pi_uid=${user.uid}`).then(r => r.json()),
     ]).then(([eventData, statusData]) => {
       setEvents(eventData.data ?? [])
+      setHasMore((eventData.data ?? []).length === 20)
+      setOffset(20)
       setStatus(statusData.data ?? null)
       setLoading(false)
     })
   }, [user])
+
+  useEffect(() => {
+    if (!user || !sentinelRef.current) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !loadingMore) {
+        setLoadingMore(true)
+        fetch(`/api/node-events?pi_uid=${user.uid}&limit=20&offset=${offset}`)
+          .then(r => r.json())
+          .then(data => {
+            const more = data.data ?? []
+            setEvents(prev => [...prev, ...more])
+            setHasMore(more.length === 20)
+            setOffset(prev => prev + 20)
+            setLoadingMore(false)
+          })
+      }
+    }, { threshold: 0.1 })
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [user, hasMore, loadingMore, offset])
 
   if (!user) {
     return (
@@ -158,6 +184,9 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
           )}
         </CardContent>
       </Card>
+
+      <div ref={sentinelRef} className="h-4" />
+      {loadingMore && <div className="text-center text-xs text-muted-foreground py-2">불러오는 중...</div>}
     </div>
   )
 }

@@ -3,21 +3,22 @@ import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const type = searchParams.get('type')  // 'qna' | 'brag' | 'general' | 'issue'
-  const limit = parseInt(searchParams.get('limit') ?? '30')
+  const type = searchParams.get('type')
+  const limit = parseInt(searchParams.get('limit') ?? '20')
+  const offset = parseInt(searchParams.get('offset') ?? '0')
 
   let query = supabaseServer
     .from('pilink_posts')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .range(offset, offset + limit - 1)
 
   if (type) query = query.eq('post_type', type)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ data })
+  return NextResponse.json({ data, hasMore: (data?.length ?? 0) === limit })
 }
 
 export async function POST(req: NextRequest) {

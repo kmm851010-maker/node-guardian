@@ -127,6 +127,7 @@ export default function QnaTab({ user, isPremium }: Props) {
   const [editContent, setEditContent] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingPost, setDeletingPost] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loadPosts = useCallback(async (currentOffset: number) => {
     const res = await fetch(`/api/posts?type=qna&limit=20&offset=${currentOffset}`)
@@ -201,12 +202,14 @@ export default function QnaTab({ user, isPremium }: Props) {
 
   const handleDelete = async (postId: string) => {
     if (!user) return
+    setIsDeleting(true)
     const res = await fetch(`/api/posts/${postId}?author_uid=${user.uid}`, { method: 'DELETE' })
     if (res.ok) {
       setPosts(prev => prev.filter(p => p.id !== postId))
       if (expandedPost === postId) setExpandedPost(null)
       toast.success('삭제됐습니다.')
     } else { toast.error('삭제 실패') }
+    setIsDeleting(false)
     setDeletingPost(null)
   }
 
@@ -350,14 +353,23 @@ export default function QnaTab({ user, isPremium }: Props) {
 
       {/* 삭제 확인 팝업 */}
       {deletingPost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setDeletingPost(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => !isDeleting && setDeletingPost(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative bg-white rounded-2xl p-6 w-72 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
             <p className="font-semibold text-sm text-center">이 질문을 삭제하시겠습니까?</p>
             <p className="text-xs text-muted-foreground text-center">삭제 후 복구할 수 없습니다.</p>
             <div className="flex gap-2">
-              <button onClick={() => setDeletingPost(null)} className="flex-1 py-2.5 bg-muted rounded-xl text-sm">취소</button>
-              <button onClick={() => handleDelete(deletingPost)} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold">삭제</button>
+              <button onClick={() => setDeletingPost(null)} disabled={isDeleting}
+                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">취소</button>
+              <button onClick={() => handleDelete(deletingPost)} disabled={isDeleting}
+                className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-70 flex items-center justify-center gap-2">
+                {isDeleting ? (
+                  <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>삭제 중...</>
+                ) : '삭제'}
+              </button>
             </div>
           </div>
         </div>

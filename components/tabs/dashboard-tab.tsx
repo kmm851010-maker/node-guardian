@@ -52,7 +52,12 @@ function dayLabel(isoDate: string) {
   return days[d.getDay()]
 }
 
-const statusBadge = (status: string) => {
+function isStale(lastSeen: string) {
+  return (Date.now() - new Date(lastSeen).getTime()) > 2 * 60 * 1000 // 2분
+}
+
+const statusBadge = (status: string, lastSeen: string) => {
+  if (isStale(lastSeen)) return <Badge variant="secondary">오프라인</Badge>
   if (status === 'healthy') return <Badge className="bg-green-500 text-white">정상</Badge>
   if (status === 'warning') return <Badge className="bg-yellow-500 text-white">경고</Badge>
   if (status === 'critical') return <Badge variant="destructive">중단</Badge>
@@ -138,7 +143,7 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">프로세스</span>
-                  {statusBadge(status.process_status)}
+                  {statusBadge(status.process_status, status.last_seen)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   마지막 신호: {timeAgo(status.last_seen)}

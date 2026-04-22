@@ -76,13 +76,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  // 이벤트 저장
-  const { error: eventError } = await supabaseServer
-    .from('node_events')
-    .insert({ pi_uid, event_type, severity: severity ?? 'info', message, detail: detail ?? null })
+  // heartbeat는 node_events에 저장하지 않고 node_status만 갱신
+  if (event_type !== 'heartbeat') {
+    const { error: eventError } = await supabaseServer
+      .from('node_events')
+      .insert({ pi_uid, event_type, severity: severity ?? 'info', message, detail: detail ?? null })
 
-  if (eventError) {
-    return NextResponse.json({ error: eventError.message }, { status: 500 })
+    if (eventError) {
+      return NextResponse.json({ error: eventError.message }, { status: 500 })
+    }
   }
 
   // 현재 상태 upsert
@@ -111,8 +113,8 @@ export async function POST(req: NextRequest) {
 
   await supabaseServer.from('node_status').upsert(statusUpdate, { onConflict: 'pi_uid' })
 
-  // startup, info 이벤트는 알림 제외 (중요 이벤트만)
-  if (severity !== 'info') {
+  // heartbeat, startup, info 이벤트는 알림 제외 (중요 이벤트만)
+  if (severity !== 'info' && event_type !== 'heartbeat') {
     await Promise.allSettled([
       sendPushToUser(pi_uid, severity, message),
       sendTelegramToUser(pi_uid, severity, message),

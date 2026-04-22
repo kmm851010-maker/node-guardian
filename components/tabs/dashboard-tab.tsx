@@ -53,7 +53,7 @@ function dayLabel(isoDate: string) {
 }
 
 function isStale(lastSeen: string) {
-  return (Date.now() - new Date(lastSeen).getTime()) > 2 * 60 * 1000 // 2분
+  return (Date.now() - new Date(lastSeen).getTime()) > 10 * 60 * 1000 // 10분
 }
 
 const statusBadge = (status: string, lastSeen: string) => {

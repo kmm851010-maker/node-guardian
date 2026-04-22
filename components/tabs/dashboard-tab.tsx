@@ -134,9 +134,11 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
                 </p>
                 <div className="grid grid-cols-5 gap-1">
                   {Array.from({ length: 10 }, (_, i) => 31400 + i).map(port => {
-                    const isOpen = status.port_detail
-                      ? status.port_detail[String(port)] === true
-                      : status.port_status === 'healthy'
+                    const isOpen = status.port_status === 'healthy'
+                      ? true
+                      : status.port_detail
+                        ? status.port_detail[String(port)] === true
+                        : false
                     return (
                       <div
                         key={port}

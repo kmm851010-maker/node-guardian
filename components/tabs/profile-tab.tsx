@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Zap, ExternalLink, Gift, Bell, BellOff } from 'lucide-react'
+import { Crown, Zap, ExternalLink, Gift, Bell, BellOff, Send } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
@@ -30,6 +30,9 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
   const [claiming, setClaiming] = useState(false)
   const [pushStatus, setPushStatus] = useState<'unsupported' | 'denied' | 'subscribed' | 'unsubscribed'>('unsubscribed')
   const [subscribing, setSubscribing] = useState(false)
+  const [telegramSubscribed, setTelegramSubscribed] = useState(false)
+  const [telegramInput, setTelegramInput] = useState('')
+  const [savingTelegram, setSavingTelegram] = useState(false)
 
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -58,6 +61,10 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
     fetch(`/api/rankings/claim?pi_uid=${user.uid}`)
       .then(r => r.json())
       .then(d => setClaimStatus(d))
+
+    fetch(`/api/telegram-subscribe?pi_uid=${encodeURIComponent(user.username)}`)
+      .then(r => r.json())
+      .then(d => setTelegramSubscribed(d.subscribed ?? false))
   }, [user])
 
   const handlePremium = async () => {
@@ -151,6 +158,31 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
       toast.error('알림 설정 실패. 브라우저 설정을 확인해주세요.')
     }
     setSubscribing(false)
+  }
+
+  const handleTelegramSave = async () => {
+    if (!user || !telegramInput.trim()) return
+    setSavingTelegram(true)
+    const res = await fetch('/api/telegram-subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pi_uid: user.username, chat_id: telegramInput.trim() }),
+    })
+    if (res.ok) {
+      setTelegramSubscribed(true)
+      setTelegramInput('')
+      toast.success('텔레그램 알림이 연결됐습니다. 텔레그램에서 확인 메시지를 받으셨나요?')
+    } else {
+      toast.error('연결 실패. Chat ID를 다시 확인해주세요.')
+    }
+    setSavingTelegram(false)
+  }
+
+  const handleTelegramDisconnect = async () => {
+    if (!user) return
+    await fetch(`/api/telegram-subscribe?pi_uid=${encodeURIComponent(user.username)}`, { method: 'DELETE' })
+    setTelegramSubscribed(false)
+    toast.success('텔레그램 알림이 해제됐습니다.')
   }
 
   const handleSaveKey = async () => {
@@ -286,6 +318,58 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
                 <Bell size={14} />
                 {subscribing ? '설정 중...' : '알림 허용하기'}
               </button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 텔레그램 알림 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Send size={14} className="text-violet-500" /> 텔레그램 알림
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {telegramSubscribed ? (
+            <div className="space-y-2">
+              <p className="text-xs text-green-600 flex items-center gap-1">
+                <Send size={12} /> 텔레그램 알림 활성화됨
+              </p>
+              <button
+                onClick={handleTelegramDisconnect}
+                className="text-xs text-red-500 underline"
+              >
+                연결 해제
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Pi Browser에서는 웹 푸시가 지원되지 않습니다. 텔레그램으로 노드 이상 알림을 받으세요.
+              </p>
+              <div className="bg-blue-50 rounded-lg px-3 py-2 text-xs text-blue-700 space-y-1">
+                <p className="font-semibold">채팅 ID 확인 방법</p>
+                <p>① 텔레그램에서 <span className="font-mono">@serge_node_guardian_bot</span> 검색</p>
+                <p>② 채팅창에서 <span className="font-mono">/start</span> 입력</p>
+                <p>③ 봇이 답장한 숫자(Chat ID)를 아래에 입력</p>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={telegramInput}
+                  onChange={e => setTelegramInput(e.target.value)}
+                  placeholder="예: 123456789"
+                  className="flex-1 border rounded-lg px-3 py-2 text-sm font-mono"
+                />
+                <button
+                  onClick={handleTelegramSave}
+                  disabled={savingTelegram || !telegramInput.trim()}
+                  className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50"
+                >
+                  {savingTelegram ? '저장 중...' : '연결'}
+                </button>
+              </div>
             </div>
           )}
         </CardContent>

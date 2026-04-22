@@ -44,10 +44,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction?.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
           })
         } catch {}
-      }).then(auth => {
+      }).then(async auth => {
         const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
         localStorage.setItem('pilink_user', JSON.stringify(piUser))
         setUser(piUser)
+        // 자동 복원 시에도 로그인 기록
+        fetch('/api/user-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pi_uid: piUser.uid, nickname: piUser.username }),
+        }).catch(() => {})
       }).catch(() => {
         // Pi Browser 아닌 환경에서는 localStorage 유저 그대로 사용
         setUser(JSON.parse(saved))

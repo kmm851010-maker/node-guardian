@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Activity, Clock, Wifi, WifiOff } from 'lucide-react'
+import { Activity, Clock, Wifi } from 'lucide-react'
 
 interface NodeStatus {
   pi_uid: string
@@ -107,24 +107,18 @@ export default function DashboardTab() {
               아직 연결된 노드가 없습니다.
             </p>
           )}
-          {statuses.map(s => {
-            const isOnline = (Date.now() - new Date(s.last_seen).getTime()) / 1000 < 120
-            return (
-              <div key={s.pi_uid} className="flex items-center justify-between py-2 border-b last:border-0">
-                <div className="flex items-center gap-2">
-                  {isOnline
-                    ? <Wifi size={14} className="text-green-500" />
-                    : <WifiOff size={14} className="text-muted-foreground" />
-                  }
-                  <span className="text-sm font-medium">{s.nickname}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {statusBadge(s.process_status)}
-                  <span className="text-xs text-muted-foreground">{timeAgo(s.last_seen)}</span>
-                </div>
+          {statuses.filter(s => (Date.now() - new Date(s.last_seen).getTime()) / 1000 < 120).map(s => (
+            <div key={s.pi_uid} className="flex items-center justify-between py-2 border-b last:border-0">
+              <div className="flex items-center gap-2">
+                <Wifi size={14} className="text-green-500" />
+                <span className="text-sm font-medium">{s.nickname || '알 수 없음'}</span>
               </div>
-            )
-          })}
+              <div className="flex items-center gap-2">
+                {statusBadge(s.process_status)}
+                <span className="text-xs text-muted-foreground">{timeAgo(s.last_seen)}</span>
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 

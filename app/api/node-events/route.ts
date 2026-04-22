@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import webpush from 'web-push'
+import { sendTelegramMessage } from '@/lib/telegram'
 
 webpush.setVapidDetails(
   process.env.VAPID_EMAIL!,
@@ -45,6 +46,17 @@ async function sendPushToUser(pi_uid: string, severity: string, message: string)
       })
     )
   )
+}
+
+async function sendTelegramToUser(pi_uid: string, message: string) {
+  const { data } = await supabaseServer
+    .from('telegram_subscriptions')
+    .select('chat_id')
+    .eq('pi_uid', pi_uid)
+    .maybeSingle()
+  if (data?.chat_id) {
+    await sendTelegramMessage(data.chat_id, message)
+  }
 }
 
 // Node Guardian → PiLink: 이벤트 수신
@@ -95,9 +107,12 @@ export async function POST(req: NextRequest) {
 
   await supabaseServer.from('node_status').upsert(statusUpdate, { onConflict: 'pi_uid' })
 
-  // startup, info 이벤트는 푸시 알림 제외 (중요 이벤트만)
+  // startup, info 이벤트는 알림 제외 (중요 이벤트만)
   if (severity !== 'info') {
-    await sendPushToUser(pi_uid, severity, message)
+    await Promise.allSettled([
+      sendPushToUser(pi_uid, severity, message),
+      sendTelegramToUser(pi_uid, message),
+    ])
   }
 
   return NextResponse.json({ ok: true })

@@ -27,14 +27,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Pi SDK 초기화
-    if (typeof window !== 'undefined' && window.Pi) {
-      window.Pi.init({ version: '2.0', sandbox: false })
+    if (typeof window === 'undefined' || !window.Pi) {
+      setIsLoading(false)
+      return
     }
-    // 로컬스토리지에서 유저 복원
+    window.Pi.init({ version: '2.0', sandbox: false })
+
+    // 저장된 유저가 있으면 Pi SDK 세션도 자동 복원
     const saved = localStorage.getItem('pilink_user')
-    if (saved) setUser(JSON.parse(saved))
-    setIsLoading(false)
+    if (saved) {
+      window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
+        try {
+          await fetch('/api/payment/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction?.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
+          })
+        } catch {}
+      }).then(auth => {
+        const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
+        localStorage.setItem('pilink_user', JSON.stringify(piUser))
+        setUser(piUser)
+      }).catch(() => {
+        // Pi Browser 아닌 환경에서는 localStorage 유저 그대로 사용
+        setUser(JSON.parse(saved))
+      }).finally(() => setIsLoading(false))
+    } else {
+      setIsLoading(false)
+    }
   }, [])
 
   const login = async () => {
@@ -44,7 +64,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const auth = await window.Pi.authenticate(['username'], () => {})
+      const auth = await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
+        // 미완료 결제 자동 완료 처리
+        try {
+          await fetch('/api/payment/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction?.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
+          })
+        } catch {}
+      })
       const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
 
       // node_profiles upsert

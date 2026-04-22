@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Star, Zap } from 'lucide-react'
+import { Crown, Zap, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
@@ -16,9 +16,9 @@ interface PremiumStatus {
 export default function ProfileTab({ user }: { user: { uid: string; username: string } | null }) {
   const [premium, setPremium] = useState<PremiumStatus>({ isPremium: false })
   const [paying, setPaying] = useState(false)
-  const [nodeScore, setNodeScore] = useState<number>(0)
-  const [scoreInput, setScoreInput] = useState('')
-  const [savingScore, setSavingScore] = useState(false)
+  const [nodeKey, setNodeKey] = useState('')
+  const [nodeKeyInput, setNodeKeyInput] = useState('')
+  const [savingKey, setSavingKey] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -28,7 +28,9 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
 
     fetch(`/api/node-status?pi_uid=${user.uid}`)
       .then(r => r.json())
-      .then(d => { if (d.data?.node_score) setNodeScore(d.data.node_score) })
+      .then(d => {
+        if (d.data?.node_key) setNodeKey(d.data.node_key)
+      })
   }, [user])
 
   const handlePremium = async () => {
@@ -36,25 +38,31 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
       toast.error('Pi Browser에서 로그인 후 이용해주세요.')
       return
     }
+
     setPaying(true)
 
     window.Pi.createPayment(
       { amount: 1, memo: 'LinkPi 프리미엄 구독 1개월', metadata: { pi_uid: user.uid } },
       {
         onReadyForServerApproval: async (paymentId) => {
-          const res = await fetch('/api/payment/approve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId }),
-          })
-          if (!res.ok) {
-            const err = await res.json()
-            toast.error(`승인 오류: ${err.error}`)
+          try {
+            const res = await fetch('https://pilink.vercel.app/api/payment/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId }),
+            })
+            const text = await res.text()
+            if (!res.ok) {
+              toast.error(`승인 오류 ${res.status}: ${text}`)
+              setPaying(false)
+            }
+          } catch (e) {
+            toast.error(`승인 fetch 오류: ${String(e)}`)
             setPaying(false)
           }
         },
         onReadyForServerCompletion: async (paymentId, txid) => {
-          const res = await fetch('/api/payment/complete', {
+          const res = await fetch('https://pilink.vercel.app/api/payment/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId, txid, pi_uid: user.uid, nickname: user.username }),
@@ -74,18 +82,22 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
     )
   }
 
-  const handleSaveScore = async () => {
-    if (!user || !scoreInput) return
-    setSavingScore(true)
-    await fetch('/api/node-score', {
+  const handleSaveKey = async () => {
+    if (!user || !nodeKeyInput) return
+    setSavingKey(true)
+    const res = await fetch('/api/node-key', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pi_uid: user.uid, score: parseInt(scoreInput) }),
+      body: JSON.stringify({ pi_uid: user.uid, node_key: nodeKeyInput.trim() }),
     })
-    setNodeScore(parseInt(scoreInput))
-    setScoreInput('')
-    setSavingScore(false)
-    toast.success('노드 점수가 업데이트됐습니다.')
+    if (res.ok) {
+      setNodeKey(nodeKeyInput.trim())
+      setNodeKeyInput('')
+      toast.success('노드 고유번호가 저장됐습니다.')
+    } else {
+      toast.error('저장 실패')
+    }
+    setSavingKey(false)
   }
 
   if (!user) {
@@ -118,27 +130,52 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
         </CardContent>
       </Card>
 
-      {/* 노드 점수 */}
+      {/* 노드 고유번호 */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Star size={14} className="text-yellow-500" /> 노드 보너스 점수
+            <ExternalLink size={14} className="text-violet-500" /> 노드 고유번호 (블록체인 랭킹)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="text-3xl font-bold text-violet-600">{nodeScore.toLocaleString()}</div>
-          <p className="text-xs text-muted-foreground">Pi 앱 → 노드 → 보너스 점수 확인 후 입력</p>
+          {nodeKey && (
+            <div className="flex items-center justify-between bg-muted rounded-lg px-3 py-2">
+              <span className="text-xs font-mono text-muted-foreground truncate flex-1">{nodeKey}</span>
+              <a
+                href="https://blockexplorer.minepi.com/mainnet/nodes"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  try {
+                    navigator.clipboard.writeText(nodeKey)
+                  } catch {
+                    const el = document.createElement('textarea')
+                    el.value = nodeKey
+                    document.body.appendChild(el)
+                    el.select()
+                    document.execCommand('copy')
+                    document.body.removeChild(el)
+                  }
+                  toast.success('고유번호가 복사됐습니다. 검색창에 붙여넣기 하세요.')
+                }}
+                className="ml-2 flex items-center gap-1 text-xs text-violet-600 font-medium whitespace-nowrap"
+              >
+                랭킹 확인 <ExternalLink size={11} />
+              </a>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">Pi 앱 → 노드 → 고유번호 확인 후 입력</p>
           <div className="flex gap-2">
             <input
-              type="number"
-              value={scoreInput}
-              onChange={e => setScoreInput(e.target.value)}
-              placeholder="점수 입력"
-              className="flex-1 border rounded-lg px-3 py-2 text-sm"
+              type="text"
+              value={nodeKeyInput}
+              onChange={e => setNodeKeyInput(e.target.value)}
+              placeholder="노드 고유번호 입력"
+              className="flex-1 border rounded-lg px-3 py-2 text-sm font-mono"
             />
             <button
-              onClick={handleSaveScore}
-              disabled={savingScore || !scoreInput}
+              onClick={handleSaveKey}
+              disabled={savingKey || !nodeKeyInput}
               className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50"
             >
               저장

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
@@ -12,10 +14,10 @@ export async function GET(req: NextRequest) {
       .from('node_status')
       .select('*')
       .eq('pi_uid', pi_uid)
-      .single()
+      .maybeSingle()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ data })
+    return NextResponse.json({ data: data ?? null })
   }
 
   // 전체 운영자 상태 (last_seen 기준 정렬)

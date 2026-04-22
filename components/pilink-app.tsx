@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle } from 'lucide-react'
+import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle, Download, BookOpen } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import DashboardTab from './tabs/dashboard-tab'
 import CommunityTab from './tabs/community-tab'
@@ -29,6 +29,23 @@ export default function PiLinkApp() {
       <header className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center gap-2">
         <span className="text-xl font-bold text-violet-600">LinkPi</span>
         <span className="text-xs text-muted-foreground flex-1">Pi Node 운영자 커뮤니티</span>
+        {/* PC 전용: 다운로드 & 가이드 버튼 */}
+        <div className="hidden md:flex items-center gap-2">
+          <a
+            href="/guide"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded-lg hover:bg-muted transition-colors"
+          >
+            <BookOpen size={14} />
+            사용법
+          </a>
+          <a
+            href="https://github.com/kmm851010-maker/node-guardian/releases/latest/download/NodeGuardian.exe"
+            className="flex items-center gap-1 text-xs bg-violet-600 text-white px-3 py-1.5 rounded-full hover:bg-violet-700 transition-colors"
+          >
+            <Download size={14} />
+            프로그램 다운로드
+          </a>
+        </div>
         {!isLoading && (
           user ? (
             <div className="flex items-center gap-2">

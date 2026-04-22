@@ -38,22 +38,49 @@ export async function GET(req: NextRequest) {
   if (downSince !== null) downtime += (Date.now() - downSince) / 1000
   const uptime_percent = Math.max(0, Math.min(100, ((WEEK_SEC - downtime) / WEEK_SEC) * 100))
 
-  // 7일 일별 최악 상태
-  const daily: { date: string; worst: string }[] = []
+  // 7일 일별 최악 상태 + 가동률
+  const daily: { date: string; worst: string; uptime: number }[] = []
   for (let i = 6; i >= 0; i--) {
     const d = new Date()
     d.setHours(0, 0, 0, 0)
     d.setDate(d.getDate() - i)
-    const start = d.toISOString()
-    const end = new Date(d.getTime() + 86400000).toISOString()
+    const dayStart = d.getTime()
+    const dayEnd = dayStart + 86400000
+    const start = new Date(dayStart).toISOString()
+    const end = new Date(dayEnd).toISOString()
 
     const dayEvents = rows.filter(e => e.created_at >= start && e.created_at < end)
     const hasCritical = dayEvents.some(e => e.severity === 'critical')
     const hasWarning = dayEvents.some(e => e.severity === 'warning')
 
+    // 일별 다운타임 계산
+    let dayDown = 0
+    let dayDownSince: number | null = downSince !== null && i === 0 ? downSince : null
+
+    // 이전 날에서 이어진 다운 상태 반영
+    if (downSince !== null && downSince < dayStart) dayDownSince = dayStart
+
+    for (const e of dayEvents) {
+      const ts = new Date(e.created_at).getTime()
+      const isDown = e.event_type === 'process_critical' || e.event_type === 'port_critical' || e.event_type === 'port_partial'
+      const isUp = e.event_type === 'process_recovery' || e.event_type === 'port_recovery' || e.event_type === 'startup'
+      if (isDown && dayDownSince === null) dayDownSince = ts
+      if (isUp && dayDownSince !== null) { dayDown += (ts - dayDownSince) / 1000; dayDownSince = null }
+    }
+    if (dayDownSince !== null) {
+      const until = Math.min(Date.now(), dayEnd)
+      dayDown += (until - Math.max(dayDownSince, dayStart)) / 1000
+    }
+
+    const DAY_SEC = i === 0
+      ? (Date.now() - dayStart) / 1000   // 오늘은 경과 시간 기준
+      : 86400
+    const dayUptime = Math.max(0, Math.min(100, ((DAY_SEC - dayDown) / DAY_SEC) * 100))
+
     daily.push({
       date: d.toISOString().slice(0, 10),
       worst: hasCritical ? 'critical' : hasWarning ? 'warning' : 'healthy',
+      uptime: Math.round(dayUptime * 10) / 10,
     })
   }
 

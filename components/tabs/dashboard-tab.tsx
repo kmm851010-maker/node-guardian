@@ -23,7 +23,7 @@ interface NodeStatus {
 
 interface NodeStats {
   uptime_percent: number
-  daily: { date: string; worst: string }[]
+  daily: { date: string; worst: string; uptime: number }[]
   event_counts: Record<string, number>
 }
 
@@ -197,7 +197,11 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
               <div className="grid grid-cols-7 gap-1">
                 {stats.daily.map(d => (
                   <div key={d.date} className="flex flex-col items-center gap-1">
-                    <div className={`w-full h-6 rounded ${dayColor[d.worst] ?? 'bg-gray-200'}`} />
+                    <div className={`w-full h-8 rounded flex items-center justify-center ${dayColor[d.worst] ?? 'bg-gray-200'}`}>
+                      <span className="text-white text-[9px] font-bold leading-none drop-shadow">
+                        {d.uptime.toFixed(0)}%
+                      </span>
+                    </div>
                     <span className="text-xs text-muted-foreground">{dayLabel(d.date)}</span>
                   </div>
                 ))}

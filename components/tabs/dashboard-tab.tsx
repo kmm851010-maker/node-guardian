@@ -61,7 +61,7 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
 
     Promise.all([
       fetch(`/api/node-events?pi_uid=${user.uid}&limit=20&offset=0`).then(r => r.json()),
-      fetch(`/api/node-status?pi_uid=${user.uid}`).then(r => r.json()),
+      fetch(`/api/node-status?pi_uid=${user.uid}&username=${encodeURIComponent(user.username)}`).then(r => r.json()),
     ]).then(([eventData, statusData]) => {
       setEvents(eventData.data ?? [])
       setHasMore((eventData.data ?? []).length === 20)

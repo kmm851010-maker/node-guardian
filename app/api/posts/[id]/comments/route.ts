@@ -29,5 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await supabaseServer.rpc('increment_comments', { post_id: id })
   return NextResponse.json({ data })
 }

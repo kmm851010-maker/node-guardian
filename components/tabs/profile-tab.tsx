@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Zap, ExternalLink } from 'lucide-react'
+import { Crown, Zap, ExternalLink, Gift } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
@@ -12,6 +12,13 @@ interface PremiumStatus {
   expires_at?: string
 }
 
+interface ClaimStatus {
+  claimable: boolean
+  claimed: boolean
+  rank?: number
+  total_likes?: number
+  week_start?: string
+}
 
 export default function ProfileTab({ user }: { user: { uid: string; username: string } | null }) {
   const [premium, setPremium] = useState<PremiumStatus>({ isPremium: false })
@@ -19,6 +26,8 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
   const [nodeKey, setNodeKey] = useState('')
   const [nodeKeyInput, setNodeKeyInput] = useState('')
   const [savingKey, setSavingKey] = useState(false)
+  const [claimStatus, setClaimStatus] = useState<ClaimStatus | null>(null)
+  const [claiming, setClaiming] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -31,6 +40,10 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
       .then(d => {
         if (d.data?.node_key) setNodeKey(d.data.node_key)
       })
+
+    fetch(`/api/rankings/claim?pi_uid=${user.uid}`)
+      .then(r => r.json())
+      .then(d => setClaimStatus(d))
   }, [user])
 
   const handlePremium = async () => {
@@ -80,6 +93,24 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
         onError: (e) => { console.error(e); setPaying(false); toast.error(`결제 오류: ${JSON.stringify(e)}`) },
       }
     )
+  }
+
+  const handleClaim = async () => {
+    if (!user) return
+    setClaiming(true)
+    const res = await fetch('/api/rankings/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pi_uid: user.uid }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setClaimStatus(prev => prev ? { ...prev, claimable: false, claimed: true } : prev)
+      toast.success(`🎉 ${data.rank}위 상금 수령 신청 완료! 72시간 내 10 Pi가 지급됩니다.`)
+    } else {
+      toast.error(data.error ?? '수령 실패')
+    }
+    setClaiming(false)
   }
 
   const handleSaveKey = async () => {
@@ -183,6 +214,39 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
           </div>
         </CardContent>
       </Card>
+
+      {/* 주간 랭킹 상금 수령 */}
+      {claimStatus && (claimStatus.claimable || claimStatus.claimed) && (
+        <Card className={claimStatus.claimable ? 'border-yellow-300 bg-yellow-50' : ''}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Gift size={14} className="text-yellow-500" /> 주간 랭킹 상금
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm">
+              <p className="font-semibold">
+                {claimStatus.rank}위 선정 🎉
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {claimStatus.week_start} 주 · ❤️ {claimStatus.total_likes}개 받음
+              </p>
+            </div>
+            {claimStatus.claimable ? (
+              <button
+                onClick={handleClaim}
+                disabled={claiming}
+                className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Gift size={16} />
+                {claiming ? '처리 중...' : '10 Pi 상금 수령하기'}
+              </button>
+            ) : (
+              <p className="text-sm text-green-600 font-medium">✅ 상금 수령 신청 완료 (72시간 내 지급)</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 프리미엄 구독 */}
       <Card>

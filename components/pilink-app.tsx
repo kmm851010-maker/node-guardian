@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle, Download, BookOpen } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import DashboardTab from './tabs/dashboard-tab'
@@ -8,6 +8,7 @@ import CommunityTab from './tabs/community-tab'
 import RankingTab from './tabs/ranking-tab'
 import QnaTab from './tabs/qna-tab'
 import ProfileTab from './tabs/profile-tab'
+import GuideDrawer from './guide-banner'
 
 type Tab = 'dashboard' | 'community' | 'ranking' | 'qna' | 'profile'
 
@@ -22,6 +23,19 @@ const TABS = [
 export default function PiLinkApp() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const { user, isLoading, login, logout } = useAuth()
+  const [isPremium, setIsPremium] = useState(false)
+  const [isPiBrowser, setIsPiBrowser] = useState(false)
+
+  useEffect(() => {
+    setIsPiBrowser(typeof window !== 'undefined' && !!(window as any).Pi)
+  }, [])
+
+  useEffect(() => {
+    if (!user) { setIsPremium(false); return }
+    fetch(`/api/premium?pi_uid=${user.uid}`)
+      .then(r => r.json())
+      .then(d => setIsPremium(d.isPremium ?? false))
+  }, [user])
 
   return (
     <div className="flex flex-col min-h-screen max-w-2xl mx-auto">
@@ -54,7 +68,7 @@ export default function PiLinkApp() {
                 <LogOut size={16} />
               </button>
             </div>
-          ) : typeof window !== 'undefined' && window.Pi ? (
+          ) : isPiBrowser ? (
             <button
               onClick={login}
               className="flex items-center gap-1 text-xs bg-violet-600 text-white px-3 py-1.5 rounded-full hover:bg-violet-700 transition-colors"
@@ -68,10 +82,11 @@ export default function PiLinkApp() {
 
       {/* 탭 컨텐츠 */}
       <main className="flex-1 overflow-y-auto pb-20">
+        <GuideDrawer />
         {activeTab === 'dashboard'  && <DashboardTab user={user} />}
-        {activeTab === 'community'  && <CommunityTab user={user} />}
-        {activeTab === 'ranking'    && <RankingTab />}
-        {activeTab === 'qna'        && <QnaTab user={user} />}
+        {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} />}
+        {activeTab === 'ranking'    && <RankingTab user={user} />}
+        {activeTab === 'qna'        && <QnaTab user={user} isPremium={isPremium} />}
         {activeTab === 'profile'    && <ProfileTab user={user} />}
       </main>
 

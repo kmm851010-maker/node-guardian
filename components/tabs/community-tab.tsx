@@ -234,7 +234,7 @@ export default function CommunityTab({ user }: Props) {
             <h3 className="text-sm font-semibold">{post.title}</h3>
             <p className="text-xs text-muted-foreground line-clamp-2">{post.content}</p>
             {post.image_url && (
-              <img src={post.image_url} alt="post" className="w-full max-h-48 object-cover rounded-lg mt-1" />
+              <img src={post.image_url} alt="post" className="w-full h-24 object-cover rounded-lg mt-1" />
             )}
             <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
               <span className="flex items-center gap-1"><Heart size={12} /> {post.likes}</span>

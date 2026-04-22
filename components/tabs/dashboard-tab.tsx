@@ -73,6 +73,7 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [offset, setOffset] = useState(0)
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -148,31 +149,20 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
                 </p>
               </div>
 
-              {/* 포트별 현황 */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                  <Network size={12} /> 포트 현황 (31400~31409)
-                </p>
-                <div className="grid grid-cols-5 gap-1">
-                  {Array.from({ length: 10 }, (_, i) => 31400 + i).map(port => {
-                    const isOpen = status.port_status === 'healthy'
-                      ? true
-                      : status.port_detail
-                        ? status.port_detail[String(port)] === true
-                        : false
-                    return (
-                      <div
-                        key={port}
-                        className={`text-center rounded py-1 text-xs font-mono ${
-                          isOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
-                        }`}
-                      >
-                        {port}
-                      </div>
-                    )
-                  })}
+              {/* 포트 열림/닫힘 */}
+              {status.port_detail && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Network size={12} />
+                  <span>
+                    열린 포트 <span className="text-green-600 font-semibold">
+                      {Object.values(status.port_detail).filter(Boolean).length}개
+                    </span>
+                    {' '}/ 닫힌 포트 <span className="text-red-500 font-semibold">
+                      {Object.values(status.port_detail).filter(v => !v).length}개
+                    </span>
+                  </span>
                 </div>
-              </div>
+              )}
             </>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">
@@ -274,17 +264,28 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
           {events.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">이벤트 없음</p>
           ) : (
-            events.map(e => (
-              <div key={e.id} className="flex items-start gap-2 py-1 border-b last:border-0">
-                <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${severityColor[e.severity] ?? ''}`}>
-                  {severityLabel[e.severity] ?? e.severity}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs truncate">{e.message}</p>
-                  <p className="text-xs text-muted-foreground">{timeAgo(e.created_at)}</p>
+            events.map(e => {
+              const expanded = expandedEventId === e.id
+              return (
+                <div
+                  key={e.id}
+                  className="py-1 border-b last:border-0 cursor-pointer"
+                  onClick={() => setExpandedEventId(expanded ? null : e.id)}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${severityColor[e.severity] ?? ''}`}>
+                      {severityLabel[e.severity] ?? e.severity}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs ${expanded ? 'whitespace-pre-wrap break-words' : 'truncate'}`}>
+                        {e.message}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{timeAgo(e.created_at)}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </CardContent>
       </Card>

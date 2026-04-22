@@ -18,10 +18,10 @@ export async function GET(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    if (data) return NextResponse.json({ data })
-
-    // Pi SDK uid로 못 찾으면 username(nickname)으로 재조회
+    // 레코드가 있어도 process_status가 없으면 PC 데이터 아님 → username으로 재조회
     const username = searchParams.get('username')
+    if (data && data.process_status) return NextResponse.json({ data })
+
     if (username) {
       const { data: data2, error: error2 } = await supabaseServer
         .from('node_status')

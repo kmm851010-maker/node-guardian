@@ -12,7 +12,7 @@ import GuideDrawer from './guide-banner'
 
 type Tab = 'dashboard' | 'community' | 'ranking' | 'qna' | 'profile'
 
-const TABS = [
+const PI_TABS = [
   { id: 'dashboard' as Tab, label: '대시보드', icon: Monitor },
   { id: 'community' as Tab, label: '커뮤니티', icon: Users },
   { id: 'ranking' as Tab, label: '랭킹', icon: Trophy },
@@ -20,14 +20,23 @@ const TABS = [
   { id: 'profile' as Tab, label: '프로필', icon: UserCircle },
 ]
 
+const WEB_TABS = [
+  { id: 'community' as Tab, label: '커뮤니티', icon: Users },
+  { id: 'ranking' as Tab, label: '랭킹', icon: Trophy },
+  { id: 'qna' as Tab, label: 'QnA', icon: MessageCircle },
+]
+
 export default function PiLinkApp() {
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
+  const [activeTab, setActiveTab] = useState<Tab>('community')
   const { user, isLoading, login, logout } = useAuth()
   const [isPremium, setIsPremium] = useState(false)
   const [isPiBrowser, setIsPiBrowser] = useState(false)
 
   useEffect(() => {
-    setIsPiBrowser(typeof window !== 'undefined' && !!(window as any).Pi)
+    const isPi = typeof window !== 'undefined' && !!(window as any).Pi
+    setIsPiBrowser(isPi)
+    // Pi Browser면 대시보드로 시작
+    if (isPi) setActiveTab('dashboard')
   }, [])
 
   useEffect(() => {
@@ -37,8 +46,10 @@ export default function PiLinkApp() {
       .then(d => setIsPremium(d.isPremium ?? false))
   }, [user])
 
+  const tabs = isPiBrowser ? PI_TABS : WEB_TABS
+
   return (
-    <div className="flex flex-col min-h-screen max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center gap-2">
         <span className="text-xl font-bold text-violet-600">LinkPi</span>
@@ -81,8 +92,8 @@ export default function PiLinkApp() {
       </header>
 
       {/* 탭 컨텐츠 */}
-      <main className="flex-1 overflow-y-auto pb-20">
-        <GuideDrawer />
+      <main className="pb-20">
+        {isPiBrowser && <GuideDrawer />}
         {activeTab === 'dashboard'  && <DashboardTab user={user} />}
         {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} />}
         {activeTab === 'ranking'    && <RankingTab user={user} />}
@@ -92,7 +103,7 @@ export default function PiLinkApp() {
 
       {/* 하단 탭 바 */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-background border-t flex">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}

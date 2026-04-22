@@ -3,11 +3,11 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { author_uid } = await req.json()
   if (!author_uid) return NextResponse.json({ error: 'author_uid required' }, { status: 400 })
 
-  const post_id = params.id
+  const { id: post_id } = await params
 
   // 이미 좋아요 했는지 확인
   const { data: existing } = await supabaseServer

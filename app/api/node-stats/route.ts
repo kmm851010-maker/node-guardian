@@ -71,9 +71,10 @@ export async function GET(req: NextRequest) {
     const dayUptime = Math.max(0, Math.min(100, ((daySec - dayDown) / daySec) * 100))
 
     daily.push({
-      date:   d.toISOString().slice(0, 10),
-      worst:  hasCritical ? 'critical' : hasWarning ? 'warning' : 'healthy',
-      uptime: Math.round(dayUptime * 10) / 10,
+      date:    d.toISOString().slice(0, 10),
+      worst:   hasCritical ? 'critical' : hasWarning ? 'warning' : 'healthy',
+      uptime:  Math.round(dayUptime * 10) / 10,
+      hasData: dayEvents.length > 0 || downtimePeriods.some(p => p.start < dayEnd && (p.end ?? Date.now()) > dayStart),
     })
   }
 

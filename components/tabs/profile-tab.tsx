@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Zap, ExternalLink, Gift, Bell, BellOff, Send } from 'lucide-react'
+import { Crown, Zap, ExternalLink, Gift, Send } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
@@ -28,23 +28,9 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
   const [savingKey, setSavingKey] = useState(false)
   const [claimStatus, setClaimStatus] = useState<ClaimStatus | null>(null)
   const [claiming, setClaiming] = useState(false)
-  const [pushStatus, setPushStatus] = useState<'unsupported' | 'denied' | 'subscribed' | 'unsubscribed'>('unsubscribed')
-  const [subscribing, setSubscribing] = useState(false)
   const [telegramSubscribed, setTelegramSubscribed] = useState(false)
   const [telegramInput, setTelegramInput] = useState('')
   const [savingTelegram, setSavingTelegram] = useState(false)
-
-  useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setPushStatus('unsupported'); return
-    }
-    if (Notification.permission === 'denied') { setPushStatus('denied'); return }
-    navigator.serviceWorker.ready.then(reg =>
-      reg.pushManager.getSubscription().then(sub => {
-        setPushStatus(sub ? 'subscribed' : 'unsubscribed')
-      })
-    )
-  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -132,32 +118,6 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
       toast.error(data.error ?? '수령 실패')
     }
     setClaiming(false)
-  }
-
-  const handlePushSubscribe = async () => {
-    if (!user) return
-    setSubscribing(true)
-    try {
-      const permission = await Notification.requestPermission()
-      if (permission !== 'granted') { setPushStatus('denied'); setSubscribing(false); return }
-
-      const reg = await navigator.serviceWorker.ready
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      })
-      await fetch('/api/push-subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pi_uid: user.uid, subscription: sub }),
-      })
-      setPushStatus('subscribed')
-      toast.success('푸시 알림이 활성화됐습니다.')
-    } catch {
-      toast.error('알림 설정 실패. 브라우저 설정을 확인해주세요.')
-    }
-    setSubscribing(false)
   }
 
   const handleTelegramSave = async () => {
@@ -287,42 +247,6 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
         </CardContent>
       </Card>
 
-      {/* 푸시 알림 설정 */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Bell size={14} className="text-violet-500" /> 노드 이상 알림
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {pushStatus === 'unsupported' && (
-            <p className="text-xs text-muted-foreground">이 브라우저는 푸시 알림을 지원하지 않습니다.</p>
-          )}
-          {pushStatus === 'denied' && (
-            <div className="space-y-2">
-              <p className="text-xs text-red-500 flex items-center gap-1"><BellOff size={12} /> 알림이 차단됐습니다.</p>
-              <p className="text-xs text-muted-foreground">브라우저 설정 → 사이트 설정 → 알림에서 pilink.vercel.app을 허용으로 변경 후 다시 시도해주세요.</p>
-            </div>
-          )}
-          {pushStatus === 'subscribed' && (
-            <p className="text-xs text-green-600 flex items-center gap-1"><Bell size={12} /> 알림 활성화됨 — 노드 이상 시 즉시 알림을 받습니다.</p>
-          )}
-          {pushStatus === 'unsubscribed' && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">노드에 이상이 생기면 스마트폰으로 즉시 알림을 받을 수 있습니다.</p>
-              <button
-                onClick={handlePushSubscribe}
-                disabled={subscribing}
-                className="w-full py-2.5 bg-violet-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Bell size={14} />
-                {subscribing ? '설정 중...' : '알림 허용하기'}
-              </button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* 텔레그램 알림 */}
       <Card>
         <CardHeader className="pb-2">
@@ -447,11 +371,4 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
       </Card>
     </div>
   )
-}
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const rawData = atob(base64)
-  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
 }

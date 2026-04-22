@@ -42,11 +42,16 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
       { amount: 1, memo: 'LinkPi 프리미엄 구독 1개월', metadata: { pi_uid: user.uid } },
       {
         onReadyForServerApproval: async (paymentId) => {
-          await fetch('/api/payment/approve', {
+          const res = await fetch('/api/payment/approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId }),
           })
+          if (!res.ok) {
+            const err = await res.json()
+            toast.error(`승인 오류: ${err.error}`)
+            setPaying(false)
+          }
         },
         onReadyForServerCompletion: async (paymentId, txid) => {
           const res = await fetch('/api/payment/complete', {
@@ -57,11 +62,14 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
           if (res.ok) {
             setPremium({ isPremium: true })
             toast.success('프리미엄 구독 완료! 🎉')
+          } else {
+            const err = await res.json()
+            toast.error(`완료 오류: ${err.error}`)
           }
           setPaying(false)
         },
-        onCancel: () => { setPaying(false) },
-        onError: (e) => { console.error(e); setPaying(false); toast.error('결제 오류가 발생했습니다.') },
+        onCancel: () => { setPaying(false); toast.error('결제가 취소됐습니다.') },
+        onError: (e) => { console.error(e); setPaying(false); toast.error(`결제 오류: ${JSON.stringify(e)}`) },
       }
     )
   }

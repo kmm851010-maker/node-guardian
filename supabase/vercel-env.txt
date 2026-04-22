@@ -1,0 +1,5 @@
+Vercel 환경변수 추가 목록
+pilink 프로젝트 → Settings → Environment Variables
+
+Name: PI_API_KEY
+Value: jvynev6awclz2kh1wrfz2otcbtlrxj1jaj9u2rkzzdkhaemuyf9p9wdquvbkvgd7

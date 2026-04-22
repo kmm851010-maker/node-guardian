@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Trophy, Wifi, WifiOff } from 'lucide-react'
+import { Trophy, Wifi, WifiOff, Crown, Star } from 'lucide-react'
 
 interface NodeStatus {
   pi_uid: string
@@ -12,6 +12,7 @@ interface NodeStatus {
   port_status: string
   last_seen: string
   uptime_start: string | null
+  node_score: number
 }
 
 function uptimeDays(start: string | null): string {
@@ -32,8 +33,9 @@ export default function RankingTab() {
       .then(d => { setStatuses(d.data ?? []); setLoading(false) })
   }, [])
 
-  // 업타임 기준 정렬
+  // 노드 점수 → 업타임 순 정렬
   const ranked = [...statuses].sort((a, b) => {
+    if ((b.node_score ?? 0) !== (a.node_score ?? 0)) return (b.node_score ?? 0) - (a.node_score ?? 0)
     const aUp = a.uptime_start ? Date.now() - new Date(a.uptime_start).getTime() : 0
     const bUp = b.uptime_start ? Date.now() - new Date(b.uptime_start).getTime() : 0
     return bUp - aUp
@@ -71,7 +73,14 @@ export default function RankingTab() {
                     }
                     <span className="text-sm font-medium">{s.nickname}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">연속 업타임: {uptimeDays(s.uptime_start)}</p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span>업타임: {uptimeDays(s.uptime_start)}</span>
+                    {s.node_score > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Star size={10} className="text-yellow-500" />{s.node_score.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <Badge variant={isHealthy ? 'default' : 'secondary'} className={isHealthy ? 'bg-green-500 text-white' : ''}>
                   {isHealthy ? '정상' : '이상'}

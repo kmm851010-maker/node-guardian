@@ -1,20 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut } from 'lucide-react'
+import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import DashboardTab from './tabs/dashboard-tab'
 import CommunityTab from './tabs/community-tab'
 import RankingTab from './tabs/ranking-tab'
 import QnaTab from './tabs/qna-tab'
+import ProfileTab from './tabs/profile-tab'
 
-type Tab = 'dashboard' | 'community' | 'ranking' | 'qna'
+type Tab = 'dashboard' | 'community' | 'ranking' | 'qna' | 'profile'
 
 const TABS = [
   { id: 'dashboard' as Tab, label: '대시보드', icon: Monitor },
   { id: 'community' as Tab, label: '커뮤니티', icon: Users },
   { id: 'ranking' as Tab, label: '랭킹', icon: Trophy },
   { id: 'qna' as Tab, label: 'QnA', icon: MessageCircle },
+  { id: 'profile' as Tab, label: '프로필', icon: UserCircle },
 ]
 
 export default function PiLinkApp() {
@@ -53,6 +55,7 @@ export default function PiLinkApp() {
         {activeTab === 'community'  && <CommunityTab user={user} />}
         {activeTab === 'ranking'    && <RankingTab />}
         {activeTab === 'qna'        && <QnaTab user={user} />}
+        {activeTab === 'profile'    && <ProfileTab user={user} />}
       </main>
 
       {/* 하단 탭 바 */}

@@ -1,0 +1,1 @@
+ALTER TABLE node_status ADD COLUMN IF NOT EXISTS port_detail JSONB;

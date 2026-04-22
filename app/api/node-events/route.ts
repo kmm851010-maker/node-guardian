@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
   if (process_status) statusUpdate.process_status = process_status
   if (port_status) statusUpdate.port_status = port_status
   if (event_type === 'startup') statusUpdate.uptime_start = new Date().toISOString()
+  if (detail?.port_detail) statusUpdate.port_detail = detail.port_detail
 
   await supabaseServer.from('node_status').upsert(statusUpdate, { onConflict: 'pi_uid' })
 

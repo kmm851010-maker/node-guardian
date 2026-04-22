@@ -54,7 +54,7 @@ export default function PiLinkApp() {
                 <LogOut size={16} />
               </button>
             </div>
-          ) : (
+          ) : typeof window !== 'undefined' && window.Pi ? (
             <button
               onClick={login}
               className="flex items-center gap-1 text-xs bg-violet-600 text-white px-3 py-1.5 rounded-full hover:bg-violet-700 transition-colors"
@@ -62,13 +62,13 @@ export default function PiLinkApp() {
               <LogIn size={14} />
               Pi 로그인
             </button>
-          )
+          ) : null
         )}
       </header>
 
       {/* 탭 컨텐츠 */}
       <main className="flex-1 overflow-y-auto pb-20">
-        {activeTab === 'dashboard'  && <DashboardTab />}
+        {activeTab === 'dashboard'  && <DashboardTab user={user} />}
         {activeTab === 'community'  && <CommunityTab user={user} />}
         {activeTab === 'ranking'    && <RankingTab />}
         {activeTab === 'qna'        && <QnaTab user={user} />}

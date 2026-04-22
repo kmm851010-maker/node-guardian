@@ -60,7 +60,7 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
     if (!user) { setLoading(false); return }
 
     Promise.all([
-      fetch(`/api/node-events?pi_uid=${user.uid}&limit=20&offset=0`).then(r => r.json()),
+      fetch(`/api/node-events?pi_uid=${user.uid}&username=${encodeURIComponent(user.username)}&limit=20&offset=0`).then(r => r.json()),
       fetch(`/api/node-status?pi_uid=${user.uid}&username=${encodeURIComponent(user.username)}`).then(r => r.json()),
     ]).then(([eventData, statusData]) => {
       setEvents(eventData.data ?? [])
@@ -76,7 +76,7 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
     const observer = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore && !loadingMore) {
         setLoadingMore(true)
-        fetch(`/api/node-events?pi_uid=${user.uid}&limit=20&offset=${offset}`)
+        fetch(`/api/node-events?pi_uid=${user.uid}&username=${encodeURIComponent(user.username)}&limit=20&offset=${offset}`)
           .then(r => r.json())
           .then(data => {
             const more = data.data ?? []

@@ -123,19 +123,40 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const pi_uid = searchParams.get('pi_uid')
+  const username = searchParams.get('username')
   const limit = parseInt(searchParams.get('limit') ?? '20')
   const offset = parseInt(searchParams.get('offset') ?? '0')
 
-  let query = supabaseServer
+  // pi_uid(UUID)로 먼저 조회
+  if (pi_uid) {
+    const { data, error } = await supabaseServer
+      .from('node_events')
+      .select('*')
+      .eq('pi_uid', pi_uid)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // 결과 없고 username 있으면 username(PC가 저장한 pi_uid)으로 재조회
+    if ((!data || data.length === 0) && username) {
+      const { data: data2, error: error2 } = await supabaseServer
+        .from('node_events')
+        .select('*')
+        .eq('pi_uid', username)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+      if (error2) return NextResponse.json({ error: error2.message }, { status: 500 })
+      return NextResponse.json({ data: data2 ?? [] })
+    }
+
+    return NextResponse.json({ data: data ?? [] })
+  }
+
+  const { data, error } = await supabaseServer
     .from('node_events')
     .select('*')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
-
-  if (pi_uid) query = query.eq('pi_uid', pi_uid)
-
-  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
   return NextResponse.json({ data })
 }

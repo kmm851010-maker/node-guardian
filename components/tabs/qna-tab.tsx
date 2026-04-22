@@ -31,6 +31,13 @@ interface Comment {
   created_at: string
 }
 
+const Spinner = () => (
+  <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+  </svg>
+)
+
 function formatTime(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
   if (diff < 3600) {
@@ -108,6 +115,8 @@ export default function QnaTab({ user, isPremium }: Props) {
   const [submittingComment, setSubmittingComment] = useState(false)
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
+  const [likingPostId, setLikingPostId] = useState<string | null>(null)
+  const [likingCommentId, setLikingCommentId] = useState<string | null>(null)
   const [profileUid, setProfileUid] = useState<string | null>(null)
 
   // 채택 팝업
@@ -217,6 +226,8 @@ export default function QnaTab({ user, isPremium }: Props) {
     e.stopPropagation()
     if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
     if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (likingPostId) return
+    setLikingPostId(postId)
     const res = await fetch(`/api/posts/${postId}/like`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -231,12 +242,15 @@ export default function QnaTab({ user, isPremium }: Props) {
     setPosts(prev => prev.map(p =>
       p.id === postId ? { ...p, likes: p.likes + (data.liked ? 1 : -1) } : p
     ))
+    setLikingPostId(null)
   }
 
   const handleCommentLike = async (e: React.MouseEvent, commentId: string, postId: string) => {
     e.stopPropagation()
     if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
     if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (likingCommentId) return
+    setLikingCommentId(commentId)
     const res = await fetch(`/api/comments/${commentId}/like`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -254,6 +268,7 @@ export default function QnaTab({ user, isPremium }: Props) {
         c.id === commentId ? { ...c, likes: c.likes + (data.liked ? 1 : -1) } : c
       ),
     }))
+    setLikingCommentId(null)
   }
 
   const handleBestAnswer = (postId: string, commentId: string, nickname: string) => {
@@ -405,8 +420,8 @@ export default function QnaTab({ user, isPremium }: Props) {
             <div className="flex justify-end gap-2">
               <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-muted-foreground">취소</button>
               <button onClick={handleSubmit} disabled={submitting}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50">
-                {submitting ? '등록 중...' : '등록'}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50 flex items-center gap-1.5">
+                {submitting ? <><Spinner />등록 중...</> : '등록'}
               </button>
             </div>
           </CardContent>
@@ -464,11 +479,12 @@ export default function QnaTab({ user, isPremium }: Props) {
             <div className="px-3 pb-2 flex items-center border-t border-muted/50 pt-2">
               <button
                 onClick={e => handleLike(e, post.id)}
-                className={`flex items-center gap-1.5 py-1.5 px-3 rounded-full transition-all active:scale-95 ${
+                disabled={!!likingPostId}
+                className={`flex items-center gap-1.5 py-1.5 px-3 rounded-full transition-all active:scale-95 disabled:opacity-60 ${
                   isLiked ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500 hover:bg-rose-50'
                 }`}
               >
-                <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={2} />
+                {likingPostId === post.id ? <Spinner /> : <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={2} />}
                 <span className="text-sm font-medium">{post.likes}</span>
               </button>
             </div>
@@ -524,11 +540,12 @@ export default function QnaTab({ user, isPremium }: Props) {
                               <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
                               <button
                                 onClick={e => handleCommentLike(e, comment.id, post.id)}
-                                className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 ${
+                                disabled={!!likingCommentId}
+                                className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 disabled:opacity-60 ${
                                   likedComments.has(comment.id) ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500'
                                 }`}
                               >
-                                <Heart size={11} fill={likedComments.has(comment.id) ? 'currentColor' : 'none'} />
+                                {likingCommentId === comment.id ? <Spinner /> : <Heart size={11} fill={likedComments.has(comment.id) ? 'currentColor' : 'none'} />}
                                 <span>{comment.likes ?? 0}</span>
                               </button>
                             </div>
@@ -570,11 +587,12 @@ export default function QnaTab({ user, isPremium }: Props) {
                                 <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
                                 <button
                                   onClick={e => handleCommentLike(e, reply.id, post.id)}
-                                  className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 ${
+                                  disabled={!!likingCommentId}
+                                  className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 disabled:opacity-60 ${
                                     likedComments.has(reply.id) ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500'
                                   }`}
                                 >
-                                  <Heart size={11} fill={likedComments.has(reply.id) ? 'currentColor' : 'none'} />
+                                  {likingCommentId === reply.id ? <Spinner /> : <Heart size={11} fill={likedComments.has(reply.id) ? 'currentColor' : 'none'} />}
                                   <span>{reply.likes ?? 0}</span>
                                 </button>
                               </div>
@@ -597,7 +615,9 @@ export default function QnaTab({ user, isPremium }: Props) {
                               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, `r-${post.id}`) } }}
                             />
                             <button onClick={() => handleComment(post.id, `r-${post.id}`)}
-                              disabled={submittingComment} className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end">등록</button>
+                              disabled={submittingComment} className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
+                              {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                            </button>
                           </div>
                         )}
                       </div>
@@ -616,7 +636,9 @@ export default function QnaTab({ user, isPremium }: Props) {
                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, post.id) } }}
                         />
                         <button onClick={() => handleComment(post.id, post.id)} disabled={submittingComment}
-                          className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end">등록</button>
+                          className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
+                          {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                        </button>
                       </div>
                     ) : user ? (
                       <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">

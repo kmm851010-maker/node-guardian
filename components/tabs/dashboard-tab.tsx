@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Cpu, Network, BarChart2 } from 'lucide-react'
+import { Clock, Cpu, BarChart2 } from 'lucide-react'
 
 interface NodeEvent {
   id: string
@@ -140,29 +140,10 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
                   <span className="text-xs text-muted-foreground">프로세스</span>
                   {statusBadge(status.process_status)}
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">포트 전체</span>
-                  {statusBadge(status.port_status)}
-                </div>
                 <p className="text-xs text-muted-foreground">
                   마지막 신호: {timeAgo(status.last_seen)}
                 </p>
               </div>
-
-              {/* 포트 열림/닫힘 */}
-              {status.port_detail && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Network size={12} />
-                  <span>
-                    열린 포트 <span className="text-green-600 font-semibold">
-                      {Object.values(status.port_detail).filter(Boolean).length}개
-                    </span>
-                    {' '}/ 닫힌 포트 <span className="text-red-500 font-semibold">
-                      {Object.values(status.port_detail).filter(v => !v).length}개
-                    </span>
-                  </span>
-                </div>
-              )}
             </>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">

@@ -56,6 +56,13 @@ function formatTime(iso: string) {
   return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
+const Spinner = () => (
+  <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+  </svg>
+)
+
 function PremiumRequired({ onGoProfile }: { onGoProfile?: () => void }) {
   return (
     <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
@@ -105,6 +112,8 @@ export default function CommunityTab({ user, isPremium }: Props) {
   const [submittingComment, setSubmittingComment] = useState(false)
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
+  const [likingPostId, setLikingPostId] = useState<string | null>(null)
+  const [likingCommentId, setLikingCommentId] = useState<string | null>(null)
   const viewedPosts = useRef<Set<string>>(new Set())
   const [profileUid, setProfileUid] = useState<string | null>(null)
 
@@ -163,6 +172,8 @@ export default function CommunityTab({ user, isPremium }: Props) {
     e.stopPropagation()
     if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
     if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (likingPostId) return
+    setLikingPostId(postId)
     const res = await fetch(`/api/posts/${postId}/like`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ author_uid: user.uid }),
@@ -170,12 +181,15 @@ export default function CommunityTab({ user, isPremium }: Props) {
     const data = await res.json()
     setLikedPosts(prev => { const next = new Set(prev); data.liked ? next.add(postId) : next.delete(postId); return next })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: p.likes + (data.liked ? 1 : -1) } : p))
+    setLikingPostId(null)
   }
 
   const handleCommentLike = async (e: React.MouseEvent, commentId: string, postId: string) => {
     e.stopPropagation()
     if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
     if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (likingCommentId) return
+    setLikingCommentId(commentId)
     const res = await fetch(`/api/comments/${commentId}/like`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ author_uid: user.uid }),
@@ -186,6 +200,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
       ...prev,
       [postId]: (prev[postId] ?? []).map(c => c.id === commentId ? { ...c, likes: c.likes + (data.liked ? 1 : -1) } : c),
     }))
+    setLikingCommentId(null)
   }
 
   const handleComment = async (postId: string, inputKey: string) => {
@@ -459,11 +474,11 @@ export default function CommunityTab({ user, isPremium }: Props) {
             </CardContent>
 
             <div className="px-3 pb-2 flex items-center border-t border-muted/50 pt-2">
-              <button onClick={e => handleLike(e, post.id)}
-                className={`flex items-center gap-1.5 py-1.5 px-3 rounded-full transition-all active:scale-95 ${
+              <button onClick={e => handleLike(e, post.id)} disabled={!!likingPostId}
+                className={`flex items-center gap-1.5 py-1.5 px-3 rounded-full transition-all active:scale-95 disabled:opacity-60 ${
                   isLiked ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500 hover:bg-rose-50'
                 }`}>
-                <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={2} />
+                {likingPostId === post.id ? <Spinner /> : <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={2} />}
                 <span className="text-sm font-medium">{post.likes}</span>
               </button>
               {!isPremium && user && (
@@ -512,11 +527,11 @@ export default function CommunityTab({ user, isPremium }: Props) {
                                 <button onClick={() => setProfileUid(comment.author_uid)}
                                   className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.nickname}</button>
                                 <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
-                                <button onClick={e => handleCommentLike(e, comment.id, post.id)}
-                                  className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 ${
+                                <button onClick={e => handleCommentLike(e, comment.id, post.id)} disabled={!!likingCommentId}
+                                  className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 disabled:opacity-60 ${
                                     likedComments.has(comment.id) ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500'
                                   }`}>
-                                  <Heart size={11} fill={likedComments.has(comment.id) ? 'currentColor' : 'none'} />
+                                  {likingCommentId === comment.id ? <Spinner /> : <Heart size={11} fill={likedComments.has(comment.id) ? 'currentColor' : 'none'} />}
                                   <span>{comment.likes ?? 0}</span>
                                 </button>
                               </div>
@@ -559,7 +574,9 @@ export default function CommunityTab({ user, isPremium }: Props) {
                                 className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
                                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, `r-${post.id}`) } }} />
                               <button onClick={() => handleComment(post.id, `r-${post.id}`)} disabled={submittingComment}
-                                className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end">등록</button>
+                                className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
+                                {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                              </button>
                             </div>
                           )}
                         </div>
@@ -574,7 +591,9 @@ export default function CommunityTab({ user, isPremium }: Props) {
                             className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, post.id) } }} />
                           <button onClick={() => handleComment(post.id, post.id)} disabled={submittingComment}
-                            className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end">등록</button>
+                            className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
+                            {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                          </button>
                         </div>
                       ) : (
                         user && <PremiumRequired />

@@ -483,9 +483,7 @@ export default function QnaTab({ user, isPremium }: Props) {
                   </div>
                 ) : (
                   <div className="px-3 py-2 bg-muted/20">
-                    <div className="max-h-80 overflow-y-auto overflow-x-hidden">
-                      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
-                    </div>
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
                   </div>
                 )}
 

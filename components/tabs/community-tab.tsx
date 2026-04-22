@@ -429,7 +429,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                     )}
                   </div>
                   {/* 본문 1줄 미리보기 */}
-                  <p className="text-xs text-muted-foreground line-clamp-1 mb-1 break-words">{post.content}</p>
+                  <p className="text-xs text-muted-foreground truncate mb-1">{post.content}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <button onClick={e => { e.stopPropagation(); setProfileUid(post.author_uid) }}
                       className="hover:text-violet-600 hover:underline transition-colors">{post.nickname}</button>
@@ -481,9 +481,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                   </div>
                 ) : (
                   <div className="px-3 py-2 space-y-2 bg-muted/20">
-                    <div className="max-h-80 overflow-y-auto overflow-x-hidden">
-                      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
-                    </div>
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
                     {post.image_url && (
                       <img src={post.image_url} alt="post" className="w-full max-h-64 object-cover rounded-lg" />
                     )}
@@ -625,9 +623,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                 </div>
               ) : (
                 <div className="px-3 py-2 bg-muted/20">
-                  <div className="max-h-80 overflow-y-auto overflow-x-hidden">
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
-                  </div>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
                   {post.image_url && <img src={post.image_url} alt="post" className="w-full max-h-64 object-cover rounded-lg mt-2" />}
                 </div>
               )}

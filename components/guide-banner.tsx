@@ -151,9 +151,9 @@ export function GuideBanner({ onClose, fullPage = false }: Props) {
         )}
       </div>
 
-      {/* PC 다운로드 버튼 — PC 일반 브라우저에서만 표시 */}
-      {tab === 'pc' && !isPiBrowser && (
-        <div className="px-4 py-3 bg-violet-50 border-b">
+      {/* PC 다운로드 버튼 — PC 일반 브라우저에서만 표시 (모바일/Pi Browser 숨김) */}
+      {tab === 'pc' && (
+        <div className="hidden md:block px-4 py-3 bg-violet-50 border-b">
           <a
             href={DOWNLOAD_URL}
             className="flex items-center justify-center gap-2 w-full py-3 bg-violet-600 text-white rounded-xl font-bold text-sm hover:bg-violet-700 transition-colors active:scale-95"
@@ -166,7 +166,7 @@ export function GuideBanner({ onClose, fullPage = false }: Props) {
       )}
 
       {/* 단계별 가이드 */}
-      <div className="px-4 py-3 space-y-2 max-h-[60vh] overflow-y-auto">
+      <div className="px-4 py-3 space-y-2">
         {steps.map((step, i) => (
           <div key={i} className="border rounded-xl overflow-hidden">
             <button
@@ -279,7 +279,7 @@ export default function GuideDrawer() {
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" onClick={() => setOpen(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
-            className="relative w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
+            className="relative w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto"
             style={{ maxHeight: '90vh' }}
             onClick={e => e.stopPropagation()}
           >

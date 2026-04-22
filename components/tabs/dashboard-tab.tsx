@@ -219,6 +219,14 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
               </div>
             </div>
 
+            {/* 계산 방식 안내 */}
+            <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 space-y-0.5">
+              <p className="font-medium text-foreground/70">📌 가동률 계산 방식</p>
+              <p>· 프로세스/포트 중단 → 복구 이벤트 구간을 다운타임으로 집계</p>
+              <p>· PC 종료 감지 시 다운타임에 포함 (최대 15분 오차)</p>
+              <p>· 90초 미만 단기 중단은 미반영될 수 있음</p>
+            </div>
+
             {/* 이벤트 건수 요약 */}
             {Object.keys(stats.event_counts).length > 0 && (
               <div className="flex gap-2 flex-wrap">

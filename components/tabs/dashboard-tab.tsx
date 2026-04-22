@@ -73,9 +73,7 @@ export default function DashboardTab() {
   }).length
 
   const totalCount = statuses.filter(s => {
-    if (!s.node_key) return false
-    if (!s.last_web_login) return false
-    const diff = (Date.now() - new Date(s.last_web_login).getTime()) / 1000
+    const diff = (Date.now() - new Date(s.last_seen).getTime()) / 1000
     return diff < 72 * 3600
   }).length
 

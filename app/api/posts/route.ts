@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { author_uid, nickname, post_type, title, content } = body
+  const { author_uid, nickname, post_type, title, content, image_url } = body
 
   if (!author_uid || !nickname || !title || !content) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabaseServer
     .from('pilink_posts')
-    .insert({ author_uid, nickname, post_type: post_type ?? 'general', title, content })
+    .insert({ author_uid, nickname, post_type: post_type ?? 'general', title, content, image_url: image_url ?? null })
     .select()
     .single()
 

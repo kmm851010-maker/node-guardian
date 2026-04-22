@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Heart, Eye, PenSquare, X } from 'lucide-react'
+import { Heart, Eye, PenSquare, X, ImagePlus } from 'lucide-react'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
 
 interface Post {
   id: string
@@ -12,6 +13,7 @@ interface Post {
   post_type: string
   title: string
   content: string
+  image_url: string | null
   likes: number
   views: number
   created_at: string
@@ -49,7 +51,10 @@ export default function CommunityTab({ user }: Props) {
   const [postType, setPostType] = useState('general')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/posts')
@@ -62,15 +67,33 @@ export default function CommunityTab({ user }: Props) {
     if (!title.trim() || !content.trim()) { toast.error('제목과 내용을 입력해주세요.'); return }
 
     setSubmitting(true)
+
+    let image_url: string | null = null
+    if (imageFile) {
+      const ext = imageFile.name.split('.').pop()
+      const path = `${user.uid}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('post-images')
+        .upload(path, imageFile, { upsert: true })
+      if (uploadError) {
+        toast.error('이미지 업로드 실패')
+        setSubmitting(false)
+        return
+      }
+      const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
+      image_url = urlData.publicUrl
+    }
+
     const res = await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ author_uid: user.uid, nickname: user.username, post_type: postType, title: title.trim(), content: content.trim() }),
+      body: JSON.stringify({ author_uid: user.uid, nickname: user.username, post_type: postType, title: title.trim(), content: content.trim(), image_url }),
     })
     if (res.ok) {
       const { data } = await res.json()
       setPosts(prev => [data, ...prev])
       setTitle(''); setContent(''); setPostType('general'); setShowForm(false)
+      setImageFile(null); setImagePreview(null)
       toast.success('게시글이 등록됐습니다.')
     } else {
       toast.error('등록 실패. 다시 시도해주세요.')
@@ -137,6 +160,41 @@ export default function CommunityTab({ user }: Props) {
               className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
             />
 
+            {/* 이미지 첨부 */}
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  if (file.size > 5 * 1024 * 1024) { toast.error('5MB 이하 이미지만 첨부 가능합니다.'); return }
+                  setImageFile(file)
+                  setImagePreview(URL.createObjectURL(file))
+                }}
+              />
+              {imagePreview ? (
+                <div className="relative">
+                  <img src={imagePreview} alt="preview" className="w-full max-h-48 object-cover rounded-lg" />
+                  <button
+                    onClick={() => { setImageFile(null); setImagePreview(null) }}
+                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground border rounded-lg px-3 py-2 hover:bg-muted transition-colors"
+                >
+                  <ImagePlus size={14} /> 사진 첨부 (최대 5MB)
+                </button>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowForm(false)}
@@ -175,6 +233,9 @@ export default function CommunityTab({ user }: Props) {
             </div>
             <h3 className="text-sm font-semibold">{post.title}</h3>
             <p className="text-xs text-muted-foreground line-clamp-2">{post.content}</p>
+            {post.image_url && (
+              <img src={post.image_url} alt="post" className="w-full max-h-48 object-cover rounded-lg mt-1" />
+            )}
             <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
               <span className="flex items-center gap-1"><Heart size={12} /> {post.likes}</span>
               <span className="flex items-center gap-1"><Eye size={12} /> {post.views}</span>

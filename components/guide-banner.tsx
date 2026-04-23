@@ -25,7 +25,7 @@ const PI_STEPS: Step[] = [
   {
     title: '주소창에 사이트 주소 입력',
     desc: 'Pi Browser 상단 주소창을 누르고 아래 주소를 입력한 뒤 이동하세요.',
-    code: 'pilink.vercel.app',
+    code: 'linkpi.io',
   },
   {
     title: '오른쪽 상단 "Pi 로그인" 버튼 클릭',
@@ -147,7 +147,7 @@ export function GuideBanner({ onClose, fullPage = false }: Props) {
       {/* 탭 설명 */}
       <div className={`px-4 py-2 text-xs font-medium flex items-center gap-2 ${tab === 'pi' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>
         {tab === 'pi' ? (
-          <><Smartphone size={12} /> Pi 앱 → Browser 탭에서 pilink.vercel.app 접속 후 Pi 로그인</>
+          <><Smartphone size={12} /> Pi 앱 → Browser 탭에서 linkpi.io 접속 후 Pi 로그인</>
         ) : (
           <><Monitor size={12} /> PC 일반 브라우저 전용 · 스마트폰에서는 다운로드 버튼이 보이지 않습니다</>
         )}

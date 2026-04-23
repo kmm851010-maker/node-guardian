@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false)
       return
     }
-    window.Pi.init({ version: '2.0', sandbox: false })
+    window.Pi.init({ version: '2.0', sandbox: true })
 
     // 저장된 유저가 있으면 Pi SDK 세션도 자동 복원
     const saved = localStorage.getItem('pilink_user')

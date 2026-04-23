@@ -56,8 +56,8 @@ async function sendTelegramToUser(pi_uid: string, severity: string, message: str
     .maybeSingle()
   if (data?.chat_id) {
     const footer = severity === 'critical'
-      ? '\n\n💬 비슷한 문제? QnA에서 도움받기\n📋 이벤트 전체 기록\n👉 <a href="https://pilink.vercel.app">pilink.vercel.app</a>'
-      : '\n\n📋 이벤트 전체 기록 → <a href="https://pilink.vercel.app">pilink.vercel.app</a>'
+      ? '\n\n혹시 해결이 안 된다면?\n다른 운영자들이 같은 문제를 먼저 겪었을 수 있습니다.\n💬 <a href="https://linkpi.io">linkpi.io</a> → QnA에서 물어보세요'
+      : '\n\n다음 중단은 막을 수 있습니다.\n운영자들의 노하우가 커뮤니티에 쌓이고 있어요.\n👉 <a href="https://linkpi.io">linkpi.io</a>'
     await sendTelegramMessage(data.chat_id, message + footer)
   }
 }

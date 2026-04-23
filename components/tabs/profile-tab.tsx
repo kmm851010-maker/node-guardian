@@ -66,7 +66,7 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
       {
         onReadyForServerApproval: async (paymentId) => {
           try {
-            const res = await fetch('https://pilink.vercel.app/api/payment/approve', {
+            const res = await fetch('https://linkpi.io/api/payment/approve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId }),
@@ -82,7 +82,7 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
           }
         },
         onReadyForServerCompletion: async (paymentId, txid) => {
-          const res = await fetch('https://pilink.vercel.app/api/payment/complete', {
+          const res = await fetch('https://linkpi.io/api/payment/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId, txid, pi_uid: user.uid, nickname: user.username }),

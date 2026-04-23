@@ -22,7 +22,7 @@ interface NodeStatus {
 }
 
 interface NodeStats {
-  uptime_percent: number
+  uptime_percent: number | null
   daily: { date: string; worst: string; uptime: number; hasData: boolean }[]
   event_counts: Record<string, number>
 }
@@ -172,21 +172,23 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-muted-foreground">최근 7일</span>
                 <span className={`text-sm font-bold ${
-                  stats.uptime_percent >= 99 ? 'text-green-600'
+                  stats.uptime_percent === null ? 'text-muted-foreground'
+                  : stats.uptime_percent >= 99 ? 'text-green-600'
                   : stats.uptime_percent >= 95 ? 'text-yellow-600'
                   : 'text-red-600'
                 }`}>
-                  {stats.uptime_percent.toFixed(1)}%
+                  {stats.uptime_percent === null ? '—' : `${stats.uptime_percent.toFixed(1)}%`}
                 </span>
               </div>
               <div className="w-full bg-gray-100 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full transition-all ${
-                    stats.uptime_percent >= 99 ? 'bg-green-500'
+                    stats.uptime_percent === null ? 'bg-gray-200'
+                    : stats.uptime_percent >= 99 ? 'bg-green-500'
                     : stats.uptime_percent >= 95 ? 'bg-yellow-500'
                     : 'bg-red-500'
                   }`}
-                  style={{ width: `${stats.uptime_percent}%` }}
+                  style={{ width: `${stats.uptime_percent ?? 0}%` }}
                 />
               </div>
             </div>

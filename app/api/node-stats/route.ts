@@ -47,11 +47,13 @@ export async function GET(req: NextRequest) {
     return down
   }
 
-  // 주간 가동률
+  // 주간 가동률 (이벤트 없으면 null)
   const weekStart = weekAgo.getTime()
   const weekSec = (Date.now() - weekStart) / 1000
   const weekDown = calcDowntime(weekStart, Date.now())
-  const uptime_percent = Math.max(0, Math.min(100, ((weekSec - weekDown) / weekSec) * 100))
+  const uptime_percent = rows.length === 0
+    ? null
+    : Math.max(0, Math.min(100, ((weekSec - weekDown) / weekSec) * 100))
 
   // 7일 일별 가동률 + 최악 상태
   const daily: { date: string; worst: string; uptime: number; hasData: boolean }[] = []

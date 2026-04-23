@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle, Download, BookOpen } from 'lucide-react'
+import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle, Download, BookOpen, Smartphone } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import DashboardTab from './tabs/dashboard-tab'
 import CommunityTab from './tabs/community-tab'
@@ -30,12 +30,11 @@ export default function PiLinkApp() {
   const [activeTab, setActiveTab] = useState<Tab>('community')
   const { user, isLoading, login, logout } = useAuth()
   const [isPremium, setIsPremium] = useState(false)
-  const [isPiBrowser, setIsPiBrowser] = useState(false)
+  const [isPiBrowser, setIsPiBrowser] = useState<boolean | null>(null)
 
   useEffect(() => {
-    const isPi = typeof window !== 'undefined' && !!(window as any).Pi
+    const isPi = !!(window as any).Pi
     setIsPiBrowser(isPi)
-    // Pi Browser면 대시보드로 시작
     if (isPi) setActiveTab('dashboard')
   }, [])
 
@@ -71,7 +70,7 @@ export default function PiLinkApp() {
             프로그램 다운로드
           </a>
         </div>
-        {!isLoading && (
+        {isPiBrowser === true && !isLoading && (
           user ? (
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">@{user.username}</span>
@@ -79,7 +78,7 @@ export default function PiLinkApp() {
                 <LogOut size={16} />
               </button>
             </div>
-          ) : isPiBrowser ? (
+          ) : (
             <button
               onClick={login}
               className="flex items-center gap-1 text-xs bg-violet-600 text-white px-3 py-1.5 rounded-full hover:bg-violet-700 transition-colors"
@@ -87,13 +86,24 @@ export default function PiLinkApp() {
               <LogIn size={14} />
               Pi 로그인
             </button>
-          ) : null
+          )
         )}
       </header>
 
+      {/* 비Pi브라우저 안내 배너 */}
+      {isPiBrowser === false && (
+        <div className="mx-4 mt-3 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <Smartphone size={16} className="text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 leading-relaxed">
+            <span className="font-semibold">로그인 및 커뮤니티 참여는 Pi Browser에서만 가능합니다.</span>
+            <br />게시글·댓글 조회는 이 브라우저에서도 가능합니다.
+          </p>
+        </div>
+      )}
+
       {/* 탭 컨텐츠 */}
       <main className="pb-20">
-        {isPiBrowser && <GuideDrawer />}
+        {isPiBrowser === true && <GuideDrawer />}
         {activeTab === 'dashboard'  && <DashboardTab user={user} />}
         {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} />}
         {activeTab === 'ranking'    && <RankingTab user={user} />}

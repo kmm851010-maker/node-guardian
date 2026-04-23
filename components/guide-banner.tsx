@@ -25,7 +25,7 @@ const PI_STEPS: Step[] = [
   {
     title: '주소창에 사이트 주소 입력',
     desc: 'Pi Browser 상단 주소창을 누르고 아래 주소를 입력한 뒤 이동하세요.',
-    code: 'linkpi.io',
+    code: 'pilink.vercel.app',
   },
   {
     title: '오른쪽 상단 "Pi 로그인" 버튼 클릭',
@@ -54,7 +54,7 @@ const PC_STEPS: Step[] = [
   {
     title: 'PC 일반 브라우저에서 사이트 접속',
     desc: '크롬, 엣지 등 일반 브라우저에서 아래 주소로 접속하세요. 다운로드 버튼은 PC에서만 보입니다.',
-    code: 'linkpi.io',
+    code: 'pilink.vercel.app',
     note: '스마트폰 Pi Browser에서는 다운로드 버튼이 표시되지 않아요. 반드시 PC에서 접속하세요.',
   },
   {
@@ -81,7 +81,7 @@ const PC_STEPS: Step[] = [
   },
   {
     title: 'Pi Browser에서 상태 확인',
-    desc: '이제 스마트폰 Pi Browser에서 linkpi.io 에 접속하면 방금 설치한 노드의 상태가 실시간으로 표시됩니다.',
+    desc: '이제 스마트폰 Pi Browser에서 pilink.vercel.app 에 접속하면 방금 설치한 노드의 상태가 실시간으로 표시됩니다.',
     note: '노드가디언 파일을 설치한 PC의 노드 고유번호를 Pi Browser에 로그인한 계정 프로필에 등록하셔야 정상적으로 서로 연결되어 실시간 연동이 됩니다.',
   },
   {
@@ -147,7 +147,7 @@ export function GuideBanner({ onClose, fullPage = false }: Props) {
       {/* 탭 설명 */}
       <div className={`px-4 py-2 text-xs font-medium flex items-center gap-2 ${tab === 'pi' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>
         {tab === 'pi' ? (
-          <><Smartphone size={12} /> Pi 앱 → Browser 탭에서 linkpi.io 접속 후 Pi 로그인</>
+          <><Smartphone size={12} /> Pi 앱 → Browser 탭에서 pilink.vercel.app 접속 후 Pi 로그인</>
         ) : (
           <><Monitor size={12} /> PC 일반 브라우저 전용 · 스마트폰에서는 다운로드 버튼이 보이지 않습니다</>
         )}

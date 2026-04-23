@@ -99,6 +99,19 @@ export async function GET(req: NextRequest) {
             )
             offlineAlerts++
           }
+        } else {
+          // 이전 offline → online 복구 이후 다시 오프라인 → 새 알림
+          await supabaseServer.from('node_events').insert({
+            pi_uid: sub.pi_uid,
+            event_type: 'node_offline',
+            severity: 'critical',
+            message: `노드 가디언 응답 없음 — PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`,
+          })
+          await sendTelegramMessage(
+            sub.chat_id,
+            `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`
+          )
+          offlineAlerts++
         }
       }
     } else {

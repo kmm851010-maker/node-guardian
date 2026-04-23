@@ -23,6 +23,7 @@ interface ClaimStatus {
 export default function ProfileTab({ user }: { user: { uid: string; username: string } | null }) {
   const [premium, setPremium] = useState<PremiumStatus>({ isPremium: false })
   const [paying, setPaying] = useState(false)
+  const [canceling, setCanceling] = useState(false)
   const [nodeKey, setNodeKey] = useState('')
   const [nodeKeyInput, setNodeKeyInput] = useState('')
   const [savingKey, setSavingKey] = useState(false)
@@ -52,6 +53,24 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
       .then(r => r.json())
       .then(d => setTelegramSubscribed(d.subscribed ?? false))
   }, [user])
+
+  const handleCancelPremium = async () => {
+    if (!user) return
+    if (!confirm('구독을 해지하시겠습니까? 남은 기간은 유지되며 자동 갱신이 취소됩니다.')) return
+    setCanceling(true)
+    const res = await fetch('/api/premium', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pi_uid: user.uid }),
+    })
+    if (res.ok) {
+      setPremium({ isPremium: false })
+      toast.success('구독이 해지됐습니다.')
+    } else {
+      toast.error('해지 실패. 다시 시도해주세요.')
+    }
+    setCanceling(false)
+  }
 
   const handlePremium = async () => {
     if (!user || !window.Pi) {
@@ -341,13 +360,20 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
         </CardHeader>
         <CardContent className="space-y-3">
           {premium.isPremium ? (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <p className="text-sm font-medium text-green-600">✅ 프리미엄 활성화됨</p>
               {premium.expires_at && (
                 <p className="text-xs text-muted-foreground">
                   만료: {new Date(premium.expires_at).toLocaleDateString('ko-KR')}
                 </p>
               )}
+              <button
+                onClick={handleCancelPremium}
+                disabled={canceling}
+                className="text-xs text-red-500 underline disabled:opacity-50"
+              >
+                {canceling ? '처리 중...' : '구독 해지'}
+              </button>
             </div>
           ) : (
             <div className="space-y-3">

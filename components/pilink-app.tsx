@@ -33,7 +33,9 @@ export default function PiLinkApp() {
   const [isPiBrowser, setIsPiBrowser] = useState<boolean | null>(null)
 
   useEffect(() => {
-    const isPi = !!(window as any).Pi
+    const hasPiSDK = !!(window as any).Pi
+    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)
+    const isPi = hasPiSDK && isMobile
     setIsPiBrowser(isPi)
     if (isPi) setActiveTab('dashboard')
   }, [])

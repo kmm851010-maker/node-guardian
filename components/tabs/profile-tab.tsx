@@ -352,9 +352,8 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
           ) : (
             <div className="space-y-3">
               <ul className="text-xs text-muted-foreground space-y-1">
-                <li>✅ 광고 제거</li>
-                <li>✅ 랭킹 상위 노출</li>
                 <li>✅ 프리미엄 뱃지</li>
+                <li>✅ 노드 운영자 커뮤니티 참여 (노하우 공유 · 질문 해결)</li>
                 <li>🔜 Pi 스마트컨트랙트 자동 구독 (예정)</li>
               </ul>
               <button

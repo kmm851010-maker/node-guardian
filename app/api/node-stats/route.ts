@@ -8,13 +8,14 @@ export async function GET(req: NextRequest) {
   const pi_uid = searchParams.get('pi_uid')
   if (!pi_uid) return NextResponse.json({ error: 'Missing pi_uid' }, { status: 400 })
 
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  const weekAgo  = new Date(Date.now() -  7 * 24 * 60 * 60 * 1000)
 
   const { data: events } = await supabaseServer
     .from('node_events')
     .select('event_type, severity, created_at')
     .eq('pi_uid', pi_uid)
-    .gte('created_at', weekAgo.toISOString())
+    .gte('created_at', monthAgo.toISOString())
     .order('created_at', { ascending: true })
 
   const rows = events ?? []
@@ -47,13 +48,24 @@ export async function GET(req: NextRequest) {
     return down
   }
 
-  // 주간 가동률 (이벤트 없으면 null)
-  const weekStart = weekAgo.getTime()
-  const weekSec = (Date.now() - weekStart) / 1000
-  const weekDown = calcDowntime(weekStart, Date.now())
-  const uptime_percent = rows.length === 0
+  // 7일 가동률 (이벤트 없으면 null)
+  const weekStart  = weekAgo.getTime()
+  const monthStart = monthAgo.getTime()
+  const now = Date.now()
+
+  const weekRows  = rows.filter(e => new Date(e.created_at).getTime() >= weekStart)
+  const weekSec   = (now - weekStart) / 1000
+  const weekDown  = calcDowntime(weekStart, now)
+  const uptime_7d = weekRows.length === 0
     ? null
     : Math.max(0, Math.min(100, ((weekSec - weekDown) / weekSec) * 100))
+
+  // 30일 가동률 (이벤트 없으면 null)
+  const monthSec   = (now - monthStart) / 1000
+  const monthDown  = calcDowntime(monthStart, now)
+  const uptime_30d = rows.length === 0
+    ? null
+    : Math.max(0, Math.min(100, ((monthSec - monthDown) / monthSec) * 100))
 
   // 7일 일별 가동률 + 최악 상태
   const daily: { date: string; worst: string; uptime: number; hasData: boolean }[] = []
@@ -86,5 +98,5 @@ export async function GET(req: NextRequest) {
     return acc
   }, {} as Record<string, number>)
 
-  return NextResponse.json({ uptime_percent, daily, event_counts })
+  return NextResponse.json({ uptime_7d, uptime_30d, daily, event_counts })
 }

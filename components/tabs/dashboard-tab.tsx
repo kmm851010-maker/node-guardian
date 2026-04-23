@@ -22,7 +22,8 @@ interface NodeStatus {
 }
 
 interface NodeStats {
-  uptime_percent: number | null
+  uptime_7d:  number | null
+  uptime_30d: number | null
   daily: { date: string; worst: string; uptime: number; hasData: boolean }[]
   event_counts: Record<string, number>
 }
@@ -163,35 +164,40 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <BarChart2 size={14} className="text-violet-500" /> 주간 가동률
+              <BarChart2 size={14} className="text-violet-500" /> 가동률
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* 가동률 바 */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-muted-foreground">최근 7일</span>
-                <span className={`text-sm font-bold ${
-                  stats.uptime_percent === null ? 'text-muted-foreground'
-                  : stats.uptime_percent >= 99 ? 'text-green-600'
-                  : stats.uptime_percent >= 95 ? 'text-yellow-600'
-                  : 'text-red-600'
-                }`}>
-                  {stats.uptime_percent === null ? '—' : `${stats.uptime_percent.toFixed(1)}%`}
-                </span>
+            {/* 7일 가동률 바 */}
+            {[
+              { label: '최근 7일', value: stats.uptime_7d },
+              { label: '최근 30일', value: stats.uptime_30d },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                  <span className={`text-sm font-bold ${
+                    value === null ? 'text-muted-foreground'
+                    : value >= 99 ? 'text-green-600'
+                    : value >= 95 ? 'text-yellow-600'
+                    : 'text-red-600'
+                  }`}>
+                    {value === null ? '—' : `${value.toFixed(1)}%`}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${
+                      value === null ? 'bg-gray-200'
+                      : value >= 99 ? 'bg-green-500'
+                      : value >= 95 ? 'bg-yellow-500'
+                      : 'bg-red-500'
+                    }`}
+                    style={{ width: `${value ?? 0}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all ${
-                    stats.uptime_percent === null ? 'bg-gray-200'
-                    : stats.uptime_percent >= 99 ? 'bg-green-500'
-                    : stats.uptime_percent >= 95 ? 'bg-yellow-500'
-                    : 'bg-red-500'
-                  }`}
-                  style={{ width: `${stats.uptime_percent ?? 0}%` }}
-                />
-              </div>
-            </div>
+            ))}
 
             {/* 7일 타임라인 */}
             <div>

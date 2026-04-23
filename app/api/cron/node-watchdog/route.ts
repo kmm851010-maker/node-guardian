@@ -29,13 +29,14 @@ export async function GET(req: NextRequest) {
     .from('telegram_subscriptions')
     .select('pi_uid, chat_id')
 
-  if (!subs || subs.length === 0) return NextResponse.json({ ok: true, checked: 0 })
+  if (!subs || subs.length === 0) return NextResponse.json({ ok: true, checked: 0, debug: 'no telegram subscriptions' })
 
   const now = Date.now()
   const offlineThreshold = new Date(now - OFFLINE_THRESHOLD_MS).toISOString()
 
   let offlineAlerts = 0
   let recoveryAlerts = 0
+  const debugInfo: { pi_uid: string; last_seen: string | null; isOffline: boolean | null }[] = []
 
   await Promise.allSettled(subs.map(async (sub) => {
     const { data: status } = await supabaseServer
@@ -44,9 +45,13 @@ export async function GET(req: NextRequest) {
       .eq('pi_uid', sub.pi_uid)
       .maybeSingle()
 
-    if (!status) return  // 노드 가디언 미설치 유저 → 스킵
+    if (!status) {
+      debugInfo.push({ pi_uid: sub.pi_uid, last_seen: null, isOffline: null })
+      return  // 노드 가디언 미설치 유저 → 스킵
+    }
 
     const isOffline = status.last_seen < offlineThreshold
+    debugInfo.push({ pi_uid: sub.pi_uid, last_seen: status.last_seen, isOffline })
 
     // 가장 최근 node_offline 이벤트
     const { data: lastOfflineEvent } = await supabaseServer
@@ -143,5 +148,5 @@ export async function GET(req: NextRequest) {
     }
   }))
 
-  return NextResponse.json({ ok: true, offlineAlerts, recoveryAlerts })
+  return NextResponse.json({ ok: true, offlineAlerts, recoveryAlerts, debug: debugInfo })
 }

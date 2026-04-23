@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
   const uptime_percent = Math.max(0, Math.min(100, ((weekSec - weekDown) / weekSec) * 100))
 
   // 7일 일별 가동률 + 최악 상태
-  const daily: { date: string; worst: string; uptime: number }[] = []
+  const daily: { date: string; worst: string; uptime: number; hasData: boolean }[] = []
   for (let i = 6; i >= 0; i--) {
     const d = new Date()
     d.setHours(0, 0, 0, 0)

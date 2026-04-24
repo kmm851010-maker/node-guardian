@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     if (!sub?.pi_uid) {
       await sendTelegramMessage(
         chat_id,
-        `연결된 계정이 없습니다.\n👉 <a href="https://linkpi.io">linkpi.io</a> 프로필 탭에서 텔레그램 알림을 연결해주세요.`,
+        `연결된 계정이 없습니다.\n👉 <a href="https://pilink.vercel.app">pilink.vercel.app</a> 프로필 탭에서 텔레그램 알림을 연결해주세요.`,
       )
       return NextResponse.json({ ok: true })
     }
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     if (!status) {
       await sendTelegramMessage(
         chat_id,
-        `Node Guardian이 실행 중이지 않거나 아직 데이터가 없습니다.\n👉 <a href="https://linkpi.io">linkpi.io</a>`,
+        `Node Guardian이 실행 중이지 않거나 아직 데이터가 없습니다.\n👉 <a href="https://pilink.vercel.app">pilink.vercel.app</a>`,
       )
       return NextResponse.json({ ok: true })
     }
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       `${procIcon} 프로세스: ${procLabel}\n` +
       `${portIcon} 포트: ${portLabel}\n` +
       `🕐 마지막 신호: ${timeAgo(status.last_seen)}\n\n` +
-      `👉 <a href="https://linkpi.io">linkpi.io</a> 에서 이벤트 기록 확인`,
+      `👉 <a href="https://pilink.vercel.app">pilink.vercel.app</a> 에서 이벤트 기록 확인`,
     )
     return NextResponse.json({ ok: true })
   }

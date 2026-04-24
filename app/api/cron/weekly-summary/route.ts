@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
         `${portIcon} 포트: ${!status ? '데이터 없음' : status.port_status === 'healthy' ? '정상' : '이상'}\n` +
         `🕐 마지막 신호: ${lastSeen}\n` +
         `📋 이번 주 이벤트: ${count ?? 0}건\n\n` +
-        `이번 주 내 노드, 잘 버텼나요?\n다른 운영자들의 가동률과 비교해보세요.\n활발한 참여로 보상도 받을 수 있습니다 👉 <a href="https://linkpi.io">linkpi.io</a>`,
+        `이번 주 내 노드, 잘 버텼나요?\n다른 운영자들의 가동률과 비교해보세요.\n활발한 참여로 보상도 받을 수 있습니다 👉 <a href="https://pilink.vercel.app">pilink.vercel.app</a>`,
       )
       sent++
     })

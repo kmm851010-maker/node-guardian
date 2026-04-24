@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (sub?.chat_id) {
         await sendTelegramMessage(
           sub.chat_id,
-          `❤️ 회원님의 게시글에 좋아요가 달렸습니다!\n\n👉 <a href="https://linkpi.io">linkpi.io</a> 에서 확인`,
+          `❤️ 회원님의 게시글에 좋아요가 달렸습니다!\n\n👉 <a href="https://pilink.vercel.app">pilink.vercel.app</a> 에서 확인`,
         )
       }
     }

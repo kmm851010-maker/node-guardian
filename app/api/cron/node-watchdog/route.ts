@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
 
-const OFFLINE_THRESHOLD_MS = 10 * 60 * 1000   // 10분 이상 신호 없으면 오프라인
+const OFFLINE_THRESHOLD_MS = 15 * 60 * 1000   // 15분 이상 신호 없으면 오프라인
 const REPEAT_INTERVAL_MS   = 60 * 60 * 1000   // 오프라인 지속 시 1시간마다 재알림
 
 function timeAgo(iso: string) {

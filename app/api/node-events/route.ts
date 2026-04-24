@@ -113,6 +113,39 @@ export async function POST(req: NextRequest) {
 
   await supabaseServer.from('node_status').upsert(statusUpdate, { onConflict: 'pi_uid' })
 
+  // startup 시 미복구 node_offline 있으면 즉시 복구 알림
+  if (event_type === 'startup') {
+    const { data: lastOffline } = await supabaseServer
+      .from('node_events')
+      .select('id, created_at')
+      .eq('pi_uid', pi_uid)
+      .eq('event_type', 'node_offline')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (lastOffline) {
+      const { data: recovered } = await supabaseServer
+        .from('node_events')
+        .select('id')
+        .eq('pi_uid', pi_uid)
+        .eq('event_type', 'node_online')
+        .gt('created_at', lastOffline.created_at)
+        .limit(1)
+        .maybeSingle()
+
+      if (!recovered) {
+        await supabaseServer.from('node_events').insert({
+          pi_uid,
+          event_type: 'node_online',
+          severity: 'recovery',
+          message: '노드 가디언 재접속 — 정상 모니터링이 재개됐습니다.',
+        })
+        await sendTelegramToUser(pi_uid, 'recovery', '✅ 노드 가디언 재접속\n\n정상 모니터링이 재개됐습니다.')
+      }
+    }
+  }
+
   // heartbeat, startup, info 이벤트는 알림 제외 (중요 이벤트만)
   if (severity !== 'info' && event_type !== 'heartbeat') {
     await Promise.allSettled([

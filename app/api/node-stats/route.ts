@@ -67,6 +67,20 @@ export async function GET(req: NextRequest) {
     ? null
     : Math.max(0, Math.min(100, ((monthSec - monthDown) / monthSec) * 100))
 
+  // 노드가 데이터를 보내기 시작한 첫 번째 시점
+  const firstEventTime = rows.length > 0 ? new Date(rows[0].created_at).getTime() : null
+
+  // node_status의 last_seen도 확인 (이벤트 없이 heartbeat만 있는 경우 대비)
+  const { data: nodeStatus } = await supabaseServer
+    .from('node_status')
+    .select('last_seen, uptime_start')
+    .eq('pi_uid', pi_uid)
+    .maybeSingle()
+
+  const nodeStartTime = nodeStatus?.uptime_start
+    ? new Date(nodeStatus.uptime_start).getTime()
+    : firstEventTime
+
   // 7일 일별 가동률 + 최악 상태
   const daily: { date: string; worst: string; uptime: number; hasData: boolean }[] = []
   for (let i = 6; i >= 0; i--) {
@@ -84,11 +98,14 @@ export async function GET(req: NextRequest) {
     const dayDown   = calcDowntime(dayStart, dayEnd)
     const dayUptime = Math.max(0, Math.min(100, ((daySec - dayDown) / daySec) * 100))
 
+    // 노드가 해당 날짜 이전부터 운영 중이면 이벤트 없어도 hasData=true (100% 정상 운영)
+    const nodeWasActive = nodeStartTime !== null && nodeStartTime < dayEnd
+
     daily.push({
       date:    d.toISOString().slice(0, 10),
       worst:   hasCritical ? 'critical' : hasWarning ? 'warning' : 'healthy',
       uptime:  Math.round(dayUptime * 10) / 10,
-      hasData: dayEvents.length > 0 || downtimePeriods.some(p => p.start < dayEnd && (p.end ?? Date.now()) > dayStart),
+      hasData: nodeWasActive || dayEvents.length > 0 || downtimePeriods.some(p => p.start < dayEnd && (p.end ?? Date.now()) > dayStart),
     })
   }
 

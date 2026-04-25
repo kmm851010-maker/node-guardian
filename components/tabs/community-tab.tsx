@@ -308,7 +308,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
             <span className="text-xs font-bold text-violet-700">📢 Pi Core Team 공지 · 뉴스</span>
             <span className="text-xs text-violet-400 ml-auto">minepi.com/blog</span>
           </div>
-          <ul className="divide-y divide-violet-100">
+          <ul className="divide-y divide-violet-100 max-h-40 overflow-y-auto">
             {piNews.map((item, i) => (
               <li key={i}>
                 <a

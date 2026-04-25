@@ -112,6 +112,11 @@ export default function CommunityTab({ user, isPremium }: Props) {
   const [submittingComment, setSubmittingComment] = useState(false)
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
+  const [piNews, setPiNews] = useState<{ title: string; link: string; date: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/pi-news').then(r => r.json()).then(d => setPiNews(d.items ?? []))
+  }, [])
   const [likingPostId, setLikingPostId] = useState<string | null>(null)
   const [likingCommentId, setLikingCommentId] = useState<string | null>(null)
   const viewedPosts = useRef<Set<string>>(new Set())
@@ -295,6 +300,31 @@ export default function CommunityTab({ user, isPremium }: Props) {
   return (
     <div className="p-4 space-y-2">
       {profileUid && <UserProfileModal uid={profileUid} onClose={() => setProfileUid(null)} />}
+
+      {/* Pi Core Team 공지 */}
+      {piNews.length > 0 && (
+        <div className="rounded-xl border border-violet-200 bg-violet-50 overflow-hidden">
+          <div className="px-3 py-2 bg-violet-100 flex items-center gap-1.5">
+            <span className="text-xs font-bold text-violet-700">📢 Pi Core Team 공지 · 뉴스</span>
+            <span className="text-xs text-violet-400 ml-auto">minepi.com/blog</span>
+          </div>
+          <ul className="divide-y divide-violet-100">
+            {piNews.map((item, i) => (
+              <li key={i}>
+                <a
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between px-3 py-2 hover:bg-violet-100 transition-colors gap-2"
+                >
+                  <span className="text-xs text-violet-900 flex-1 truncate">{item.title}</span>
+                  <span className="text-xs text-violet-400 shrink-0">{item.date}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* 삭제 확인 팝업 */}
       {deletingPost && (

@@ -93,32 +93,36 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
             })
             const text = await res.text()
             if (!res.ok) {
-              toast.error(`승인 오류 ${res.status}: ${text}`)
+              alert(`[승인 오류 ${res.status}]\n${text}`)
               setPaying(false)
             }
           } catch (e) {
-            toast.error(`승인 fetch 오류: ${String(e)}`)
+            alert(`[승인 네트워크 오류]\n${String(e)}`)
             setPaying(false)
           }
         },
         onReadyForServerCompletion: async (paymentId, txid) => {
-          const res = await fetch('/api/payment/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, txid, pi_uid: user.uid, nickname: user.username }),
-          })
-          if (res.ok) {
-            const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json())
-            setPremium(updated)
-            toast.success('프리미엄 구독 완료! 🎉')
-          } else {
-            const err = await res.json()
-            toast.error(`완료 오류: ${err.error}`)
+          try {
+            const res = await fetch('/api/payment/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId, txid, pi_uid: user.uid, nickname: user.username }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+              const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json())
+              setPremium(updated)
+              toast.success('프리미엄 구독 완료! 🎉')
+            } else {
+              alert(`[완료 오류 ${res.status}]\n${JSON.stringify(data)}`)
+            }
+          } catch (e) {
+            alert(`[완료 네트워크 오류]\n${String(e)}`)
           }
           setPaying(false)
         },
         onCancel: () => { setPaying(false); toast.error('결제가 취소됐습니다.') },
-        onError: (e) => { console.error(e); setPaying(false); toast.error(`결제 오류: ${JSON.stringify(e)}`) },
+        onError: (e) => { setPaying(false); alert(`[Pi SDK 오류]\n${JSON.stringify(e)}`) },
       }
     )
   }

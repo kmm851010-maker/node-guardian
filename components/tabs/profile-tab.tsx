@@ -364,11 +364,15 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
           {premium.isPremium ? (
             <div className="space-y-2">
               <p className="text-sm font-medium text-green-600">✅ 프리미엄 활성화됨</p>
-              {premium.expires_at && (
-                <p className="text-xs text-muted-foreground">
-                  만료: {new Date(premium.expires_at).toLocaleDateString('ko-KR')}
-                </p>
-              )}
+              {premium.expires_at && (() => {
+                const days = Math.ceil((new Date(premium.expires_at).getTime() - Date.now()) / 86400000)
+                return (
+                  <p className="text-xs text-muted-foreground">
+                    만료: {new Date(premium.expires_at).toLocaleDateString('ko-KR')}
+                    {days > 0 && <span className="ml-1 text-green-600 font-medium">({days}일 남음)</span>}
+                  </p>
+                )
+              })()}
               {premium.canceled ? (
                 <p className="text-xs text-orange-500">⏳ 기간 만료 후 자동 해지 예정</p>
               ) : (

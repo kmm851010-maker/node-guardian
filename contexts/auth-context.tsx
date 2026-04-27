@@ -37,21 +37,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem('pilink_user')
     if (saved) {
       window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
+        const txid = payment.transaction?.txid
+        alert(`[미완료결제발견]\nid: ${payment.identifier}\ntxid: ${txid ?? '없음'}\nstatus: ${JSON.stringify(payment.status)}`)
         try {
-          if (payment.transaction?.txid) {
-            await fetch('/api/payment/complete', {
+          if (txid) {
+            const res = await fetch('/api/payment/complete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
+              body: JSON.stringify({ paymentId: payment.identifier, txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
             })
+            const data = await res.json()
+            alert(`[미완료결제-complete] ${res.status}: ${JSON.stringify(data)}`)
           } else {
-            await fetch('/api/payment/approve', {
+            const res = await fetch('/api/payment/approve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId: payment.identifier }),
             })
+            const data = await res.json()
+            alert(`[미완료결제-approve] ${res.status}: ${JSON.stringify(data)}`)
           }
-        } catch {}
+        } catch (e) {
+          alert(`[미완료결제-오류] ${String(e)}`)
+        }
       }).then(async auth => {
         const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
         localStorage.setItem('pilink_user', JSON.stringify(piUser))

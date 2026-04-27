@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       const { data: status } = await supabaseServer
         .from('node_status')
         .select('process_status, port_status, last_seen')
-        .eq('nickname', sub.pi_uid)
+        .eq('pi_uid', sub.pi_uid)
         .maybeSingle()
 
       const procIcon = !status ? '⚫' : status.process_status === 'healthy' ? '🟢' : status.process_status === 'warning' ? '🟡' : '🔴'

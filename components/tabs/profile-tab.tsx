@@ -81,6 +81,21 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
 
     setPaying(true)
 
+    // 결제 전 재인증으로 미완료 결제 정리
+    try {
+      await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
+        if (payment.transaction?.txid) {
+          try {
+            await fetch('/api/payment/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: user.uid, nickname: user.username }),
+            })
+          } catch {}
+        }
+      })
+    } catch {}
+
     window.Pi.createPayment(
       { amount: 1, memo: 'LinkPi 프리미엄 구독 1개월', metadata: { pi_uid: user.uid } },
       {

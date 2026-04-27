@@ -80,11 +80,13 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
     }
 
     setPaying(true)
+    alert(`[결제 시작] pi_uid: ${user.uid}`)
 
     window.Pi.createPayment(
       { amount: 1, memo: 'LinkPi 프리미엄 구독 1개월', metadata: { pi_uid: user.uid } },
       {
         onReadyForServerApproval: async (paymentId) => {
+          alert(`[승인 요청] paymentId: ${paymentId}`)
           try {
             const res = await fetch('/api/payment/approve', {
               method: 'POST',

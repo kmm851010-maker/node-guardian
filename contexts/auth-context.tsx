@@ -37,21 +37,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem('pilink_user')
     if (saved) {
       window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
-        try {
-          if (payment.transaction?.txid) {
+        // txid 있는 경우(블록체인 완료)만 서버 complete 호출
+        // txid 없는 경우 Pi SDK에 맡김 (approve 재호출 시 새 결제 차단됨)
+        if (payment.transaction?.txid) {
+          try {
             await fetch('/api/payment/complete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
             })
-          } else {
-            await fetch('/api/payment/approve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId: payment.identifier }),
-            })
-          }
-        } catch {}
+          } catch {}
+        }
       }).then(async auth => {
         const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
         localStorage.setItem('pilink_user', JSON.stringify(piUser))
@@ -79,22 +75,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const auth = await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
-        // 미완료 결제 자동 처리
-        try {
-          if (payment.transaction?.txid) {
+        if (payment.transaction?.txid) {
+          try {
             await fetch('/api/payment/complete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
             })
-          } else {
-            await fetch('/api/payment/approve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId: payment.identifier }),
-            })
-          }
-        } catch {}
+          } catch {}
+        }
       })
       const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
 

@@ -38,11 +38,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (saved) {
       window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
         try {
-          await fetch('/api/payment/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction?.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
-          })
+          if (payment.transaction?.txid) {
+            await fetch('/api/payment/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
+            })
+          } else {
+            await fetch('/api/payment/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId: payment.identifier }),
+            })
+          }
         } catch {}
       }).then(async auth => {
         const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
@@ -71,13 +79,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const auth = await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
-        // 미완료 결제 자동 완료 처리
+        // 미완료 결제 자동 처리
         try {
-          await fetch('/api/payment/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction?.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
-          })
+          if (payment.transaction?.txid) {
+            await fetch('/api/payment/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
+            })
+          } else {
+            await fetch('/api/payment/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId: payment.identifier }),
+            })
+          }
         } catch {}
       })
       const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }

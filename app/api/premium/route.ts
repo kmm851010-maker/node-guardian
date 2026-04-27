@@ -23,17 +23,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ isPremium, expires_at: data.expires_at })
 }
 
-// 구독 해지 (만료일을 현재로 설정)
+// 구독 해지 의사 표시 (자동갱신 없는 시스템이므로 기간은 그대로 유지)
 export async function DELETE(req: NextRequest) {
   const { pi_uid } = await req.json()
   if (!pi_uid) return NextResponse.json({ error: 'Missing pi_uid' }, { status: 400 })
-
-  const { error } = await supabaseServer
-    .from('premium_users')
-    .update({ expires_at: new Date().toISOString() })
-    .eq('pi_uid', pi_uid)
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
   return NextResponse.json({ ok: true })
 }

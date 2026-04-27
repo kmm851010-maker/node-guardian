@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 interface PremiumStatus {
   isPremium: boolean
   expires_at?: string
+  canceled?: boolean
 }
 
 interface ClaimStatus {
@@ -64,8 +65,8 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
       body: JSON.stringify({ pi_uid: user.uid }),
     })
     if (res.ok) {
-      setPremium({ isPremium: false })
-      toast.success('구독이 해지됐습니다.')
+      setPremium(prev => ({ ...prev, canceled: true }))
+      toast.success('해지 신청됐습니다. 남은 기간 만료 후 자동 해지됩니다.')
     } else {
       toast.error('해지 실패. 다시 시도해주세요.')
     }
@@ -107,7 +108,8 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
             body: JSON.stringify({ paymentId, txid, pi_uid: user.uid, nickname: user.username }),
           })
           if (res.ok) {
-            setPremium({ isPremium: true })
+            const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json())
+            setPremium(updated)
             toast.success('프리미엄 구독 완료! 🎉')
           } else {
             const err = await res.json()
@@ -367,13 +369,17 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
                   만료: {new Date(premium.expires_at).toLocaleDateString('ko-KR')}
                 </p>
               )}
-              <button
-                onClick={handleCancelPremium}
-                disabled={canceling}
-                className="text-xs text-red-500 underline disabled:opacity-50"
-              >
-                {canceling ? '처리 중...' : '구독 해지'}
-              </button>
+              {premium.canceled ? (
+                <p className="text-xs text-orange-500">⏳ 기간 만료 후 자동 해지 예정</p>
+              ) : (
+                <button
+                  onClick={handleCancelPremium}
+                  disabled={canceling}
+                  className="text-xs text-red-500 underline disabled:opacity-50"
+                >
+                  {canceling ? '처리 중...' : '구독 해지'}
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">

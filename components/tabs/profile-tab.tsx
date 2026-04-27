@@ -82,7 +82,7 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
     setPaying(true)
     alert(`[결제 시작] pi_uid: ${user.uid}`)
 
-    window.Pi.createPayment(
+    try { window.Pi.createPayment(
       { amount: 1, memo: 'LinkPi 프리미엄 구독 1개월', metadata: { pi_uid: user.uid } },
       {
         onReadyForServerApproval: async (paymentId) => {
@@ -126,7 +126,7 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
         onCancel: () => { setPaying(false); toast.error('결제가 취소됐습니다.') },
         onError: (e) => { setPaying(false); alert(`[Pi SDK 오류]\n${JSON.stringify(e)}`) },
       }
-    )
+    ) } catch (e) { setPaying(false); alert(`[createPayment 예외]\n${String(e)}`) }
   }
 
   const handleClaim = async () => {

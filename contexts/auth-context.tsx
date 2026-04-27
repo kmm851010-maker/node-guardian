@@ -31,35 +31,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false)
       return
     }
-    window.Pi.init({ version: '2.0', sandbox: false })
+    window.Pi.init({ version: '2.0', sandbox: true })
 
     // 저장된 유저가 있으면 Pi SDK 세션도 자동 복원
     const saved = localStorage.getItem('pilink_user')
     if (saved) {
       window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
-        const txid = payment.transaction?.txid
-        alert(`[미완료결제발견]\nid: ${payment.identifier}\ntxid: ${txid ?? '없음'}\nstatus: ${JSON.stringify(payment.status)}`)
         try {
-          if (txid) {
-            const res = await fetch('/api/payment/complete', {
+          if (payment.transaction?.txid) {
+            await fetch('/api/payment/complete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId: payment.identifier, txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
+              body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
             })
-            const data = await res.json()
-            alert(`[미완료결제-complete] ${res.status}: ${JSON.stringify(data)}`)
           } else {
-            const res = await fetch('/api/payment/approve', {
+            await fetch('/api/payment/approve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId: payment.identifier }),
             })
-            const data = await res.json()
-            alert(`[미완료결제-approve] ${res.status}: ${JSON.stringify(data)}`)
           }
-        } catch (e) {
-          alert(`[미완료결제-오류] ${String(e)}`)
-        }
+        } catch {}
       }).then(async auth => {
         const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
         localStorage.setItem('pilink_user', JSON.stringify(piUser))

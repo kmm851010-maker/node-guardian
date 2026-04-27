@@ -80,26 +80,24 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
     }
 
     setPaying(true)
-    alert(`[결제 시작] pi_uid: ${user.uid}`)
 
-    try { window.Pi.createPayment(
+    window.Pi.createPayment(
       { amount: 1, memo: 'LinkPi 프리미엄 구독 1개월', metadata: { pi_uid: user.uid } },
       {
         onReadyForServerApproval: async (paymentId) => {
-          alert(`[승인 요청] paymentId: ${paymentId}`)
           try {
             const res = await fetch('/api/payment/approve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId }),
             })
-            const text = await res.text()
             if (!res.ok) {
-              alert(`[승인 오류 ${res.status}]\n${text}`)
+              const text = await res.text()
+              toast.error(`승인 오류 ${res.status}: ${text}`)
               setPaying(false)
             }
           } catch (e) {
-            alert(`[승인 네트워크 오류]\n${String(e)}`)
+            toast.error(`승인 오류: ${String(e)}`)
             setPaying(false)
           }
         },
@@ -110,23 +108,23 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId, txid, pi_uid: user.uid, nickname: user.username }),
             })
-            const data = await res.json()
             if (res.ok) {
               const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json())
               setPremium(updated)
               toast.success('프리미엄 구독 완료! 🎉')
             } else {
-              alert(`[완료 오류 ${res.status}]\n${JSON.stringify(data)}`)
+              const data = await res.json()
+              toast.error(`완료 오류: ${data.error}`)
             }
           } catch (e) {
-            alert(`[완료 네트워크 오류]\n${String(e)}`)
+            toast.error(`완료 오류: ${String(e)}`)
           }
           setPaying(false)
         },
         onCancel: () => { setPaying(false); toast.error('결제가 취소됐습니다.') },
-        onError: (e) => { setPaying(false); alert(`[Pi SDK 오류]\n${JSON.stringify(e)}`) },
+        onError: (e) => { setPaying(false); toast.error(`결제 오류: ${JSON.stringify(e)}`) },
       }
-    ) } catch (e) { setPaying(false); alert(`[createPayment 예외]\n${String(e)}`) }
+    )
   }
 
   const handleClaim = async () => {

@@ -367,10 +367,21 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
               {premium.expires_at && (() => {
                 const days = Math.ceil((new Date(premium.expires_at).getTime() - Date.now()) / 86400000)
                 return (
-                  <p className="text-xs text-muted-foreground">
-                    만료: {new Date(premium.expires_at).toLocaleDateString('ko-KR')}
-                    {days > 0 && <span className="ml-1 text-green-600 font-medium">({days}일 남음)</span>}
-                  </p>
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      만료: {new Date(premium.expires_at).toLocaleDateString('ko-KR')}
+                      {days > 0 && <span className="ml-1 text-green-600 font-medium">({days}일 남음)</span>}
+                    </p>
+                    {days <= 7 && (
+                      <button
+                        onClick={handlePremium}
+                        disabled={paying}
+                        className="w-full py-2.5 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                      >
+                        {paying ? '처리 중...' : '🔁 구독 연장 (1 Pi / 30일)'}
+                      </button>
+                    )}
+                  </>
                 )
               })()}
               {premium.canceled ? (

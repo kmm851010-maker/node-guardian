@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Crown, Zap, ExternalLink, Gift, Send } from 'lucide-react'
@@ -24,6 +24,7 @@ interface ClaimStatus {
 export default function ProfileTab({ user }: { user: { uid: string; username: string } | null }) {
   const [premium, setPremium] = useState<PremiumStatus>({ isPremium: false })
   const [paying, setPaying] = useState(false)
+  const didReauth = useRef(false)
   const [canceling, setCanceling] = useState(false)
   const [nodeKey, setNodeKey] = useState('')
   const [nodeKeyInput, setNodeKeyInput] = useState('')
@@ -81,23 +82,23 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
 
     setPaying(true)
 
-    // 결제 전 재인증으로 미완료 결제 정리
-    try {
-      await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
-        alert(`[미완료결제] id:${payment.identifier}\ntxid:${payment.transaction?.txid ?? '없음'}\nstatus:${JSON.stringify(payment.status)}`)
-        if (payment.transaction?.txid) {
-          await fetch('/api/payment/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: user.uid, nickname: user.username }),
-          }).catch(() => {})
-        }
-      })
-      alert('[재인증 완료] createPayment 호출 예정')
-    } catch (e) {
-      alert(`[재인증 실패] ${String(e)}`)
-      setPaying(false)
-      return
+    // 첫 결제 시도에만 재인증으로 미완료 결제 정리
+    if (!didReauth.current) {
+      try {
+        await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
+          if (payment.transaction?.txid) {
+            await fetch('/api/payment/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: user.uid, nickname: user.username }),
+            }).catch(() => {})
+          }
+        })
+        didReauth.current = true
+      } catch {
+        setPaying(false)
+        return
+      }
     }
 
     window.Pi.createPayment(

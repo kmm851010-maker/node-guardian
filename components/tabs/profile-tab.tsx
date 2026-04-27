@@ -84,17 +84,21 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
     // 결제 전 재인증으로 미완료 결제 정리
     try {
       await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
+        alert(`[미완료결제] id:${payment.identifier}\ntxid:${payment.transaction?.txid ?? '없음'}\nstatus:${JSON.stringify(payment.status)}`)
         if (payment.transaction?.txid) {
-          try {
-            await fetch('/api/payment/complete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: user.uid, nickname: user.username }),
-            })
-          } catch {}
+          await fetch('/api/payment/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: user.uid, nickname: user.username }),
+          }).catch(() => {})
         }
       })
-    } catch {}
+      alert('[재인증 완료] createPayment 호출 예정')
+    } catch (e) {
+      alert(`[재인증 실패] ${String(e)}`)
+      setPaying(false)
+      return
+    }
 
     window.Pi.createPayment(
       { amount: 1, memo: 'LinkPi 프리미엄 구독 1개월', metadata: { pi_uid: user.uid } },

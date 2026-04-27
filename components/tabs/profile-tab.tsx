@@ -21,7 +21,7 @@ interface ClaimStatus {
   week_start?: string
 }
 
-export default function ProfileTab({ user }: { user: { uid: string; username: string } | null }) {
+export default function ProfileTab({ user, onPremiumChange }: { user: { uid: string; username: string } | null; onPremiumChange?: (v: boolean) => void }) {
   const [premium, setPremium] = useState<PremiumStatus>({ isPremium: false })
   const [paying, setPaying] = useState(false)
   const didReauth = useRef(false)
@@ -131,6 +131,7 @@ export default function ProfileTab({ user }: { user: { uid: string; username: st
             if (res.ok) {
               const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json())
               setPremium(updated)
+              onPremiumChange?.(updated.isPremium)
               toast.success('프리미엄 구독 완료! 🎉')
             } else {
               const data = await res.json()

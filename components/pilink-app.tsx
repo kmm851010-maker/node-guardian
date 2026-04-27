@@ -110,7 +110,7 @@ export default function PiLinkApp() {
         {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} />}
         {activeTab === 'ranking'    && <RankingTab user={user} />}
         {activeTab === 'qna'        && <QnaTab user={user} isPremium={isPremium} />}
-        {activeTab === 'profile'    && <ProfileTab user={user} />}
+        {activeTab === 'profile'    && <ProfileTab user={user} onPremiumChange={setIsPremium} />}
       </main>
 
       {/* 하단 탭 바 */}

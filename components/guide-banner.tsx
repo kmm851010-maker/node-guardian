@@ -86,9 +86,11 @@ const PC_STEPS: Step[] = [
     note: '노드가디언 파일을 설치한 PC의 노드 고유번호를 Pi Browser에 로그인한 계정 프로필에 등록하셔야 정상적으로 서로 연결되어 실시간 연동이 됩니다.',
   },
   {
-    title: 'PC 시작 시 자동 실행 설정 (선택)',
-    desc: 'PC를 켤 때마다 수동으로 실행하기 번거롭다면 시작 프로그램에 등록하세요.',
-    code: '① NodeGuardian.exe 우클릭 → "바로 가기 만들기"\n② Win+R 키 → "shell:startup" 입력 후 확인\n③ 생성된 바로가기를 열린 폴더에 붙여넣기',
+    title: '재부팅 후 자동 시작 등록 (강력 권장)',
+    desc: 'PC가 재부팅되면 NodeGuardian이 자동으로 다시 실행되도록 Windows 시작 프로그램에 등록하세요. 등록하지 않으면 Windows 업데이트나 정전 후 재부팅 시 노드 감시가 중단됩니다.',
+    code: '① NodeGuardian.exe 파일에 우클릭 → "바로 가기 만들기"\n② 키보드에서 Win키 + R 동시에 누르기\n③ 실행 창에 아래를 입력 후 확인\n   shell:startup\n④ 열린 폴더에 ①에서 만든 바로가기를 붙여넣기\n\n✅ 이제 PC를 재시작해도 자동으로 실행됩니다.',
+    note: '등록 확인 방법: 작업 관리자(Ctrl+Shift+Esc) → 시작 프로그램 탭 → NodeGuardian 항목이 "사용"으로 표시되면 완료.',
+    warn: '시작 프로그램 폴더 위치: C:\\Users\\[사용자명]\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup',
   },
 ]
 
@@ -271,10 +273,11 @@ export default function GuideDrawer() {
       {/* 플로팅 도움말 버튼 */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-4 z-40 w-11 h-11 bg-violet-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-violet-700 transition-colors active:scale-95"
+        className="fixed bottom-24 right-4 z-40 bg-violet-600 text-white rounded-full shadow-lg flex items-center gap-1.5 px-3 py-2 hover:bg-violet-700 transition-colors active:scale-95"
         title="설치 가이드"
       >
-        <HelpCircle size={20} />
+        <HelpCircle size={15} />
+        <span className="text-xs font-bold">사용법</span>
       </button>
 
       {/* 가이드 드로어 */}

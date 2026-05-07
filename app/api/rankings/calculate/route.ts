@@ -89,7 +89,7 @@ async function runCalculation(weekStart: string, weekEnd: string, startUTC: Date
     pi_uid: u.pi_uid,
     nickname: u.nickname,
     total_likes: u.total_likes,
-    weekly_xp: u.weekly_xp,
+    // weekly_xp: u.weekly_xp, // TODO: 스키마 캐시 갱신 후 활성화
   }))
 
   const { error: insertError } = await supabaseServer.from('weekly_rankings').insert(rows)

@@ -3,27 +3,33 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
-function getWeekStartDate(): string {
-  const nowKST = new Date(Date.now() + 9 * 3600000)
-  const day = nowKST.getUTCDay()
-  const sun = new Date(nowKST.getTime() - day * 86400000)
-  const y = sun.getUTCFullYear()
-  const m = String(sun.getUTCMonth() + 1).padStart(2, '0')
-  const d = String(sun.getUTCDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-// GET: 현재 주 랭킹 조회 (또는 지정 week_start)
+// GET: 가장 최근에 계산된 주 랭킹 반환 (week_start 파라미터로 특정 주 지정 가능)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const weekStart = searchParams.get('week_start') ?? getWeekStartDate()
+  const weekStart = searchParams.get('week_start')
 
+  if (weekStart) {
+    const { data, error } = await supabaseServer
+      .from('weekly_rankings')
+      .select('*')
+      .eq('week_start', weekStart)
+      .order('rank', { ascending: true })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ data, weekStart })
+  }
+
+  // week_start 미지정 시 가장 최근 계산된 주 반환
   const { data, error } = await supabaseServer
     .from('weekly_rankings')
     .select('*')
-    .eq('week_start', weekStart)
+    .order('week_start', { ascending: false })
     .order('rank', { ascending: true })
+    .limit(50)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data, weekStart })
+
+  const mostRecent = data?.[0]?.week_start ?? null
+  const filtered = mostRecent ? data.filter(r => r.week_start === mostRecent) : []
+
+  return NextResponse.json({ data: filtered, weekStart: mostRecent })
 }

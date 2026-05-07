@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Zap, ExternalLink, Gift, Send } from 'lucide-react'
+import { Crown, Zap, ExternalLink, Gift, Send, Star } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
@@ -21,6 +21,14 @@ interface ClaimStatus {
   week_start?: string
 }
 
+function getLevel(xp: number): { level: number; name: string } {
+  if (xp >= 1500) return { level: 5, name: '마스터' }
+  if (xp >= 700) return { level: 4, name: '노드' }
+  if (xp >= 300) return { level: 3, name: '나무' }
+  if (xp >= 100) return { level: 2, name: '새싹' }
+  return { level: 1, name: '씨앗' }
+}
+
 export default function ProfileTab({ user, onPremiumChange }: { user: { uid: string; username: string } | null; onPremiumChange?: (v: boolean) => void }) {
   const [premium, setPremium] = useState<PremiumStatus>({ isPremium: false })
   const [paying, setPaying] = useState(false)
@@ -34,6 +42,8 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
   const [telegramSubscribed, setTelegramSubscribed] = useState(false)
   const [telegramInput, setTelegramInput] = useState('')
   const [savingTelegram, setSavingTelegram] = useState(false)
+  const [attendance, setAttendance] = useState<{ checked_today: boolean; week_xp: number; total_xp: number } | null>(null)
+  const [checkingIn, setCheckingIn] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -54,6 +64,10 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
     fetch(`/api/telegram-subscribe?pi_uid=${encodeURIComponent(user.username)}`)
       .then(r => r.json())
       .then(d => setTelegramSubscribed(d.subscribed ?? false))
+
+    fetch(`/api/attendance?pi_uid=${user.uid}`)
+      .then(r => r.json())
+      .then(setAttendance)
   }, [user])
 
   const handleCancelPremium = async () => {
@@ -101,6 +115,7 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
       }
     }
 
+    await window.Pi.init({ version: '2.0', sandbox: true }).catch(() => {})
     window.Pi.createPayment(
       { amount: 1, memo: 'LinkPi 프리미엄 구독 1개월', metadata: { pi_uid: user.uid } },
       {
@@ -191,6 +206,29 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
     toast.success('텔레그램 알림이 해제됐습니다.')
   }
 
+  const handleAttendance = async () => {
+    if (!user) return
+    setCheckingIn(true)
+    const res = await fetch('/api/attendance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pi_uid: user.uid }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setAttendance(prev => prev ? {
+        ...prev,
+        checked_today: true,
+        week_xp: prev.week_xp + data.xp_earned,
+        total_xp: prev.total_xp + data.xp_earned,
+      } : null)
+      toast.success(`출석 체크 완료! +${data.xp_earned} XP`)
+    } else {
+      toast.error(data.error === 'already_checked' ? '오늘은 이미 출석했습니다.' : '출석 체크 실패')
+    }
+    setCheckingIn(false)
+  }
+
   const handleSaveKey = async () => {
     if (!user || !nodeKeyInput) return
     setSavingKey(true)
@@ -234,8 +272,37 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">Pi Node 운영자</p>
+            <p className="text-xs text-muted-foreground">
+              {attendance
+                ? `Lv.${getLevel(attendance.total_xp).level} ${getLevel(attendance.total_xp).name} · ${attendance.total_xp} XP`
+                : 'Pi Node 운영자'}
+            </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 출석 체크 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Star size={14} className="text-yellow-500" /> 출석 체크
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {attendance && (
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">이번 주 XP</span>
+              <span className="font-semibold text-violet-600">+{attendance.week_xp} XP</span>
+            </div>
+          )}
+          <button
+            onClick={handleAttendance}
+            disabled={checkingIn || !!attendance?.checked_today}
+            className="w-full py-2.5 bg-violet-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+          >
+            {attendance?.checked_today ? '✅ 오늘 출석 완료' : checkingIn ? '처리 중...' : '📅 출석 체크 (+10 XP)'}
+          </button>
+          <p className="text-xs text-muted-foreground text-center">이번 주 XP는 주간 랭킹 활동점수에 반영됩니다</p>
         </CardContent>
       </Card>
 

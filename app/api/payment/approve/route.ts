@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 
-const PI_API_KEY = process.env.PI_API_KEY ?? ''
+const PI_API_KEY = process.env.PI_NETWORK_API_KEY ?? process.env.PI_API_KEY ?? ''
 const PI_API_BASE = 'https://api.minepi.com/v2'
 
 export async function POST(req: NextRequest) {

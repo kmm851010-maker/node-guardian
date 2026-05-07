@@ -16,7 +16,7 @@ interface PiPaymentCallbacks {
 }
 
 interface PiSDK {
-  init(config: { version: string; sandbox?: boolean }): void
+  init(config: { version: string; sandbox?: boolean }): Promise<void>
   authenticate(scopes: ('username' | 'payments' | 'wallet_address')[], onIncompletePaymentFound: (payment: unknown) => void): Promise<AuthResult>
   createPayment(data: { amount: number; memo: string; metadata: Record<string, unknown> }, callbacks: PiPaymentCallbacks): void
 }

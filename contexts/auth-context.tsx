@@ -31,40 +31,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false)
       return
     }
-    window.Pi.init({ version: '2.0', sandbox: true })
 
-    // 저장된 유저가 있으면 Pi SDK 세션도 자동 복원
-    const saved = localStorage.getItem('pilink_user')
-    if (saved) {
-      window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
-        // txid 있는 경우(블록체인 완료)만 서버 complete 호출
-        // txid 없는 경우 Pi SDK에 맡김 (approve 재호출 시 새 결제 차단됨)
-        if (payment.transaction?.txid) {
-          try {
-            await fetch('/api/payment/complete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
-            })
-          } catch {}
-        }
-      }).then(async auth => {
-        const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
+    ;(async () => {
+      try {
+        await window.Pi!.init({ version: '2.0', sandbox: true })
+      } catch {}
+
+      const saved = localStorage.getItem('pilink_user')
+      try {
+        const auth = await window.Pi!.authenticate(['username', 'payments'], async (payment: any) => {
+          if (payment.transaction?.txid) {
+            try {
+              await fetch('/api/payment/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: payment.metadata?.pi_uid, nickname: '' }),
+              })
+            } catch {}
+          }
+        })
+
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: auth.accessToken }),
+        })
+        if (!res.ok) throw new Error('auth validation failed')
+        const piUser: PiUser = await res.json()
+
         localStorage.setItem('pilink_user', JSON.stringify(piUser))
         setUser(piUser)
-        // 자동 복원 시에도 로그인 기록
         fetch('/api/user-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pi_uid: piUser.uid, nickname: piUser.username }),
         }).catch(() => {})
-      }).catch(() => {
-        // Pi Browser 아닌 환경에서는 localStorage 유저 그대로 사용
-        setUser(JSON.parse(saved))
-      }).finally(() => setIsLoading(false))
-    } else {
-      setIsLoading(false)
-    }
+      } catch {
+        if (saved) setUser(JSON.parse(saved))
+      } finally {
+        setIsLoading(false)
+      }
+    })()
   }, [])
 
   const login = async () => {
@@ -74,7 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const auth = await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
+      await window.Pi!.init({ version: '2.0', sandbox: true }).catch(() => {})
+      const auth = await window.Pi!.authenticate(['username', 'payments'], async (payment: any) => {
         if (payment.transaction?.txid) {
           try {
             await fetch('/api/payment/complete', {
@@ -85,7 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } catch {}
         }
       })
-      const piUser: PiUser = { uid: auth.user.uid, username: auth.user.username }
+
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: auth.accessToken }),
+      })
+      if (!res.ok) throw new Error('auth validation failed')
+      const piUser: PiUser = await res.json()
 
       // node_profiles upsert
       await supabase.from('node_profiles').upsert(

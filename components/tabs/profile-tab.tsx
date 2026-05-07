@@ -415,12 +415,18 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
         </CardContent>
       </Card>
 
-      {/* 주간 랭킹 상금 수령 */}
-      {claimStatus && (claimStatus.claimable || claimStatus.claimed) && (
+      {/* 주간 랭킹 보상 수령 */}
+      {claimStatus && (claimStatus.claimable || claimStatus.claimed) && (() => {
+        // 이번 주 일요일 00:00 KST = 클레임 마감
+        const nowKST = new Date(Date.now() + 9 * 3600000)
+        const day = nowKST.getUTCDay()
+        const nextSun = new Date(nowKST.getTime() + (7 - day) * 86400000)
+        const deadline = `${nextSun.getUTCMonth() + 1}/${nextSun.getUTCDate()} 00:00 (KST)`
+        return (
         <Card className={claimStatus.claimable ? 'border-yellow-300 bg-yellow-50' : ''}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Gift size={14} className="text-yellow-500" /> 주간 랭킹 상금
+              <Gift size={14} className="text-yellow-500" /> 주간 랭킹 보상
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -433,20 +439,24 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
               </p>
             </div>
             {claimStatus.claimable ? (
-              <button
-                onClick={handleClaim}
-                disabled={claiming}
-                className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Gift size={16} />
-                {claiming ? '처리 중...' : '프리미엄 1주일 즉시 수령'}
-              </button>
+              <>
+                <button
+                  onClick={handleClaim}
+                  disabled={claiming}
+                  className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Gift size={16} />
+                  {claiming ? '처리 중...' : '프리미엄 1주일 즉시 수령'}
+                </button>
+                <p className="text-xs text-orange-500 text-center">⏰ 수령 마감: {deadline}</p>
+              </>
             ) : (
               <p className="text-sm text-green-600 font-medium">✅ 프리미엄 1주일 적용 완료</p>
             )}
           </CardContent>
         </Card>
-      )}
+        )
+      })()}
 
       {/* 프리미엄 구독 */}
       <Card>

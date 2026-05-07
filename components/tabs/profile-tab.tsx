@@ -174,7 +174,10 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
     const data = await res.json()
     if (res.ok) {
       setClaimStatus(prev => prev ? { ...prev, claimable: false, claimed: true } : prev)
-      toast.success(`🎉 ${data.rank}위 상금 수령 신청 완료! 72시간 내 10 Pi가 지급됩니다.`)
+      const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json())
+      setPremium(updated)
+      onPremiumChange?.(updated.isPremium)
+      toast.success(`🎉 ${data.rank}위 달성! 프리미엄 1주일이 즉시 적용됐습니다.`)
     } else {
       toast.error(data.error ?? '수령 실패')
     }
@@ -436,10 +439,10 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
                 className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Gift size={16} />
-                {claiming ? '처리 중...' : '10 Pi 상금 수령하기'}
+                {claiming ? '처리 중...' : '프리미엄 1주일 즉시 수령'}
               </button>
             ) : (
-              <p className="text-sm text-green-600 font-medium">✅ 상금 수령 신청 완료 (72시간 내 지급)</p>
+              <p className="text-sm text-green-600 font-medium">✅ 프리미엄 1주일 적용 완료</p>
             )}
           </CardContent>
         </Card>

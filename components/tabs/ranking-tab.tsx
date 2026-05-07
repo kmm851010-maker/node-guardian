@@ -72,7 +72,7 @@ export default function RankingTab({ user }: Props) {
             <div className="text-xs text-violet-700 space-y-0.5">
               <p className="font-semibold">주간 인기 랭킹 🏆</p>
               <p>커뮤니티 & QnA 게시글·댓글의 좋아요 합산으로 매주 1~10위를 선정합니다.</p>
-              <p>선정된 분께는 <span className="font-bold">10 Test Pi</span> 상금이 지급됩니다.</p>
+              <p>선정된 분께는 <span className="font-bold">프리미엄 1주일</span>이 즉시 지급됩니다.</p>
               {nextSunday && <p className="text-violet-500">다음 갱신: {nextSunday} 00:00 (KST)</p>}
             </div>
           </div>
@@ -121,7 +121,7 @@ export default function RankingTab({ user }: Props) {
                   {entry.claimed ? (
                     <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">수령완료</span>
                   ) : (
-                    <span className="text-xs font-bold text-violet-700 bg-violet-100 px-2 py-1 rounded-full">🎁 10π</span>
+                    <span className="text-xs font-bold text-violet-700 bg-violet-100 px-2 py-1 rounded-full">🎁 1주 프리미엄</span>
                   )}
                 </div>
               </div>

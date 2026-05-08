@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Zap, ExternalLink, Gift, Send, Star } from 'lucide-react'
+import { Crown, Zap, ExternalLink, Gift, Send, Star, Pencil, Camera, Check, X } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
@@ -40,6 +40,12 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
   const [savingTelegram, setSavingTelegram] = useState(false)
   const [attendance, setAttendance] = useState<{ checked_today: boolean; week_xp: number; total_xp: number } | null>(null)
   const [checkingIn, setCheckingIn] = useState(false)
+  const [profileData, setProfileData] = useState<{ display_name?: string; avatar_url?: string } | null>(null)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState('')
+  const [savingName, setSavingName] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -64,6 +70,10 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
     fetch(`/api/attendance?pi_uid=${user.uid}`)
       .then(r => r.json())
       .then(setAttendance)
+
+    fetch(`/api/profile?pi_uid=${user.uid}`)
+      .then(r => r.json())
+      .then(setProfileData)
   }, [user])
 
   const handleCancelPremium = async () => {
@@ -228,6 +238,49 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
     setCheckingIn(false)
   }
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('2MB 이하 이미지만 업로드 가능합니다.')
+      return
+    }
+    setUploadingAvatar(true)
+    const fd = new FormData()
+    fd.append('pi_uid', user.uid)
+    fd.append('file', file)
+    const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd })
+    const data = await res.json()
+    if (res.ok) {
+      setProfileData(prev => ({ ...prev, avatar_url: data.avatar_url }))
+      toast.success('프로필 사진이 업데이트됐습니다.')
+    } else {
+      toast.error(data.error ?? '업로드 실패')
+    }
+    setUploadingAvatar(false)
+    e.target.value = ''
+  }
+
+  const handleSaveName = async () => {
+    if (!user || !nameInput.trim()) return
+    setSavingName(true)
+    const res = await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pi_uid: user.uid, display_name: nameInput.trim() }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setProfileData(prev => ({ ...prev, display_name: data.display_name }))
+      setEditingName(false)
+      toast.success('닉네임이 저장됐습니다.')
+    } else {
+      toast.error(data.error ?? '저장 실패')
+    }
+    setSavingName(false)
+  }
+
   const handleSaveKey = async () => {
     if (!user || !nodeKeyInput) return
     setSavingKey(true)
@@ -259,18 +312,78 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
       {/* 프로필 카드 */}
       <Card>
         <CardContent className="p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-bold text-lg">
-            {user.username[0].toUpperCase()}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">@{user.username}</span>
-              {premium.isPremium && (
-                <Badge className="bg-yellow-400 text-yellow-900 text-xs">
-                  <Crown size={10} className="mr-1" /> 프리미엄
-                </Badge>
+          {/* 아바타 */}
+          <div className="relative shrink-0">
+            <div
+              className="w-14 h-14 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-bold text-xl overflow-hidden cursor-pointer"
+              onClick={() => avatarInputRef.current?.click()}
+            >
+              {profileData?.avatar_url ? (
+                <img src={profileData.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                user.username[0].toUpperCase()
               )}
             </div>
+            <button
+              className="absolute bottom-0 right-0 bg-violet-600 text-white rounded-full p-1 shadow"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+            >
+              {uploadingAvatar ? (
+                <span className="w-3 h-3 block border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Camera size={10} />
+              )}
+            </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {/* 닉네임 행 */}
+            {editingName ? (
+              <div className="flex items-center gap-1 mb-1">
+                <input
+                  autoFocus
+                  value={nameInput}
+                  onChange={e => setNameInput(e.target.value)}
+                  maxLength={20}
+                  className="border rounded px-2 py-0.5 text-sm flex-1 min-w-0"
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }}
+                />
+                <button onClick={handleSaveName} disabled={savingName} className="text-violet-600 disabled:opacity-50">
+                  <Check size={15} />
+                </button>
+                <button onClick={() => setEditingName(false)} className="text-muted-foreground">
+                  <X size={15} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="font-semibold truncate">
+                  {profileData?.display_name ?? `@${user.username}`}
+                </span>
+                {premium.isPremium && (
+                  <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">
+                    <Crown size={10} className="mr-1" /> 프리미엄
+                  </Badge>
+                )}
+                <button
+                  onClick={() => { setNameInput(profileData?.display_name ?? user.username); setEditingName(true) }}
+                  className="text-muted-foreground hover:text-violet-600 shrink-0"
+                >
+                  <Pencil size={12} />
+                </button>
+              </div>
+            )}
+            {profileData?.display_name && (
+              <p className="text-xs text-muted-foreground">@{user.username}</p>
+            )}
             <p className="text-xs text-muted-foreground">
               {attendance
                 ? `Lv.${getLevel(attendance.total_xp)} · ${attendance.total_xp} XP`

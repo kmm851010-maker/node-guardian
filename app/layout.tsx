@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   title: 'LinkPi | Pi Node 모니터링 & 커뮤니티',
   description: 'Pi Node 운영자들을 위한 실시간 모니터링 & 커뮤니티 플랫폼',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

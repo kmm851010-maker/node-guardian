@@ -18,9 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko" className={geist.className}>
       <head>
-        <link rel="icon" href="/icon.png" type="image/png" />
-        <link rel="shortcut icon" href="/icon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+        <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
         <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="beforeInteractive" />
       </head>
       <body className="min-h-screen bg-background text-foreground">

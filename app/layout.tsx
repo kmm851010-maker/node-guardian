@@ -12,16 +12,15 @@ export const metadata: Metadata = {
   title: 'LinkPi | Pi Node 모니터링 & 커뮤니티',
   description: 'Pi Node 운영자들을 위한 실시간 모니터링 & 커뮤니티 플랫폼',
   manifest: '/manifest.json',
-  icons: {
-    icon: '/icon.png',
-    apple: '/icon.png',
-  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" className={geist.className}>
       <head>
+        <link rel="icon" href="/icon.png" type="image/png" />
+        <link rel="shortcut icon" href="/icon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
         <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="beforeInteractive" />
       </head>
       <body className="min-h-screen bg-background text-foreground">

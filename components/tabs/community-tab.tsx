@@ -106,6 +106,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const [expandedPost, setExpandedPost] = useState<string | null>(null)
+  const [modalPost, setModalPost] = useState<string | null>(null)
   const [comments, setComments] = useState<Record<string, Comment[]>>({})
   const [commentInput, setCommentInput] = useState<Record<string, string>>({})
   const [replyTo, setReplyTo] = useState<{ postId: string; commentId: string; nickname: string } | null>(null)
@@ -155,8 +156,8 @@ export default function CommunityTab({ user, isPremium }: Props) {
     return () => observer.disconnect()
   }, [hasMore, loadingMore, offset, loadPosts])
 
-  const toggleExpand = async (postId: string) => {
-    if (expandedPost === postId) { setExpandedPost(null); return }
+  const openPost = async (postId: string) => {
+    setModalPost(postId)
     setExpandedPost(postId)
     if (!viewedPosts.current.has(postId)) {
       viewedPosts.current.add(postId)
@@ -171,6 +172,11 @@ export default function CommunityTab({ user, isPremium }: Props) {
       const data = await res.json()
       setComments(prev => ({ ...prev, [postId]: data.data ?? [] }))
     }
+  }
+
+  const closeModal = () => {
+    setModalPost(null)
+    setExpandedPost(null)
   }
 
   const handleLike = async (e: React.MouseEvent, postId: string) => {
@@ -263,6 +269,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
     setEditingPost(post.id)
     setEditTitle(post.title)
     setEditContent(post.content)
+    setModalPost(post.id)
     setExpandedPost(post.id)
   }
 
@@ -300,6 +307,174 @@ export default function CommunityTab({ user, isPremium }: Props) {
   return (
     <div className="p-4 space-y-2">
       {profileUid && <UserProfileModal uid={profileUid} onClose={() => setProfileUid(null)} />}
+
+      {/* 게시글 상세 모달 */}
+      {modalPost && (() => {
+        const post = posts.find(p => p.id === modalPost)
+        if (!post) return null
+        const isLiked = likedPosts.has(post.id)
+        const isMyPost = user?.uid === post.author_uid
+        const isEditing = editingPost === post.id
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closeModal}>
+            <div className="absolute inset-0 bg-black/60" />
+            <div
+              className="relative bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* 모달 헤더 */}
+              <div className="flex items-start gap-2 px-4 pt-4 pb-3 border-b shrink-0">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${typeColor(post.post_type)}`}>{typeLabel(post.post_type)}</span>
+                    <span className="text-sm font-semibold leading-snug">{post.title}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <button onClick={() => { closeModal(); setProfileUid(post.author_uid) }} className="hover:text-violet-600 hover:underline">{post.nickname}</button>
+                    <span>{formatTime(post.created_at)}</span>
+                    <span className="flex items-center gap-0.5"><Eye size={10} /> {post.views}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {isMyPost && !isEditing && (
+                    <>
+                      <button onClick={() => { setEditingPost(post.id); setEditTitle(post.title); setEditContent(post.content) }} className="p-1.5 text-muted-foreground hover:text-violet-600"><Pencil size={14} /></button>
+                      <button onClick={() => { closeModal(); setDeletingPost(post.id) }} className="p-1.5 text-muted-foreground hover:text-red-500"><Trash2 size={14} /></button>
+                    </>
+                  )}
+                  <button onClick={closeModal} className="p-1.5 text-muted-foreground hover:text-foreground"><X size={18} /></button>
+                </div>
+              </div>
+
+              {/* 모달 본문 — 스크롤 */}
+              <div className="flex-1 overflow-y-auto">
+                {isEditing ? (
+                  <div className="px-4 py-3 space-y-2">
+                    <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                      maxLength={150} className="w-full border rounded-lg px-3 py-2 text-sm" />
+                    <div className="relative">
+                      <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
+                        rows={8} maxLength={10000} className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
+                      <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">{editContent.length}/10,000</span>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setEditingPost(null)} className="px-3 py-1.5 text-sm text-muted-foreground">취소</button>
+                      <button onClick={() => handleEdit(post.id)} disabled={savingEdit}
+                        className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50">
+                        {savingEdit ? '저장 중...' : '저장'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="px-4 py-3 space-y-3">
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
+                    {post.image_url && (
+                      <img src={post.image_url} alt="post" className="w-full h-auto rounded-xl border" />
+                    )}
+                  </div>
+                )}
+
+                {/* 댓글 */}
+                {!isEditing && (
+                  <div className="border-t bg-muted/30 px-4 py-3 space-y-3">
+                    {(comments[post.id] ?? []).map(comment => (
+                      !comment.parent_id && (
+                        <div key={comment.id} className="space-y-1.5">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 bg-white rounded-xl px-3 py-2 space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <button onClick={() => setProfileUid(comment.author_uid)}
+                                  className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.nickname}</button>
+                                <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
+                                <button onClick={e => handleCommentLike(e, comment.id, post.id)} disabled={!!likingCommentId}
+                                  className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 disabled:opacity-60 ${
+                                    likedComments.has(comment.id) ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500'
+                                  }`}>
+                                  {likingCommentId === comment.id ? <Spinner /> : <Heart size={11} fill={likedComments.has(comment.id) ? 'currentColor' : 'none'} />}
+                                  <span>{comment.likes ?? 0}</span>
+                                </button>
+                              </div>
+                              <p className="text-xs whitespace-pre-wrap leading-relaxed">{comment.content}</p>
+                            </div>
+                            {isPremium && (
+                              <button onClick={() => setReplyTo(replyTo?.commentId === comment.id ? null : { postId: post.id, commentId: comment.id, nickname: comment.nickname })}
+                                className="text-xs text-violet-500 mt-1 whitespace-nowrap">답글</button>
+                            )}
+                          </div>
+                          {(comments[post.id] ?? []).filter(c => c.parent_id === comment.id).map(reply => (
+                            <div key={reply.id} className="ml-4 flex items-start gap-1.5">
+                              <CornerDownRight size={11} className="text-muted-foreground mt-1.5 shrink-0" />
+                              <div className="flex-1 bg-white rounded-xl px-3 py-2 space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <button onClick={() => setProfileUid(reply.author_uid)}
+                                    className="text-xs font-medium hover:text-violet-600 hover:underline">{reply.nickname}</button>
+                                  <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
+                                  <button onClick={e => handleCommentLike(e, reply.id, post.id)}
+                                    className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 ${
+                                      likedComments.has(reply.id) ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500'
+                                    }`}>
+                                    <Heart size={11} fill={likedComments.has(reply.id) ? 'currentColor' : 'none'} />
+                                    <span>{reply.likes ?? 0}</span>
+                                  </button>
+                                </div>
+                                <p className="text-xs whitespace-pre-wrap leading-relaxed">{reply.content}</p>
+                              </div>
+                            </div>
+                          ))}
+                          {replyTo?.commentId === comment.id && isPremium && (
+                            <div className="ml-4 flex gap-1.5">
+                              <textarea value={commentInput[`r-${post.id}`] ?? ''}
+                                onChange={e => setCommentInput(prev => ({ ...prev, [`r-${post.id}`]: e.target.value }))}
+                                placeholder={`@${replyTo.nickname}에게 답글...`} maxLength={2000} rows={2}
+                                className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
+                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, `r-${post.id}`) } }} />
+                              <button onClick={() => handleComment(post.id, `r-${post.id}`)} disabled={submittingComment}
+                                className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
+                                {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    ))}
+                    {!replyTo && (
+                      isPremium ? (
+                        <div className="flex gap-1.5">
+                          <textarea value={commentInput[post.id] ?? ''}
+                            onChange={e => setCommentInput(prev => ({ ...prev, [post.id]: e.target.value }))}
+                            placeholder="댓글 입력..." maxLength={2000} rows={2}
+                            className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, post.id) } }} />
+                          <button onClick={() => handleComment(post.id, post.id)} disabled={submittingComment}
+                            className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
+                            {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                          </button>
+                        </div>
+                      ) : (
+                        user && <PremiumRequired />
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 좋아요 푸터 */}
+              <div className="border-t px-4 py-2 shrink-0 flex items-center">
+                <button onClick={e => handleLike(e, post.id)} disabled={!!likingPostId}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-full transition-all active:scale-95 disabled:opacity-60 ${
+                    isLiked ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500 hover:bg-rose-50'
+                  }`}>
+                  {likingPostId === post.id ? <Spinner /> : <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={2} />}
+                  <span className="text-sm font-medium">{post.likes}</span>
+                </button>
+                {!isPremium && user && (
+                  <span className="ml-2 text-xs text-amber-500 flex items-center gap-0.5"><Crown size={10} /> 프리미엄</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Pi Core Team 공지 */}
       {piNews.length > 0 && (
@@ -447,7 +622,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
           </div>
           {posts.map(post => (
             <div key={post.id} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/30 cursor-pointer transition-colors"
-              onClick={() => toggleExpand(post.id)}>
+              onClick={() => openPost(post.id)}>
               <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 w-10 text-center ${typeColor(post.post_type)}`}>{typeLabel(post.post_type)}</span>
               <div className="flex-1 min-w-0">
                 <span className="text-sm truncate block">{post.title}
@@ -472,7 +647,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
         const isEditing = editingPost === post.id
         return (
           <Card key={post.id} className="overflow-hidden">
-            <CardContent className="p-3 cursor-pointer" onClick={() => !isEditing && toggleExpand(post.id)}>
+            <CardContent className="p-3 cursor-pointer" onClick={() => !isEditing && openPost(post.id)}>
               <div className="flex items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
@@ -516,215 +691,10 @@ export default function CommunityTab({ user, isPremium }: Props) {
               )}
             </div>
 
-            {expandedPost === post.id && (
-              <div className="border-t" onClick={e => e.stopPropagation()}>
-                {/* 수정 폼 */}
-                {isEditing ? (
-                  <div className="px-3 py-3 space-y-2 bg-muted/10">
-                    <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)}
-                      maxLength={150} className="w-full border rounded-lg px-3 py-2 text-sm" />
-                    <div className="relative">
-                      <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
-                        rows={6} maxLength={10000} className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
-                      <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">{editContent.length}/10,000</span>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => setEditingPost(null)} className="px-3 py-1.5 text-sm text-muted-foreground">취소</button>
-                      <button onClick={() => handleEdit(post.id)} disabled={savingEdit}
-                        className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50">
-                        {savingEdit ? '저장 중...' : '저장'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="px-3 py-2 space-y-2 bg-muted/20">
-                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
-                    {post.image_url && (
-                      <img src={post.image_url} alt="post" className="w-full max-h-64 object-cover rounded-lg" />
-                    )}
-                  </div>
-                )}
-
-                {/* 댓글 */}
-                {!isEditing && (
-                  <div className="bg-muted/30 px-3 py-2 space-y-2">
-                    {(comments[post.id] ?? []).map(comment => (
-                      !comment.parent_id && (
-                        <div key={comment.id} className="space-y-1">
-                          <div className="flex items-start gap-2">
-                            <div className="flex-1 bg-white rounded-lg px-2.5 py-1.5 space-y-0.5">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <button onClick={() => setProfileUid(comment.author_uid)}
-                                  className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.nickname}</button>
-                                <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
-                                <button onClick={e => handleCommentLike(e, comment.id, post.id)} disabled={!!likingCommentId}
-                                  className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 disabled:opacity-60 ${
-                                    likedComments.has(comment.id) ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500'
-                                  }`}>
-                                  {likingCommentId === comment.id ? <Spinner /> : <Heart size={11} fill={likedComments.has(comment.id) ? 'currentColor' : 'none'} />}
-                                  <span>{comment.likes ?? 0}</span>
-                                </button>
-                              </div>
-                              <div className="max-h-48 overflow-y-auto">
-                                <p className="text-xs whitespace-pre-wrap leading-relaxed">{comment.content}</p>
-                              </div>
-                            </div>
-                            {isPremium && (
-                              <button onClick={() => setReplyTo(replyTo?.commentId === comment.id ? null : { postId: post.id, commentId: comment.id, nickname: comment.nickname })}
-                                className="text-xs text-violet-500 mt-1 whitespace-nowrap">답글</button>
-                            )}
-                          </div>
-                          {(comments[post.id] ?? []).filter(c => c.parent_id === comment.id).map(reply => (
-                            <div key={reply.id} className="ml-4 flex items-start gap-1.5">
-                              <CornerDownRight size={11} className="text-muted-foreground mt-1.5 shrink-0" />
-                              <div className="flex-1 bg-white rounded-lg px-2.5 py-1.5 space-y-0.5">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <button onClick={() => setProfileUid(reply.author_uid)}
-                                    className="text-xs font-medium hover:text-violet-600 hover:underline">{reply.nickname}</button>
-                                  <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
-                                  <button onClick={e => handleCommentLike(e, reply.id, post.id)}
-                                    className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 ${
-                                      likedComments.has(reply.id) ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500'
-                                    }`}>
-                                    <Heart size={11} fill={likedComments.has(reply.id) ? 'currentColor' : 'none'} />
-                                    <span>{reply.likes ?? 0}</span>
-                                  </button>
-                                </div>
-                                <div className="max-h-36 overflow-y-auto">
-                                  <p className="text-xs whitespace-pre-wrap leading-relaxed">{reply.content}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          {replyTo?.commentId === comment.id && isPremium && (
-                            <div className="ml-4 flex gap-1.5">
-                              <textarea value={commentInput[`r-${post.id}`] ?? ''}
-                                onChange={e => setCommentInput(prev => ({ ...prev, [`r-${post.id}`]: e.target.value }))}
-                                placeholder={`@${replyTo.nickname}에게 답글...`} maxLength={2000} rows={2}
-                                className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
-                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, `r-${post.id}`) } }} />
-                              <button onClick={() => handleComment(post.id, `r-${post.id}`)} disabled={submittingComment}
-                                className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
-                                {submittingComment ? <><Spinner />등록 중</> : '등록'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    ))}
-                    {!replyTo && (
-                      isPremium ? (
-                        <div className="flex gap-1.5">
-                          <textarea value={commentInput[post.id] ?? ''}
-                            onChange={e => setCommentInput(prev => ({ ...prev, [post.id]: e.target.value }))}
-                            placeholder="댓글 입력..." maxLength={2000} rows={2}
-                            className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
-                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, post.id) } }} />
-                          <button onClick={() => handleComment(post.id, post.id)} disabled={submittingComment}
-                            className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
-                            {submittingComment ? <><Spinner />등록 중</> : '등록'}
-                          </button>
-                        </div>
-                      ) : (
-                        user && <PremiumRequired />
-                      )
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </Card>
         )
       })}
 
-      {/* 목록뷰에서 클릭한 글 상세 */}
-      {viewMode === 'list' && expandedPost && (() => {
-        const post = posts.find(p => p.id === expandedPost)
-        if (!post) return null
-        const isLiked = likedPosts.has(post.id)
-        const isMyPost = user?.uid === post.author_uid
-        const isEditing = editingPost === post.id
-        return (
-          <Card className="overflow-hidden">
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2 justify-between mb-2">
-                <div>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full mr-2 ${typeColor(post.post_type)}`}>{typeLabel(post.post_type)}</span>
-                  <span className="text-sm font-semibold">{post.title}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  {isMyPost && (
-                    <>
-                      <button onClick={() => startEdit(post)} className="p-1 text-muted-foreground hover:text-violet-600"><Pencil size={12} /></button>
-                      <button onClick={() => setDeletingPost(post.id)} className="p-1 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
-                    </>
-                  )}
-                  <button onClick={() => setExpandedPost(null)} className="p-1 text-muted-foreground"><X size={14} /></button>
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
-                <button onClick={() => setProfileUid(post.author_uid)} className="hover:text-violet-600">{post.nickname}</button>
-                <span>{formatTime(post.created_at)}</span>
-                <span className="flex items-center gap-0.5"><Eye size={10} /> {post.views}</span>
-              </div>
-            </CardContent>
-            <div className="border-t">
-              {isEditing ? (
-                <div className="px-3 py-3 space-y-2">
-                  <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} maxLength={150} className="w-full border rounded-lg px-3 py-2 text-sm" />
-                  <div className="relative">
-                    <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
-                      maxLength={10000} className="w-full border rounded-lg px-3 py-2 text-sm resize-none min-h-[200px] max-h-[400px] overflow-y-auto" />
-                    <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">{editContent.length}/10,000</span>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => setEditingPost(null)} className="px-3 py-1.5 text-sm text-muted-foreground">취소</button>
-                    <button onClick={() => handleEdit(post.id)} disabled={savingEdit} className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm">저장</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="px-3 py-2 bg-muted/20">
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
-                  {post.image_url && <img src={post.image_url} alt="post" className="w-full max-h-64 object-cover rounded-lg mt-2" />}
-                </div>
-              )}
-              <div className="px-3 py-2 border-t flex items-center">
-                <button onClick={e => handleLike(e, post.id)}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-full transition-all active:scale-95 ${
-                    isLiked ? 'text-rose-500 bg-rose-50' : 'text-muted-foreground hover:text-rose-500 hover:bg-rose-50'
-                  }`}>
-                  <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={2} />
-                  <span className="text-sm font-medium">{post.likes}</span>
-                </button>
-              </div>
-              <div className="bg-muted/30 px-3 py-2 space-y-2">
-                {(comments[post.id] ?? []).map(comment => (
-                  !comment.parent_id && (
-                    <div key={comment.id} className="flex items-start gap-2">
-                      <div className="flex-1 bg-white rounded-lg px-2.5 py-1.5 space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => setProfileUid(comment.author_uid)} className="text-xs font-medium hover:text-violet-600">{comment.nickname}</button>
-                          <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
-                        </div>
-                        <p className="text-xs whitespace-pre-wrap">{comment.content}</p>
-                      </div>
-                    </div>
-                  )
-                ))}
-                {isPremium ? (
-                  <div className="flex gap-1.5">
-                    <textarea value={commentInput[post.id] ?? ''} onChange={e => setCommentInput(prev => ({ ...prev, [post.id]: e.target.value }))}
-                      placeholder="댓글 입력..." maxLength={2000} rows={2} className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, post.id) } }} />
-                    <button onClick={() => handleComment(post.id, post.id)} disabled={submittingComment}
-                      className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs self-end">등록</button>
-                  </div>
-                ) : user && <PremiumRequired />}
-              </div>
-            </div>
-          </Card>
-        )
-      })()}
 
       <div ref={sentinelRef} className="h-4" />
       {loadingMore && <div className="text-center text-xs text-muted-foreground py-2">불러오는 중...</div>}

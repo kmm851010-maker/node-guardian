@@ -117,13 +117,11 @@ export default function RankingTab({ user }: Props) {
                     <span>좋아요</span>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  {entry.claimed ? (
+                {entry.claimed && (
+                  <div className="text-right shrink-0">
                     <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">수령완료</span>
-                  ) : (
-                    <span className="text-xs font-bold text-violet-700 bg-violet-100 px-2 py-1 rounded-full">🎁 1주 프리미엄</span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             ))
           )}

@@ -21,12 +21,8 @@ interface ClaimStatus {
   week_start?: string
 }
 
-function getLevel(xp: number): { level: number; name: string } {
-  if (xp >= 1500) return { level: 5, name: '마스터' }
-  if (xp >= 700) return { level: 4, name: '노드' }
-  if (xp >= 300) return { level: 3, name: '나무' }
-  if (xp >= 100) return { level: 2, name: '새싹' }
-  return { level: 1, name: '씨앗' }
+function getLevel(xp: number): number {
+  return Math.min(100, Math.floor(xp / 50) + 1)
 }
 
 export default function ProfileTab({ user, onPremiumChange }: { user: { uid: string; username: string } | null; onPremiumChange?: (v: boolean) => void }) {
@@ -277,7 +273,7 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
             </div>
             <p className="text-xs text-muted-foreground">
               {attendance
-                ? `Lv.${getLevel(attendance.total_xp).level} ${getLevel(attendance.total_xp).name} · ${attendance.total_xp} XP`
+                ? `Lv.${getLevel(attendance.total_xp)} · ${attendance.total_xp} XP`
                 : 'Pi Node 운영자'}
             </p>
           </div>

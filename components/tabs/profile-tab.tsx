@@ -296,9 +296,11 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
       if (res.ok) {
         const next = { ...(profileData ?? {}), display_name: data.display_name }
         setProfileData(next)
-        localStorage.setItem('pilink_profile', JSON.stringify(next))
+        localStorage.setItem(profileKey, JSON.stringify(next))
         setEditingName(false)
         toast.success('닉네임이 저장됐습니다.')
+      } else if (res.status === 409) {
+        alert(data.error ?? '이미 사용 중인 닉네임입니다.')
       } else {
         alert(`닉네임 저장 실패: ${data.error ?? '알 수 없는 오류'}`)
       }

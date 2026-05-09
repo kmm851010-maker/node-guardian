@@ -35,6 +35,16 @@ export async function PATCH(req: NextRequest) {
   const trimmed = (display_name ?? '').trim().slice(0, 20)
   if (!trimmed) return NextResponse.json({ error: 'Invalid display_name' }, { status: 400 })
 
+  // 중복 닉네임 체크 (같은 display_name을 다른 사용자가 사용 중인지)
+  const { data: existing } = await supabaseServer
+    .from('node_profiles')
+    .select('pi_uid, nickname')
+    .eq('display_name', trimmed)
+    .maybeSingle()
+  if (existing && existing.pi_uid !== pi_uid && existing.nickname !== nickname) {
+    return NextResponse.json({ error: '이미 사용 중인 닉네임입니다.' }, { status: 409 })
+  }
+
   // pi_uid로 UPDATE 시도
   const { data: updated, error: updateError } = await supabaseServer
     .from('node_profiles')

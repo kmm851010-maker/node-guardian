@@ -117,7 +117,7 @@ export function GuideBanner({ onClose, fullPage = false }: Props) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-bold text-base">📱 LinkPi 시작 가이드</h2>
-            <p className="text-xs text-violet-200 mt-0.5">처음이라도 5분이면 설정 완료!</p>
+            <p className="text-xs text-violet-200 mt-0.5">① PC 프로그램 설치 → ② Pi Browser 연동 순서로 진행하세요</p>
           </div>
           {onClose && (
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/20 transition-colors">
@@ -134,7 +134,7 @@ export function GuideBanner({ onClose, fullPage = false }: Props) {
               tab === 'pc' ? 'bg-white text-violet-700' : 'bg-white/20 text-white hover:bg-white/30'
             }`}
           >
-            <Monitor size={13} /> PC 프로그램 설치
+            <Monitor size={13} /> 1단계 · PC 프로그램 설치
           </button>
           <button
             onClick={() => { setTab('pi'); setExpanded(null) }}
@@ -142,7 +142,7 @@ export function GuideBanner({ onClose, fullPage = false }: Props) {
               tab === 'pi' ? 'bg-white text-violet-700' : 'bg-white/20 text-white hover:bg-white/30'
             }`}
           >
-            <Smartphone size={13} /> Pi Browser 사용법
+            <Smartphone size={13} /> 2단계 · Pi Browser 연동
           </button>
         </div>
       </div>
@@ -150,9 +150,9 @@ export function GuideBanner({ onClose, fullPage = false }: Props) {
       {/* 탭 설명 */}
       <div className={`px-4 py-2 text-xs font-medium flex items-center gap-2 ${tab === 'pi' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>
         {tab === 'pi' ? (
-          <><Smartphone size={12} /> Pi 앱 → Browser 탭에서 pilink.vercel.app 접속 후 Pi 로그인</>
+          <><Smartphone size={12} /> <span><b>2단계</b> · PC 프로그램 설치 완료 후 진행하세요 · Pi Browser에서 pilink.vercel.app 접속</span></>
         ) : (
-          <><Monitor size={12} /> PC 일반 브라우저 전용 · 스마트폰에서는 다운로드 버튼이 보이지 않습니다</>
+          <><Monitor size={12} /> <span><b>1단계 먼저!</b> · PC에 프로그램을 먼저 설치해야 Pi Browser와 연동됩니다</span></>
         )}
       </div>
 

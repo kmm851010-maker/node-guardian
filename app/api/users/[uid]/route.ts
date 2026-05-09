@@ -21,11 +21,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ uid:
 
   const totalLikes = (totalLikesData ?? []).reduce((sum, p) => sum + (p.likes ?? 0), 0)
 
-  // 닉네임
-  const nickname = posts?.[0]?.title ? null : null
   const { data: nodeData } = await supabaseServer
     .from('node_status')
     .select('nickname, process_status, port_status, last_seen')
+    .eq('pi_uid', uid)
+    .maybeSingle()
+
+  const { data: profileData } = await supabaseServer
+    .from('node_profiles')
+    .select('display_name, avatar_url, nickname')
     .eq('pi_uid', uid)
     .maybeSingle()
 
@@ -39,7 +43,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ uid:
 
   return NextResponse.json({
     pi_uid: uid,
-    nickname: nodeData?.nickname ?? null,
+    nickname: profileData?.nickname ?? nodeData?.nickname ?? null,
+    display_name: profileData?.display_name ?? null,
+    avatar_url: profileData?.avatar_url ?? null,
     nodeStatus: nodeData ?? null,
     recentPosts: posts ?? [],
     totalLikes,

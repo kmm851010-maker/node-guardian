@@ -11,6 +11,8 @@ interface Post {
   id: string
   author_uid: string
   nickname: string
+  display_name: string | null
+  avatar_url: string | null
   post_type: string
   title: string
   content: string
@@ -26,6 +28,8 @@ interface Comment {
   post_id: string
   author_uid: string
   nickname: string
+  display_name: string | null
+  avatar_url: string | null
   content: string
   parent_id: string | null
   likes: number
@@ -330,7 +334,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                     <span className="text-sm font-semibold leading-snug">{post.title}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <button onClick={() => { closeModal(); setProfileUid(post.author_uid) }} className="hover:text-violet-600 hover:underline">{post.nickname}</button>
+                    <button onClick={() => { closeModal(); setProfileUid(post.author_uid) }} className="hover:text-violet-600 hover:underline">{post.display_name ?? post.nickname}</button>
                     <span>{formatTime(post.created_at)}</span>
                     <span className="flex items-center gap-0.5"><Eye size={10} /> {post.views}</span>
                   </div>
@@ -384,7 +388,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                             <div className="flex-1 bg-white rounded-xl px-3 py-2 space-y-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <button onClick={() => setProfileUid(comment.author_uid)}
-                                  className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.nickname}</button>
+                                  className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.display_name ?? comment.nickname}</button>
                                 <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
                                 <button onClick={e => handleCommentLike(e, comment.id, post.id)} disabled={!!likingCommentId}
                                   className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 disabled:opacity-60 ${
@@ -407,7 +411,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                               <div className="flex-1 bg-white rounded-xl px-3 py-2 space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <button onClick={() => setProfileUid(reply.author_uid)}
-                                    className="text-xs font-medium hover:text-violet-600 hover:underline">{reply.nickname}</button>
+                                    className="text-xs font-medium hover:text-violet-600 hover:underline">{reply.display_name ?? reply.nickname}</button>
                                   <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
                                   <button onClick={e => handleCommentLike(e, reply.id, post.id)}
                                     className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 ${
@@ -630,7 +634,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                 </span>
               </div>
               <button onClick={e => { e.stopPropagation(); setProfileUid(post.author_uid) }}
-                className="w-14 text-xs text-muted-foreground text-right truncate shrink-0 hover:text-violet-600">{post.nickname}</button>
+                className="w-14 text-xs text-muted-foreground text-right truncate shrink-0 hover:text-violet-600">{post.display_name ?? post.nickname}</button>
               <span className="w-10 text-xs text-muted-foreground text-right shrink-0">{formatTime(post.created_at).slice(0,5)}</span>
               <span className="w-12 text-xs text-muted-foreground text-right shrink-0 hidden sm:block flex items-center gap-0.5">
                 <Eye size={10} className="inline" /> {post.views}
@@ -664,7 +668,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                   <p className="text-xs text-muted-foreground truncate mb-1">{post.content}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <button onClick={e => { e.stopPropagation(); setProfileUid(post.author_uid) }}
-                      className="hover:text-violet-600 hover:underline transition-colors">{post.nickname}</button>
+                      className="hover:text-violet-600 hover:underline transition-colors">{post.display_name ?? post.nickname}</button>
                     <span className="ml-auto">{formatTime(post.created_at)}</span>
                     <span className="flex items-center gap-0.5"><Eye size={11} /> {post.views}</span>
                     <span className="flex items-center gap-0.5"><MessageCircle size={11} /> {post.comments_count}</span>

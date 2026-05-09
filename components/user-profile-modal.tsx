@@ -6,6 +6,8 @@ import { X, Heart, FileText, Trophy, Wifi, WifiOff } from 'lucide-react'
 interface UserProfile {
   pi_uid: string
   nickname: string | null
+  display_name: string | null
+  avatar_url: string | null
   nodeStatus: { process_status: string; port_status: string; last_seen: string } | null
   recentPosts: { id: string; title: string; post_type: string; likes: number; created_at: string }[]
   totalLikes: number
@@ -45,10 +47,12 @@ export default function UserProfileModal({ uid, onClose }: Props) {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-bold text-lg">
+            <div className="w-12 h-12 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-bold text-lg overflow-hidden shrink-0">
               {loading
                 ? <div className="w-5 h-5 rounded-full bg-violet-200 animate-pulse" />
-                : (profile?.nickname ?? '?')[0]?.toUpperCase()}
+                : profile?.avatar_url
+                  ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                  : (profile?.display_name ?? profile?.nickname ?? '?')[0]?.toUpperCase()}
             </div>
             <div>
               {loading ? (
@@ -58,7 +62,8 @@ export default function UserProfileModal({ uid, onClose }: Props) {
                 </div>
               ) : (
                 <>
-                  <p className="font-semibold text-sm">@{profile?.nickname ?? '알 수 없음'}</p>
+                  <p className="font-semibold text-sm">{profile?.display_name ?? profile?.nickname ?? '알 수 없음'}</p>
+                  <p className="text-xs text-muted-foreground">@{profile?.nickname ?? ''}</p>
                   {profile?.nodeStatus && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       {isOnline

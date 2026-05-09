@@ -26,10 +26,11 @@ export async function POST(req: NextRequest) {
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
   const { data: { publicUrl } } = supabaseServer.storage.from('avatars').getPublicUrl(path)
+  const avatarUrl = `${publicUrl}?t=${Date.now()}`
 
   const { data: updated, error: updateError } = await supabaseServer
     .from('node_profiles')
-    .update({ avatar_url: publicUrl })
+    .update({ avatar_url: avatarUrl })
     .eq('pi_uid', pi_uid)
     .select('avatar_url')
     .maybeSingle()
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
   if (!updated && nickname) {
     const { data: updated2, error: updateError2 } = await supabaseServer
       .from('node_profiles')
-      .update({ avatar_url: publicUrl })
+      .update({ avatar_url: avatarUrl })
       .eq('nickname', nickname)
       .select('avatar_url')
       .maybeSingle()
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     if (!updated2) {
       const { error: insertError } = await supabaseServer
         .from('node_profiles')
-        .insert({ pi_uid, nickname: nickname ?? pi_uid, avatar_url: publicUrl })
+        .insert({ pi_uid, nickname: nickname ?? pi_uid, avatar_url: avatarUrl })
       if (insertError) {
         console.error('[avatar insert]', insertError.message)
         return NextResponse.json({ error: insertError.message }, { status: 500 })
@@ -63,5 +64,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, avatar_url: publicUrl })
+  return NextResponse.json({ ok: true, avatar_url: avatarUrl })
 }

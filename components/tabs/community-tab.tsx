@@ -251,7 +251,12 @@ export default function CommunityTab({ user, isPremium }: Props) {
       fd.append('author_uid', user.uid)
       fd.append('file', imageFile)
       const uploadRes = await fetch('/api/posts/image', { method: 'POST', body: fd })
-      if (!uploadRes.ok) { toast.error('이미지 업로드 실패'); setSubmitting(false); return }
+      if (!uploadRes.ok) {
+        const errData = await uploadRes.json().catch(() => ({}))
+        alert(`이미지 업로드 실패: ${errData.error ?? uploadRes.status}`)
+        setSubmitting(false)
+        return
+      }
       const uploadData = await uploadRes.json()
       image_url = uploadData.url
     }
@@ -264,8 +269,10 @@ export default function CommunityTab({ user, isPremium }: Props) {
       setPosts(prev => [data, ...prev])
       setTitle(''); setContent(''); setPostType('general'); setShowForm(false)
       setImageFile(null); setImagePreview(null)
-      toast.success('게시글이 등록됐습니다.')
-    } else { toast.error('등록 실패. 다시 시도해주세요.') }
+    } else {
+      const errData = await res.json().catch(() => ({}))
+      alert(`등록 실패: ${errData.error ?? '다시 시도해주세요.'}`)
+    }
     setSubmitting(false)
   }
 
@@ -583,8 +590,12 @@ export default function CommunityTab({ user, isPremium }: Props) {
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
                 onChange={e => {
                   const file = e.target.files?.[0]; if (!file) return
-                  if (file.size > 5 * 1024 * 1024) { toast.error('5MB 이하 이미지만 첨부 가능합니다.'); return }
-                  setImageFile(file); setImagePreview(URL.createObjectURL(file))
+                  if (file.size > 5 * 1024 * 1024) { alert('5MB 이하 이미지만 첨부 가능합니다.'); return }
+                  try {
+                    setImageFile(file); setImagePreview(URL.createObjectURL(file))
+                  } catch (err) {
+                    alert(`이미지 미리보기 오류: ${String(err)}`)
+                  }
                 }} />
               {imagePreview ? (
                 <div className="relative">

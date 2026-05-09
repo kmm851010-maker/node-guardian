@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Heart, Eye, PenSquare, X, ImagePlus, MessageCircle, CornerDownRight, LayoutList, LayoutGrid, Pencil, Trash2, Crown } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
 import UserProfileModal from '@/components/user-profile-modal'
 
 interface Post {
@@ -248,12 +247,13 @@ export default function CommunityTab({ user, isPremium }: Props) {
     setSubmitting(true)
     let image_url: string | null = null
     if (imageFile) {
-      const ext = imageFile.name.split('.').pop()
-      const path = `${user.uid}/${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage.from('post-images').upload(path, imageFile, { upsert: true })
-      if (uploadError) { toast.error('이미지 업로드 실패'); setSubmitting(false); return }
-      const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
-      image_url = urlData.publicUrl
+      const fd = new FormData()
+      fd.append('author_uid', user.uid)
+      fd.append('file', imageFile)
+      const uploadRes = await fetch('/api/posts/image', { method: 'POST', body: fd })
+      if (!uploadRes.ok) { toast.error('이미지 업로드 실패'); setSubmitting(false); return }
+      const uploadData = await uploadRes.json()
+      image_url = uploadData.url
     }
     const res = await fetch('/api/posts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

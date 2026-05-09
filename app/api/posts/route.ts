@@ -48,5 +48,12 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data })
+
+  const { data: profile } = await supabaseServer
+    .from('node_profiles')
+    .select('display_name, avatar_url')
+    .eq('nickname', nickname)
+    .maybeSingle()
+
+  return NextResponse.json({ data: { ...data, display_name: profile?.display_name ?? null, avatar_url: profile?.avatar_url ?? null } })
 }

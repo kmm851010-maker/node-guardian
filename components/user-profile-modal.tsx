@@ -21,18 +21,22 @@ const RANK_EMOJI = ['🥇', '🥈', '🥉']
 
 interface Props {
   uid: string
+  nickname?: string
   onClose: () => void
 }
 
-export default function UserProfileModal({ uid, onClose }: Props) {
+export default function UserProfileModal({ uid, nickname, onClose }: Props) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/users/${uid}`)
+    const url = nickname
+      ? `/api/users/${uid}?nickname=${encodeURIComponent(nickname)}`
+      : `/api/users/${uid}`
+    fetch(url)
       .then(r => r.json())
       .then(d => { setProfile(d); setLoading(false) })
-  }, [uid])
+  }, [uid, nickname])
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" onClick={onClose}>

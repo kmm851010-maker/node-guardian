@@ -5,6 +5,7 @@ import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
   const { uid } = await params
+  const nicknameParam = new URL(req.url).searchParams.get('nickname')
 
   // 게시글 및 받은 좋아요 수
   const { data: posts } = await supabaseServer
@@ -35,13 +36,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ uid:
     .maybeSingle()
   if (profileByUid) {
     profileData = profileByUid
-  } else if (nodeData?.nickname) {
-    const { data: profileByNick } = await supabaseServer
-      .from('node_profiles')
-      .select('display_name, avatar_url, nickname')
-      .eq('nickname', nodeData.nickname)
-      .maybeSingle()
-    profileData = profileByNick
+  } else {
+    // fallback: try by nodeData.nickname, then by provided nickname param
+    const fallbackNick = nodeData?.nickname ?? nicknameParam
+    if (fallbackNick) {
+      const { data: profileByNick } = await supabaseServer
+        .from('node_profiles')
+        .select('display_name, avatar_url, nickname')
+        .eq('nickname', fallbackNick)
+        .maybeSingle()
+      profileData = profileByNick
+    }
   }
 
   // 주간 랭킹 기록 (최근 4주)

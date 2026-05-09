@@ -124,7 +124,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
   const [likingPostId, setLikingPostId] = useState<string | null>(null)
   const [likingCommentId, setLikingCommentId] = useState<string | null>(null)
   const viewedPosts = useRef<Set<string>>(new Set())
-  const [profileUid, setProfileUid] = useState<string | null>(null)
+  const [profileUser, setProfileUser] = useState<{ uid: string; nickname: string } | null>(null)
 
   const loadPosts = useCallback(async (currentOffset: number) => {
     const res = await fetch(`/api/posts?limit=20&offset=${currentOffset}`)
@@ -310,7 +310,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
 
   return (
     <div className="p-4 space-y-2">
-      {profileUid && <UserProfileModal uid={profileUid} onClose={() => setProfileUid(null)} />}
+      {profileUser && <UserProfileModal uid={profileUser.uid} nickname={profileUser.nickname} onClose={() => setProfileUser(null)} />}
 
       {/* 게시글 상세 모달 */}
       {modalPost && (() => {
@@ -334,7 +334,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                     <span className="text-sm font-semibold leading-snug">{post.title}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <button onClick={() => { closeModal(); setProfileUid(post.author_uid) }} className="hover:text-violet-600 hover:underline">{post.display_name ?? post.nickname}</button>
+                    <button onClick={() => { closeModal(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }} className="hover:text-violet-600 hover:underline">{post.display_name ?? post.nickname}</button>
                     <span>{formatTime(post.created_at)}</span>
                     <span className="flex items-center gap-0.5"><Eye size={10} /> {post.views}</span>
                   </div>
@@ -387,7 +387,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                           <div className="flex items-start gap-2">
                             <div className="flex-1 bg-white rounded-xl px-3 py-2 space-y-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <button onClick={() => setProfileUid(comment.author_uid)}
+                                <button onClick={() => setProfileUser({ uid: comment.author_uid, nickname: comment.nickname })}
                                   className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.display_name ?? comment.nickname}</button>
                                 <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
                                 <button onClick={e => handleCommentLike(e, comment.id, post.id)} disabled={!!likingCommentId}
@@ -410,7 +410,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                               <CornerDownRight size={11} className="text-muted-foreground mt-1.5 shrink-0" />
                               <div className="flex-1 bg-white rounded-xl px-3 py-2 space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <button onClick={() => setProfileUid(reply.author_uid)}
+                                  <button onClick={() => setProfileUser({ uid: reply.author_uid, nickname: reply.nickname })}
                                     className="text-xs font-medium hover:text-violet-600 hover:underline">{reply.display_name ?? reply.nickname}</button>
                                   <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
                                   <button onClick={e => handleCommentLike(e, reply.id, post.id)}
@@ -633,7 +633,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                   {post.comments_count > 0 && <span className="text-violet-500 text-xs ml-1">[{post.comments_count}]</span>}
                 </span>
               </div>
-              <button onClick={e => { e.stopPropagation(); setProfileUid(post.author_uid) }}
+              <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
                 className="w-14 text-xs text-muted-foreground text-right truncate shrink-0 hover:text-violet-600">{post.display_name ?? post.nickname}</button>
               <span className="w-10 text-xs text-muted-foreground text-right shrink-0">{formatTime(post.created_at).slice(0,5)}</span>
               <span className="w-12 text-xs text-muted-foreground text-right shrink-0 hidden sm:block flex items-center gap-0.5">
@@ -667,7 +667,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
                   {/* 본문 1줄 미리보기 */}
                   <p className="text-xs text-muted-foreground truncate mb-1">{post.content}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <button onClick={e => { e.stopPropagation(); setProfileUid(post.author_uid) }}
+                    <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
                       className="hover:text-violet-600 hover:underline transition-colors">{post.display_name ?? post.nickname}</button>
                     <span className="ml-auto">{formatTime(post.created_at)}</span>
                     <span className="flex items-center gap-0.5"><Eye size={11} /> {post.views}</span>

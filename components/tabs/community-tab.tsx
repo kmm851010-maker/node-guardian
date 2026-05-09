@@ -430,6 +430,15 @@ export default function CommunityTab({ user, isPremium }: Props) {
                                 </div>
                                 <p className="text-xs whitespace-pre-wrap leading-relaxed">{reply.content}</p>
                               </div>
+                              {isPremium && (
+                                <button
+                                  onClick={() => setReplyTo(
+                                    replyTo?.commentId === comment.id && replyTo?.nickname === (reply.display_name ?? reply.nickname)
+                                      ? null
+                                      : { postId: post.id, commentId: comment.id, nickname: reply.display_name ?? reply.nickname }
+                                  )}
+                                  className="text-xs text-violet-500 mt-1 whitespace-nowrap">답글</button>
+                              )}
                             </div>
                           ))}
                           {replyTo?.commentId === comment.id && isPremium && (

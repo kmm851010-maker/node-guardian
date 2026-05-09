@@ -40,9 +40,10 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
   const [savingTelegram, setSavingTelegram] = useState(false)
   const [attendance, setAttendance] = useState<{ checked_today: boolean; week_xp: number; total_xp: number } | null>(null)
   const [checkingIn, setCheckingIn] = useState(false)
+  const profileKey = `pilink_profile_${user?.uid ?? ''}`
   const [profileData, setProfileData] = useState<{ display_name?: string; avatar_url?: string } | null>(() => {
-    if (typeof window === 'undefined') return null
-    const cached = localStorage.getItem('pilink_profile')
+    if (typeof window === 'undefined' || !user?.uid) return null
+    const cached = localStorage.getItem(`pilink_profile_${user.uid}`)
     return cached ? JSON.parse(cached) : null
   })
   const [editingName, setEditingName] = useState(false)
@@ -79,8 +80,11 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
       .then(r => r.json())
       .then(data => {
         if (data.display_name || data.avatar_url) {
-          localStorage.setItem('pilink_profile', JSON.stringify(data))
+          localStorage.setItem(profileKey, JSON.stringify(data))
           setProfileData(data)
+        } else {
+          localStorage.removeItem(profileKey)
+          setProfileData(null)
         }
         // GET가 빈 값을 반환해도 기존 캐시 유지 (덮어쓰지 않음)
       })

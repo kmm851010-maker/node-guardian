@@ -28,36 +28,34 @@ export async function POST(req: NextRequest) {
   const { data: { publicUrl } } = supabaseServer.storage.from('avatars').getPublicUrl(path)
   const avatarUrl = `${publicUrl}?t=${Date.now()}`
 
-  const { data: updated, error: updateError } = await supabaseServer
+  const orFilter = nickname
+    ? `pi_uid.eq.${pi_uid},nickname.eq.${nickname}`
+    : `pi_uid.eq.${pi_uid}`
+  const { data: rows } = await supabaseServer
     .from('node_profiles')
-    .update({ avatar_url: avatarUrl })
-    .eq('pi_uid', pi_uid)
-    .select('avatar_url')
-    .maybeSingle()
+    .select('pi_uid')
+    .or(orFilter)
+    .limit(1)
 
-  if (updateError) {
-    console.error('[avatar update by pi_uid]', updateError.message)
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
-  }
-
-  if (!updated && nickname) {
-    const { data: updated2, error: updateError2 } = await supabaseServer
+  if (rows && rows.length > 0) {
+    const { error } = await supabaseServer
       .from('node_profiles')
       .update({ avatar_url: avatarUrl })
-      .eq('nickname', nickname)
-      .select('avatar_url')
-      .maybeSingle()
-
-    if (updateError2) {
-      console.error('[avatar update by nickname]', updateError2.message)
-      return NextResponse.json({ error: updateError2.message }, { status: 500 })
+      .eq('pi_uid', rows[0].pi_uid)
+    if (error) {
+      console.error('[avatar update]', error.message)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
-    if (!updated2) {
-      const { error: insertError } = await supabaseServer
-        .from('node_profiles')
-        .insert({ pi_uid, nickname: nickname ?? pi_uid, avatar_url: avatarUrl })
-      if (insertError) {
+  } else {
+    const { error: insertError } = await supabaseServer
+      .from('node_profiles')
+      .insert({ pi_uid, nickname: nickname ?? pi_uid, avatar_url: avatarUrl })
+    if (insertError) {
+      if (insertError.code === '23505' && nickname) {
+        await supabaseServer.from('node_profiles')
+          .update({ avatar_url: avatarUrl, pi_uid })
+          .eq('nickname', nickname)
+      } else {
         console.error('[avatar insert]', insertError.message)
         return NextResponse.json({ error: insertError.message }, { status: 500 })
       }

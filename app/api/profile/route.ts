@@ -45,48 +45,42 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: '이미 사용 중인 닉네임입니다.' }, { status: 409 })
   }
 
-  // pi_uid로 UPDATE 시도
-  const { data: updated, error: updateError } = await supabaseServer
+  // pi_uid 또는 nickname으로 기존 row 찾기 (OR 쿼리)
+  const orFilter = nickname
+    ? `pi_uid.eq.${pi_uid},nickname.eq.${nickname}`
+    : `pi_uid.eq.${pi_uid}`
+  const { data: rows } = await supabaseServer
     .from('node_profiles')
-    .update({ display_name: trimmed })
-    .eq('pi_uid', pi_uid)
-    .select('display_name')
-    .maybeSingle()
+    .select('pi_uid')
+    .or(orFilter)
+    .limit(1)
 
-  if (updateError) {
-    console.error('[profile PATCH update by pi_uid]', updateError.message)
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
-  }
-
-  if (updated) {
-    return NextResponse.json({ ok: true, display_name: updated.display_name ?? trimmed })
-  }
-
-  // pi_uid로 못 찾으면 nickname으로 UPDATE (Node Guardian이 username을 pi_uid로 저장한 케이스)
-  if (nickname) {
-    const { data: updated2, error: updateError2 } = await supabaseServer
+  if (rows && rows.length > 0) {
+    // 찾은 row의 pi_uid로 업데이트 (어느 경로로 찾았든 동일하게 처리)
+    const { error } = await supabaseServer
       .from('node_profiles')
       .update({ display_name: trimmed })
-      .eq('nickname', nickname)
-      .select('display_name')
-      .maybeSingle()
-
-    if (updateError2) {
-      console.error('[profile PATCH update by nickname]', updateError2.message)
-      return NextResponse.json({ error: updateError2.message }, { status: 500 })
+      .eq('pi_uid', rows[0].pi_uid)
+    if (error) {
+      console.error('[profile PATCH update]', error.message)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
-    if (updated2) {
-      return NextResponse.json({ ok: true, display_name: updated2.display_name ?? trimmed })
-    }
+    return NextResponse.json({ ok: true, display_name: trimmed })
   }
 
-  // 행이 없으면 INSERT
+  // row 없으면 INSERT
   const { error: insertError } = await supabaseServer
     .from('node_profiles')
     .insert({ pi_uid, nickname: nickname ?? pi_uid, display_name: trimmed })
 
   if (insertError) {
+    if (insertError.code === '23505' && nickname) {
+      // nickname 충돌 — 해당 row 업데이트
+      await supabaseServer.from('node_profiles')
+        .update({ display_name: trimmed, pi_uid })
+        .eq('nickname', nickname)
+      return NextResponse.json({ ok: true, display_name: trimmed })
+    }
     console.error('[profile PATCH insert]', insertError.message)
     return NextResponse.json({ error: insertError.message }, { status: 500 })
   }

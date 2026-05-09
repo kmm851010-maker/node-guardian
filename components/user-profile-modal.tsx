@@ -52,7 +52,7 @@ export default function UserProfileModal({ uid, nickname, onClose }: Props) {
                 ? <div className="w-5 h-5 rounded-full bg-violet-200 animate-pulse" />
                 : profile?.avatar_url
                   ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                  : (profile?.display_name ?? profile?.nickname ?? '?')[0]?.toUpperCase()}
+                  : (profile?.display_name ?? nickname ?? profile?.nickname ?? '?')[0]?.toUpperCase()}
             </div>
             <div>
               {loading ? (
@@ -62,8 +62,8 @@ export default function UserProfileModal({ uid, nickname, onClose }: Props) {
                 </div>
               ) : (
                 <>
-                  <p className="font-semibold text-sm">{profile?.display_name ?? profile?.nickname ?? '알 수 없음'}</p>
-                  <p className="text-xs text-muted-foreground">@{profile?.nickname ?? ''}</p>
+                  <p className="font-semibold text-sm">{profile?.display_name ?? nickname ?? profile?.nickname ?? '알 수 없음'}</p>
+                  <p className="text-xs text-muted-foreground">@{nickname ?? profile?.nickname ?? ''}</p>
                 </>
               )}
             </div>

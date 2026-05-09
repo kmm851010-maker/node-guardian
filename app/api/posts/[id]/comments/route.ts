@@ -13,17 +13,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Enrich with display_name and avatar_url from node_profiles (join by nickname)
+  // Enrich with display_name and avatar_url — primary by nickname, secondary by pi_uid
   const nicknames = [...new Set((data ?? []).map((c: any) => c.nickname as string))]
-  const { data: profiles } = nicknames.length
-    ? await supabaseServer.from('node_profiles').select('nickname, display_name, avatar_url').in('nickname', nicknames)
+  const { data: profilesByNick } = nicknames.length
+    ? await supabaseServer.from('node_profiles').select('pi_uid, nickname, display_name, avatar_url').in('nickname', nicknames)
     : { data: [] }
-  const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.nickname, p]))
-  const enriched = (data ?? []).map((c: any) => ({
-    ...c,
-    display_name: profileMap[c.nickname]?.display_name ?? null,
-    avatar_url: profileMap[c.nickname]?.avatar_url ?? null,
-  }))
+  const profileMapByNick = Object.fromEntries((profilesByNick ?? []).map((p: any) => [p.nickname, p]))
+
+  const unmatchedUids = [...new Set((data ?? []).filter((c: any) => !profileMapByNick[c.nickname]).map((c: any) => c.author_uid as string))]
+  const profileMapByUid: Record<string, any> = {}
+  if (unmatchedUids.length) {
+    const { data: profilesByUid } = await supabaseServer.from('node_profiles').select('pi_uid, nickname, display_name, avatar_url').in('pi_uid', unmatchedUids)
+    for (const p of (profilesByUid ?? [])) profileMapByUid[(p as any).pi_uid] = p
+  }
+
+  const enriched = (data ?? []).map((c: any) => {
+    const profile = profileMapByNick[c.nickname] ?? profileMapByUid[c.author_uid]
+    return { ...c, display_name: profile?.display_name ?? null, avatar_url: profile?.avatar_url ?? null }
+  })
 
   return NextResponse.json({ data: enriched })
 }

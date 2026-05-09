@@ -18,17 +18,25 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Enrich with display_name and avatar_url from node_profiles (join by nickname — more reliable than pi_uid)
+  // Enrich with display_name and avatar_url — primary by nickname, secondary by pi_uid
   const nicknames = [...new Set((data ?? []).map((p: any) => p.nickname as string))]
-  const { data: profiles } = nicknames.length
-    ? await supabaseServer.from('node_profiles').select('nickname, display_name, avatar_url').in('nickname', nicknames)
+  const { data: profilesByNick } = nicknames.length
+    ? await supabaseServer.from('node_profiles').select('pi_uid, nickname, display_name, avatar_url').in('nickname', nicknames)
     : { data: [] }
-  const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.nickname, p]))
-  const enriched = (data ?? []).map((p: any) => ({
-    ...p,
-    display_name: profileMap[p.nickname]?.display_name ?? null,
-    avatar_url: profileMap[p.nickname]?.avatar_url ?? null,
-  }))
+  const profileMapByNick = Object.fromEntries((profilesByNick ?? []).map((p: any) => [p.nickname, p]))
+
+  // Secondary: pi_uid lookup for posts whose nickname didn't match
+  const unmatchedUids = [...new Set((data ?? []).filter((p: any) => !profileMapByNick[p.nickname]).map((p: any) => p.author_uid as string))]
+  const profileMapByUid: Record<string, any> = {}
+  if (unmatchedUids.length) {
+    const { data: profilesByUid } = await supabaseServer.from('node_profiles').select('pi_uid, nickname, display_name, avatar_url').in('pi_uid', unmatchedUids)
+    for (const p of (profilesByUid ?? [])) profileMapByUid[(p as any).pi_uid] = p
+  }
+
+  const enriched = (data ?? []).map((p: any) => {
+    const profile = profileMapByNick[p.nickname] ?? profileMapByUid[p.author_uid]
+    return { ...p, display_name: profile?.display_name ?? null, avatar_url: profile?.avatar_url ?? null }
+  })
 
   return NextResponse.json({ data: enriched, hasMore: (data?.length ?? 0) === limit })
 }

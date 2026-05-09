@@ -100,7 +100,7 @@ interface Props {
 }
 
 export function GuideBanner({ onClose, fullPage = false }: Props) {
-  const [tab, setTab] = useState<GuideTab>('pi')
+  const [tab, setTab] = useState<GuideTab>('pc')
   const [expanded, setExpanded] = useState<number | null>(null)
   const [isPiBrowser, setIsPiBrowser] = useState(false)
 
@@ -129,20 +129,20 @@ export function GuideBanner({ onClose, fullPage = false }: Props) {
         {/* 탭 */}
         <div className="flex gap-2 mt-3">
           <button
-            onClick={() => { setTab('pi'); setExpanded(null) }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              tab === 'pi' ? 'bg-white text-violet-700' : 'bg-white/20 text-white hover:bg-white/30'
-            }`}
-          >
-            <Smartphone size={13} /> Pi Browser 사용법
-          </button>
-          <button
             onClick={() => { setTab('pc'); setExpanded(null) }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
               tab === 'pc' ? 'bg-white text-violet-700' : 'bg-white/20 text-white hover:bg-white/30'
             }`}
           >
             <Monitor size={13} /> PC 프로그램 설치
+          </button>
+          <button
+            onClick={() => { setTab('pi'); setExpanded(null) }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+              tab === 'pi' ? 'bg-white text-violet-700' : 'bg-white/20 text-white hover:bg-white/30'
+            }`}
+          >
+            <Smartphone size={13} /> Pi Browser 사용법
           </button>
         </div>
       </div>

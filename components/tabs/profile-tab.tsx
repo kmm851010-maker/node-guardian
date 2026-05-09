@@ -40,7 +40,11 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
   const [savingTelegram, setSavingTelegram] = useState(false)
   const [attendance, setAttendance] = useState<{ checked_today: boolean; week_xp: number; total_xp: number } | null>(null)
   const [checkingIn, setCheckingIn] = useState(false)
-  const [profileData, setProfileData] = useState<{ display_name?: string; avatar_url?: string } | null>(null)
+  const [profileData, setProfileData] = useState<{ display_name?: string; avatar_url?: string } | null>(() => {
+    if (typeof window === 'undefined') return null
+    const cached = localStorage.getItem('pilink_profile')
+    return cached ? JSON.parse(cached) : null
+  })
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [savingName, setSavingName] = useState(false)
@@ -71,9 +75,15 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
       .then(r => r.json())
       .then(setAttendance)
 
-    fetch(`/api/profile?pi_uid=${user.uid}`)
+    fetch(`/api/profile?pi_uid=${user.uid}&username=${encodeURIComponent(user.username)}`)
       .then(r => r.json())
-      .then(setProfileData)
+      .then(data => {
+        if (data.display_name || data.avatar_url) {
+          localStorage.setItem('pilink_profile', JSON.stringify(data))
+          setProfileData(data)
+        }
+        // GET가 빈 값을 반환해도 기존 캐시 유지 (덮어쓰지 않음)
+      })
   }, [user])
 
   const handleCancelPremium = async () => {
@@ -247,16 +257,23 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
       return
     }
     setUploadingAvatar(true)
-    const fd = new FormData()
-    fd.append('pi_uid', user.uid)
-    fd.append('file', file)
-    const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd })
-    const data = await res.json()
-    if (res.ok) {
-      setProfileData(prev => ({ ...prev, avatar_url: data.avatar_url }))
-      toast.success('프로필 사진이 업데이트됐습니다.')
-    } else {
-      toast.error(data.error ?? '업로드 실패')
+    try {
+      const fd = new FormData()
+      fd.append('pi_uid', user.uid)
+      fd.append('nickname', user.username)
+      fd.append('file', file)
+      const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (res.ok) {
+        const next = { ...(profileData ?? {}), avatar_url: data.avatar_url }
+        setProfileData(next)
+        localStorage.setItem('pilink_profile', JSON.stringify(next))
+        toast.success('프로필 사진이 업데이트됐습니다.')
+      } else {
+        alert(`사진 업로드 실패: ${data.error ?? '알 수 없는 오류'}`)
+      }
+    } catch (e) {
+      alert(`사진 업로드 오류: ${String(e)}`)
     }
     setUploadingAvatar(false)
     e.target.value = ''
@@ -265,18 +282,24 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
   const handleSaveName = async () => {
     if (!user || !nameInput.trim()) return
     setSavingName(true)
-    const res = await fetch('/api/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pi_uid: user.uid, display_name: nameInput.trim() }),
-    })
-    const data = await res.json()
-    if (res.ok) {
-      setProfileData(prev => ({ ...prev, display_name: data.display_name }))
-      setEditingName(false)
-      toast.success('닉네임이 저장됐습니다.')
-    } else {
-      toast.error(data.error ?? '저장 실패')
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pi_uid: user.uid, nickname: user.username, display_name: nameInput.trim() }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        const next = { ...(profileData ?? {}), display_name: data.display_name }
+        setProfileData(next)
+        localStorage.setItem('pilink_profile', JSON.stringify(next))
+        setEditingName(false)
+        toast.success('닉네임이 저장됐습니다.')
+      } else {
+        alert(`닉네임 저장 실패: ${data.error ?? '알 수 없는 오류'}`)
+      }
+    } catch (e) {
+      alert(`닉네임 저장 오류: ${String(e)}`)
     }
     setSavingName(false)
   }

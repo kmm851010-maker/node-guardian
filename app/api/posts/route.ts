@@ -18,16 +18,16 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Enrich with display_name and avatar_url from node_profiles
-  const authorUids = [...new Set((data ?? []).map((p: any) => p.author_uid as string))]
-  const { data: profiles } = authorUids.length
-    ? await supabaseServer.from('node_profiles').select('pi_uid, display_name, avatar_url').in('pi_uid', authorUids)
+  // Enrich with display_name and avatar_url from node_profiles (join by nickname — more reliable than pi_uid)
+  const nicknames = [...new Set((data ?? []).map((p: any) => p.nickname as string))]
+  const { data: profiles } = nicknames.length
+    ? await supabaseServer.from('node_profiles').select('nickname, display_name, avatar_url').in('nickname', nicknames)
     : { data: [] }
-  const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.pi_uid, p]))
+  const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.nickname, p]))
   const enriched = (data ?? []).map((p: any) => ({
     ...p,
-    display_name: profileMap[p.author_uid]?.display_name ?? null,
-    avatar_url: profileMap[p.author_uid]?.avatar_url ?? null,
+    display_name: profileMap[p.nickname]?.display_name ?? null,
+    avatar_url: profileMap[p.nickname]?.avatar_url ?? null,
   }))
 
   return NextResponse.json({ data: enriched, hasMore: (data?.length ?? 0) === limit })

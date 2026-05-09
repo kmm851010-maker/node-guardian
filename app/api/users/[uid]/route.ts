@@ -27,11 +27,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ uid:
     .eq('pi_uid', uid)
     .maybeSingle()
 
-  const { data: profileData } = await supabaseServer
+  let profileData: { display_name: string | null; avatar_url: string | null; nickname: string | null } | null = null
+  const { data: profileByUid } = await supabaseServer
     .from('node_profiles')
     .select('display_name, avatar_url, nickname')
     .eq('pi_uid', uid)
     .maybeSingle()
+  if (profileByUid) {
+    profileData = profileByUid
+  } else if (nodeData?.nickname) {
+    const { data: profileByNick } = await supabaseServer
+      .from('node_profiles')
+      .select('display_name, avatar_url, nickname')
+      .eq('nickname', nodeData.nickname)
+      .maybeSingle()
+    profileData = profileByNick
+  }
 
   // 주간 랭킹 기록 (최근 4주)
   const { data: rankHistory } = await supabaseServer

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Heart, FileText, Trophy, Wifi, WifiOff } from 'lucide-react'
+import { X, Heart, FileText, Trophy } from 'lucide-react'
 
 interface UserProfile {
   pi_uid: string
@@ -34,10 +34,6 @@ export default function UserProfileModal({ uid, onClose }: Props) {
       .then(d => { setProfile(d); setLoading(false) })
   }, [uid])
 
-  const isOnline = profile?.nodeStatus
-    ? (Date.now() - new Date(profile.nodeStatus.last_seen).getTime()) / 1000 < 120
-    : false
-
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
@@ -64,13 +60,6 @@ export default function UserProfileModal({ uid, onClose }: Props) {
                 <>
                   <p className="font-semibold text-sm">{profile?.display_name ?? profile?.nickname ?? '알 수 없음'}</p>
                   <p className="text-xs text-muted-foreground">@{profile?.nickname ?? ''}</p>
-                  {profile?.nodeStatus && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      {isOnline
-                        ? <><Wifi size={10} className="text-green-500" /> 온라인</>
-                        : <><WifiOff size={10} /> 오프라인</>}
-                    </div>
-                  )}
                 </>
               )}
             </div>

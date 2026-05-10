@@ -51,6 +51,20 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
   const [savingName, setSavingName] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [pushSubscribed, setPushSubscribed] = useState(false)
+  const [subscribingPush, setSubscribingPush] = useState(false)
+  const [pushSupported, setPushSupported] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window) {
+      setPushSupported(true)
+      navigator.serviceWorker.ready.then(reg => {
+        reg.pushManager.getSubscription().then(sub => {
+          setPushSubscribed(!!sub)
+        })
+      })
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -220,6 +234,54 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
       toast.error('연결 실패. Chat ID를 다시 확인해주세요.')
     }
     setSavingTelegram(false)
+  }
+
+  const handlePushSubscribe = async () => {
+    if (!user) return
+    setSubscribingPush(true)
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') {
+        toast.error('알림 권한이 거부됐습니다.')
+        setSubscribingPush(false)
+        return
+      }
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      })
+      const res = await fetch('/api/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pi_uid: user.uid, subscription: sub }),
+      })
+      if (res.ok) {
+        setPushSubscribed(true)
+        toast.success('푸시 알림이 활성화됐습니다!')
+      } else {
+        toast.error('서버 등록 실패')
+      }
+    } catch (e) {
+      toast.error(`구독 실패: ${String(e)}`)
+    }
+    setSubscribingPush(false)
+  }
+
+  const handlePushUnsubscribe = async () => {
+    if (!user) return
+    const reg = await navigator.serviceWorker.ready
+    const sub = await reg.pushManager.getSubscription()
+    if (sub) {
+      await fetch('/api/push-subscribe', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pi_uid: user.uid, endpoint: sub.endpoint }),
+      })
+      await sub.unsubscribe()
+    }
+    setPushSubscribed(false)
+    toast.success('푸시 알림이 해제됐습니다.')
   }
 
   const handleTelegramDisconnect = async () => {
@@ -500,6 +562,45 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
           </div>
         </CardContent>
       </Card>
+
+      {/* 푸시 알림 테스트 */}
+      {pushSupported && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Send size={14} className="text-blue-500" /> 모바일 푸시 알림 (테스트)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {pushSubscribed ? (
+              <div className="space-y-2">
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <Send size={12} /> 푸시 알림 활성화됨
+                </p>
+                <button
+                  onClick={handlePushUnsubscribe}
+                  className="text-xs text-red-500 underline"
+                >
+                  알림 해제
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  노드 이상 감지 시 이 기기로 직접 알림을 받습니다.
+                </p>
+                <button
+                  onClick={handlePushSubscribe}
+                  disabled={subscribingPush}
+                  className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                >
+                  {subscribingPush ? '처리 중...' : '알림 허용하기'}
+                </button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 텔레그램 알림 */}
       <Card>

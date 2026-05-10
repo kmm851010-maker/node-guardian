@@ -564,7 +564,7 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
       </Card>
 
       {/* 푸시 알림 테스트 */}
-      {pushSupported && (
+      {true && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -588,6 +588,11 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
                   노드 이상 감지 시 이 기기로 직접 알림을 받습니다.
+                </p>
+                <p className="text-xs text-muted-foreground font-mono">
+                  SW: {'serviceWorker' in navigator ? 'O' : 'X'} /
+                  Push: {'PushManager' in window ? 'O' : 'X'} /
+                  Notif: {'Notification' in window ? 'O' : 'X'}
                 </p>
                 <button
                   onClick={handlePushSubscribe}

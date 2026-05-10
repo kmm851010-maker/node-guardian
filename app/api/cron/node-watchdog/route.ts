@@ -18,10 +18,8 @@ function timeAgo(iso: string) {
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-pilink-secret') ?? req.nextUrl.searchParams.get('secret')
   const auth   = req.headers.get('authorization')
-  if (
-    secret !== process.env.PILINK_API_SECRET &&
-    auth   !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  const cronOk = !process.env.CRON_SECRET || auth === `Bearer ${process.env.CRON_SECRET}`
+  if (secret !== process.env.PILINK_API_SECRET && !cronOk) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

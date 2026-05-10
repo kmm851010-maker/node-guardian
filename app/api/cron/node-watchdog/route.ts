@@ -35,7 +35,10 @@ export async function GET(req: NextRequest) {
   let offlineAlerts = 0
   let recoveryAlerts = 0
 
-  await Promise.allSettled(subs.map(async (sub) => {
+  const BATCH_SIZE = 50
+  const BATCH_DELAY_MS = 200
+
+  const processSub = async (sub: { pi_uid: string; chat_id: string }) => {
     const { data: status } = await supabaseServer
       .from('node_status')
       .select('last_seen')
@@ -139,7 +142,15 @@ export async function GET(req: NextRequest) {
         }
       }
     }
-  }))
+  }
 
-  return NextResponse.json({ ok: true, offlineAlerts, recoveryAlerts })
+  for (let i = 0; i < subs.length; i += BATCH_SIZE) {
+    const batch = subs.slice(i, i + BATCH_SIZE)
+    await Promise.allSettled(batch.map(sub => processSub(sub)))
+    if (i + BATCH_SIZE < subs.length) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS))
+    }
+  }
+
+  return NextResponse.json({ ok: true, checked: subs.length, offlineAlerts, recoveryAlerts })
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, Circle, MessageCircle, Heart, CornerDownRight, PenSquare, X, Award, Pencil, Trash2, Crown } from 'lucide-react'
+import { CheckCircle, Circle, MessageCircle, Heart, CornerDownRight, PenSquare, X, Award, Pencil, Trash2, Crown, ImagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 
@@ -11,8 +11,11 @@ interface Post {
   id: string
   author_uid: string
   nickname: string
+  display_name: string | null
+  avatar_url: string | null
   title: string
   content: string
+  image_url: string | null
   likes: number
   comments_count: number
   is_resolved: boolean
@@ -25,6 +28,8 @@ interface Comment {
   post_id: string
   author_uid: string
   nickname: string
+  display_name: string | null
+  avatar_url: string | null
   content: string
   parent_id: string | null
   likes: number
@@ -130,6 +135,9 @@ export default function QnaTab({ user, isPremium }: Props) {
   const [formTitle, setFormTitle] = useState('')
   const [formContent, setFormContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [editingPost, setEditingPost] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -326,18 +334,34 @@ export default function QnaTab({ user, isPremium }: Props) {
     if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
     if (!formTitle.trim() || !formContent.trim()) { toast.error('제목과 내용을 입력해주세요.'); return }
     setSubmitting(true)
+    let image_url: string | null = null
+    if (imageFile) {
+      const fd = new FormData()
+      fd.append('author_uid', user.uid)
+      fd.append('file', imageFile)
+      const uploadRes = await fetch('/api/posts/image', { method: 'POST', body: fd })
+      if (!uploadRes.ok) {
+        const errData = await uploadRes.json().catch(() => ({}))
+        alert(`이미지 업로드 실패: ${errData.error ?? uploadRes.status}`)
+        setSubmitting(false)
+        return
+      }
+      const uploadData = await uploadRes.json()
+      image_url = uploadData.url
+    }
     const res = await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         author_uid: user.uid, nickname: user.username,
-        post_type: 'qna', title: formTitle.trim(), content: formContent.trim(),
+        post_type: 'qna', title: formTitle.trim(), content: formContent.trim(), image_url,
       }),
     })
     if (res.ok) {
       const { data } = await res.json()
       setPosts(prev => [data, ...prev])
       setFormTitle(''); setFormContent(''); setShowForm(false)
+      setImageFile(null); setImagePreview(null)
       toast.success('질문이 등록됐습니다.')
     } else {
       toast.error('등록 실패. 다시 시도해주세요.')
@@ -407,7 +431,7 @@ export default function QnaTab({ user, isPremium }: Props) {
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold">새 질문</span>
-              <button onClick={() => setShowForm(false)}><X size={16} className="text-muted-foreground" /></button>
+              <button onClick={() => { setShowForm(false); setImageFile(null); setImagePreview(null) }}><X size={16} className="text-muted-foreground" /></button>
             </div>
             <input type="text" value={formTitle} onChange={e => setFormTitle(e.target.value)}
               placeholder="질문 제목" maxLength={150} className="w-full border rounded-lg px-3 py-2 text-sm" />
@@ -417,8 +441,26 @@ export default function QnaTab({ user, isPremium }: Props) {
                 className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
               <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">{formContent.length}/10,000</span>
             </div>
+            <div>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0]; if (!file) return
+                  if (file.size > 5 * 1024 * 1024) { alert('5MB 이하 이미지만 첨부 가능합니다.'); return }
+                  setImageFile(file); setImagePreview(URL.createObjectURL(file))
+                }} />
+              {imagePreview ? (
+                <div className="relative">
+                  <img src={imagePreview} alt="preview" className="w-full max-h-48 object-cover rounded-lg" />
+                  <button onClick={() => { setImageFile(null); setImagePreview(null) }} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5"><X size={14} /></button>
+                </div>
+              ) : (
+                <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 text-xs text-muted-foreground border rounded-lg px-3 py-2 hover:bg-muted transition-colors">
+                  <ImagePlus size={14} /> 사진 첨부 (최대 5MB)
+                </button>
+              )}
+            </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-muted-foreground">취소</button>
+              <button onClick={() => { setShowForm(false); setImageFile(null); setImagePreview(null) }} className="px-4 py-2 text-sm text-muted-foreground">취소</button>
               <button onClick={handleSubmit} disabled={submitting}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50 flex items-center gap-1.5">
                 {submitting ? <><Spinner />등록 중...</> : '등록'}
@@ -469,7 +511,7 @@ export default function QnaTab({ user, isPremium }: Props) {
                   onClick={e => { e.stopPropagation(); setProfileUid(post.author_uid) }}
                   className="hover:text-violet-600 hover:underline transition-colors"
                 >
-                  {post.nickname}
+                  {post.display_name ?? post.nickname}
                 </button>
                 <span className="ml-auto">{formatTime(post.created_at)}</span>
                 <span className="flex items-center gap-0.5"><MessageCircle size={11} /> {post.comments_count ?? 0}</span>
@@ -510,8 +552,11 @@ export default function QnaTab({ user, isPremium }: Props) {
                     </div>
                   </div>
                 ) : (
-                  <div className="px-3 py-2 bg-muted/20">
+                  <div className="px-3 py-2 bg-muted/20 space-y-2">
                     <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
+                    {post.image_url && (
+                      <img src={post.image_url} alt="post" className="w-full h-auto rounded-xl border" />
+                    )}
                   </div>
                 )}
 
@@ -530,7 +575,7 @@ export default function QnaTab({ user, isPremium }: Props) {
                                 onClick={() => setProfileUid(comment.author_uid)}
                                 className="text-xs font-medium hover:text-violet-600 hover:underline"
                               >
-                                {comment.nickname}
+                                {comment.display_name ?? comment.nickname}
                               </button>
                               {isBestAnswer && (
                                 <span className="flex items-center gap-0.5 text-xs bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
@@ -582,7 +627,7 @@ export default function QnaTab({ user, isPremium }: Props) {
                                   onClick={() => setProfileUid(reply.author_uid)}
                                   className="text-xs font-medium hover:text-violet-600 hover:underline"
                                 >
-                                  {reply.nickname}
+                                  {reply.display_name ?? reply.nickname}
                                 </button>
                                 <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
                                 <button

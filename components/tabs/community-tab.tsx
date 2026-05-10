@@ -39,7 +39,6 @@ const POST_TYPES = [
   { value: 'general', label: '일반',  color: 'bg-gray-100 text-gray-700' },
   { value: 'brag',    label: '자랑',  color: 'bg-yellow-100 text-yellow-700' },
   { value: 'issue',   label: '이슈',  color: 'bg-red-100 text-red-700' },
-  { value: 'qna',     label: 'QnA',   color: 'bg-blue-100 text-blue-700' },
 ]
 function typeColor(type: string) {
   return POST_TYPES.find(t => t.value === type)?.color ?? 'bg-gray-100 text-gray-700'
@@ -127,7 +126,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
   const [profileUser, setProfileUser] = useState<{ uid: string; nickname: string } | null>(null)
 
   const loadPosts = useCallback(async (currentOffset: number) => {
-    const res = await fetch(`/api/posts?limit=20&offset=${currentOffset}`)
+    const res = await fetch(`/api/posts?limit=20&offset=${currentOffset}&exclude_type=qna`)
     const data = await res.json()
     return { posts: data.data ?? [], hasMore: data.hasMore ?? false }
   }, [])

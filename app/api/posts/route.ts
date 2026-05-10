@@ -6,6 +6,7 @@ import { supabaseServer } from '@/lib/supabase-server'
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
+  const excludeType = searchParams.get('exclude_type')
   const limit = parseInt(searchParams.get('limit') ?? '20')
   const offset = parseInt(searchParams.get('offset') ?? '0')
 
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
     .range(offset, offset + limit - 1)
 
   if (type) query = query.eq('post_type', type)
+  if (excludeType) query = query.neq('post_type', excludeType)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -289,7 +289,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
     setSavingEdit(true)
     const res = await fetch(`/api/posts/${postId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ author_uid: user.uid, title: editTitle.trim(), content: editContent.trim() }),
+      body: JSON.stringify({ author_uid: user.uid, nickname: user.username, title: editTitle.trim(), content: editContent.trim() }),
     })
     if (res.ok) {
       const { data } = await res.json()
@@ -303,7 +303,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
   const handleDelete = async (postId: string) => {
     if (!user) return
     setIsDeleting(true)
-    const res = await fetch(`/api/posts/${postId}?author_uid=${user.uid}`, { method: 'DELETE' })
+    const res = await fetch(`/api/posts/${postId}?author_uid=${user.uid}&nickname=${encodeURIComponent(user.username)}`, { method: 'DELETE' })
     if (res.ok) {
       setPosts(prev => prev.filter(p => p.id !== postId))
       if (expandedPost === postId) setExpandedPost(null)
@@ -324,7 +324,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
         const post = posts.find(p => p.id === modalPost)
         if (!post) return null
         const isLiked = likedPosts.has(post.id)
-        const isMyPost = user?.uid === post.author_uid
+        const isMyPost = user?.uid === post.author_uid || user?.username === post.author_uid
         const isEditing = editingPost === post.id
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closeModal}>
@@ -667,7 +667,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
       {/* 카드 뷰 */}
       {viewMode === 'card' && posts.map(post => {
         const isLiked = likedPosts.has(post.id)
-        const isMyPost = user?.uid === post.author_uid
+        const isMyPost = user?.uid === post.author_uid || user?.username === post.author_uid
         const isEditing = editingPost === post.id
         return (
           <Card key={post.id} className="overflow-hidden">

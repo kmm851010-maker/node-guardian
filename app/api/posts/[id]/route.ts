@@ -6,14 +6,14 @@ import { supabaseServer } from '@/lib/supabase-server'
 // 글 수정
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { author_uid, title, content } = await req.json()
+  const { author_uid, nickname, title, content } = await req.json()
   if (!author_uid || !title || !content) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
   const { data: post } = await supabaseServer
     .from('pilink_posts').select('author_uid').eq('id', id).single()
-  if (post?.author_uid !== author_uid) {
+  if (post?.author_uid !== author_uid && post?.author_uid !== nickname) {
     return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
   }
 
@@ -32,11 +32,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params
   const { searchParams } = new URL(req.url)
   const author_uid = searchParams.get('author_uid')
+  const nickname = searchParams.get('nickname') ?? ''
   if (!author_uid) return NextResponse.json({ error: 'Missing author_uid' }, { status: 400 })
 
   const { data: post } = await supabaseServer
     .from('pilink_posts').select('author_uid').eq('id', id).single()
-  if (post?.author_uid !== author_uid) {
+  if (post?.author_uid !== author_uid && post?.author_uid !== nickname) {
     return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
   }
 

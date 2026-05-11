@@ -179,6 +179,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
   const closeModal = () => {
     setModalPost(null)
     setExpandedPost(null)
+    setEditingPost(null)
   }
 
   const handleLike = async (e: React.MouseEvent, postId: string) => {

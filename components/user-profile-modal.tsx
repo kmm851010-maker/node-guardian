@@ -14,6 +14,14 @@ interface UserProfile {
   rankHistory: { week_start: string; rank: number; total_likes: number }[]
 }
 
+const BADGE_LABELS: Record<string, { label: string; color: string }> = {
+  crown:   { label: '역대 최장출석 TOP5',  color: 'text-yellow-700' },
+  flame:   { label: '현재 연속출석 TOP3',  color: 'text-orange-600' },
+  diamond: { label: '역대 지식In TOP5',    color: 'text-purple-700' },
+  scholar: { label: '주간 지식In TOP3',    color: 'text-blue-600'   },
+  trophy:  { label: '주간 인기멤버 TOP3',  color: 'text-rose-600'   },
+}
+
 const POST_TYPE_LABEL: Record<string, string> = {
   general: '일반', brag: '자랑', issue: '이슈', qna: 'QnA',
 }
@@ -28,6 +36,7 @@ interface Props {
 export default function UserProfileModal({ uid, nickname, onClose }: Props) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userBadges, setUserBadges] = useState<string[]>([])
 
   useEffect(() => {
     const url = nickname
@@ -36,6 +45,9 @@ export default function UserProfileModal({ uid, nickname, onClose }: Props) {
     fetch(url)
       .then(r => r.json())
       .then(d => { setProfile(d); setLoading(false) })
+    fetch('/api/badges')
+      .then(r => r.json())
+      .then(d => setUserBadges((d.badges ?? {})[uid] ?? []))
   }, [uid, nickname])
 
   return (
@@ -87,6 +99,23 @@ export default function UserProfileModal({ uid, nickname, onClose }: Props) {
           </div>
         ) : (
           <>
+            {/* 뱃지 */}
+            {userBadges.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-2">보유 뱃지</p>
+                <div className="flex flex-wrap gap-3">
+                  {userBadges.map(b => (
+                    <div key={b} className="flex flex-col items-center gap-1">
+                      <img src={`/badges/badge-${b}.png`} alt={b} className="w-10 h-10" />
+                      <span className={`text-xs font-medium ${BADGE_LABELS[b]?.color ?? 'text-muted-foreground'}`}>
+                        {BADGE_LABELS[b]?.label ?? b}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 통계 */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-rose-50 rounded-xl p-3 text-center">

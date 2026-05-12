@@ -7,6 +7,14 @@ import { Crown, Zap, ExternalLink, Gift, Send, Star, Pencil, Camera, Check, X, B
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
+const BADGE_LABELS: Record<string, { label: string; color: string }> = {
+  crown:   { label: '역대 최장출석 TOP5',  color: 'text-yellow-700' },
+  flame:   { label: '현재 연속출석 TOP3',  color: 'text-orange-600' },
+  diamond: { label: '역대 지식In TOP5',    color: 'text-purple-700' },
+  scholar: { label: '주간 지식In TOP3',    color: 'text-blue-600'   },
+  trophy:  { label: '주간 인기멤버 TOP3',  color: 'text-rose-600'   },
+}
+
 interface PremiumStatus {
   isPremium: boolean
   expires_at?: string
@@ -54,6 +62,7 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
   const [checkingIn, setCheckingIn] = useState(false)
   const [showAdModal, setShowAdModal] = useState(false)
   const [adXpEarned, setAdXpEarned] = useState(0)
+  const [myBadges, setMyBadges] = useState<string[]>([])
   const [notifications, setNotifications] = useState<NotifItem[]>([])
   const [notifOffset, setNotifOffset] = useState(0)
   const [notifHasMore, setNotifHasMore] = useState(false)
@@ -70,6 +79,13 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
   const [savingName, setSavingName] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!user) return
+    fetch('/api/badges')
+      .then(r => r.json())
+      .then(d => setMyBadges((d.badges ?? {})[user.uid] ?? []))
+  }, [user])
 
   useEffect(() => {
     if (!user) return
@@ -466,6 +482,25 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
           </div>
         </CardContent>
       </Card>
+
+      {/* 보유 뱃지 */}
+      {myBadges.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-3">보유 뱃지</p>
+            <div className="flex flex-wrap gap-4">
+              {myBadges.map(b => (
+                <div key={b} className="flex flex-col items-center gap-1">
+                  <img src={`/badges/badge-${b}.png`} alt={b} className="w-12 h-12" />
+                  <span className={`text-xs font-medium text-center ${BADGE_LABELS[b]?.color ?? 'text-muted-foreground'}`}>
+                    {BADGE_LABELS[b]?.label ?? b}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 댓글 알림 피드 */}
       <Card>

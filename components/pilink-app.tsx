@@ -54,7 +54,7 @@ export default function PiLinkApp() {
       const dy = startYRef.current - e.touches[0].clientY
       const atBottom = window.scrollY + window.innerHeight >= document.body.scrollHeight - 20
       const atTop = window.scrollY <= 0
-      const ready = (atBottom && dy > 100) || (atTop && dy < -100)
+      const ready = (atBottom && dy > 150) || (atTop && dy < -150)
       pullReadyRef.current = ready
       setPullReady(ready)
     }

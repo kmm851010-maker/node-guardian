@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle, Download, BookOpen, Smartphone } from 'lucide-react'
+import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle, Download, BookOpen, Smartphone, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import DashboardTab from './tabs/dashboard-tab'
 import CommunityTab from './tabs/community-tab'
@@ -36,6 +36,7 @@ export default function PiLinkApp() {
   const [openPostRequest, setOpenPostRequest] = useState<{ postId: string; postType: string } | null>(null)
   const [badgeMap, setBadgeMap] = useState<Record<string, string[]>>({})
   const [pullReady, setPullReady] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const startYRef = useRef(0)
   const pullReadyRef = useRef(false)
 
@@ -58,9 +59,14 @@ export default function PiLinkApp() {
       setPullReady(ready)
     }
     const onTouchEnd = () => {
-      if (pullReadyRef.current) window.location.reload()
+      if (pullReadyRef.current) {
+        setRefreshing(true)
+        setPullReady(false)
+        setTimeout(() => window.location.reload(), 700)
+      } else {
+        setPullReady(false)
+      }
       pullReadyRef.current = false
-      setPullReady(false)
     }
     window.addEventListener('touchstart', onTouchStart, { passive: true })
     window.addEventListener('touchmove', onTouchMove, { passive: true })
@@ -230,10 +236,18 @@ export default function PiLinkApp() {
         {activeTab === 'profile'    && <ProfileTab user={user} onPremiumChange={setIsPremium} notifSince={profileSince} onNavigateToPost={handleNavigateToPost} />}
       </main>
 
-      {/* 오버스크롤 새로고침 인디케이터 */}
-      {pullReady && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-violet-600 text-white text-xs px-4 py-1.5 rounded-full shadow-lg pointer-events-none">
-          손 떼면 새로고침
+      {/* 오버스크롤 준비 인디케이터 */}
+      {pullReady && !refreshing && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-violet-600 text-white text-xs px-4 py-1.5 rounded-full shadow-lg pointer-events-none flex items-center gap-1.5">
+          <RefreshCw size={12} /> 손 떼면 새로고침
+        </div>
+      )}
+
+      {/* 새로고침 애니메이션 오버레이 */}
+      {refreshing && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm pointer-events-none">
+          <RefreshCw size={36} className="text-violet-600 animate-spin" />
+          <p className="mt-3 text-sm font-medium text-violet-700">새로고침 중...</p>
         </div>
       )}
 

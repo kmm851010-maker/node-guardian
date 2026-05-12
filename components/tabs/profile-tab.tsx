@@ -58,6 +58,7 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
   const [notifOffset, setNotifOffset] = useState(0)
   const [notifHasMore, setNotifHasMore] = useState(false)
   const [notifLoading, setNotifLoading] = useState(false)
+  const notifSentinelRef = useRef<HTMLDivElement>(null)
   const profileKey = `pilink_profile_${user?.uid ?? ''}`
   const [profileData, setProfileData] = useState<{ display_name?: string; avatar_url?: string } | null>(() => {
     if (typeof window === 'undefined' || !user?.uid) return null
@@ -97,7 +98,29 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
     fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=1970-01-01T00%3A00%3A00.000Z&limit=10&offset=0`)
       .then(r => r.json())
       .then(d => { setNotifications(d.items ?? []); setNotifHasMore(d.hasMore ?? false); setNotifOffset(10) })
+  }, [user])
 
+  useEffect(() => {
+    if (!notifSentinelRef.current || !user) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && notifHasMore && !notifLoading) {
+        setNotifLoading(true)
+        fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=1970-01-01T00%3A00%3A00.000Z&limit=10&offset=${notifOffset}`)
+          .then(r => r.json())
+          .then(d => {
+            setNotifications(prev => [...prev, ...(d.items ?? [])])
+            setNotifHasMore(d.hasMore ?? false)
+            setNotifOffset(prev => prev + 10)
+            setNotifLoading(false)
+          })
+      }
+    }, { threshold: 0.1 })
+    observer.observe(notifSentinelRef.current)
+    return () => observer.disconnect()
+  }, [notifHasMore, notifLoading, notifOffset, user])
+
+  useEffect(() => {
+    if (!user) return
     fetch(`/api/profile?pi_uid=${user.uid}&username=${encodeURIComponent(user.username)}`)
       .then(r => r.json())
       .then(data => {
@@ -108,7 +131,6 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
           localStorage.removeItem(profileKey)
           setProfileData(null)
         }
-        // GET가 빈 값을 반환해도 기존 캐시 유지 (덮어쓰지 않음)
       })
   }, [user])
 
@@ -475,26 +497,8 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
               ))}
             </div>
           )}
-          {notifHasMore && (
-            <div className="px-3 py-2 border-t">
-              <button
-                onClick={async () => {
-                  if (notifLoading || !user) return
-                  setNotifLoading(true)
-                  const res = await fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=1970-01-01T00%3A00%3A00.000Z&limit=10&offset=${notifOffset}`)
-                  const d = await res.json()
-                  setNotifications(prev => [...prev, ...(d.items ?? [])])
-                  setNotifHasMore(d.hasMore ?? false)
-                  setNotifOffset(prev => prev + 10)
-                  setNotifLoading(false)
-                }}
-                disabled={notifLoading}
-                className="w-full text-xs text-violet-600 py-1.5 disabled:opacity-50"
-              >
-                {notifLoading ? '불러오는 중...' : '더 보기'}
-              </button>
-            </div>
-          )}
+          <div ref={notifSentinelRef} className="h-2" />
+          {notifLoading && <p className="text-xs text-muted-foreground text-center py-2">불러오는 중...</p>}
         </CardContent>
       </Card>
 

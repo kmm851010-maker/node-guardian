@@ -63,9 +63,15 @@ function formatTime(iso: string) {
   return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
+function BadgeIcons({ badges }: { badges?: string[] }) {
+  if (!badges?.length) return null
+  return <>{badges.map(b => <img key={b} src={`/badges/badge-${b}.png`} alt={b} className="w-4 h-4 shrink-0 inline" />)}</>
+}
+
 interface Props {
   user: { uid: string; username: string } | null
   isPremium: boolean
+  badgeMap?: Record<string, string[]>
   openPostId?: string
   onPostOpened?: () => void
 }
@@ -114,7 +120,7 @@ function BestAnswerPopup({
   )
 }
 
-export default function QnaTab({ user, isPremium, openPostId, onPostOpened }: Props) {
+export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onPostOpened }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -549,6 +555,7 @@ export default function QnaTab({ user, isPremium, openPostId, onPostOpened }: Pr
                   >
                     {post.display_name ?? post.nickname}
                   </button>
+                  <BadgeIcons badges={badgeMap[post.author_uid]} />
                 </span>
                 <span className="ml-auto">{formatTime(post.created_at)}</span>
                 <span className="flex items-center gap-0.5"><MessageCircle size={11} /> {post.comments_count ?? 0}</span>
@@ -616,6 +623,7 @@ export default function QnaTab({ user, isPremium, openPostId, onPostOpened }: Pr
                                 >
                                   {comment.display_name ?? comment.nickname}
                                 </button>
+                                <BadgeIcons badges={badgeMap[comment.author_uid]} />
                               </span>
                               {isBestAnswer && (
                                 <span className="flex items-center gap-0.5 text-xs bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
@@ -671,6 +679,7 @@ export default function QnaTab({ user, isPremium, openPostId, onPostOpened }: Pr
                                   >
                                     {reply.display_name ?? reply.nickname}
                                   </button>
+                                  <BadgeIcons badges={badgeMap[reply.author_uid]} />
                                 </span>
                                 <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
                                 <button

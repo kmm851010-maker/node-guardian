@@ -34,9 +34,14 @@ export default function PiLinkApp() {
   const [badges, setBadges] = useState<Partial<Record<Tab, boolean>>>({})
   const [profileSince, setProfileSince] = useState('1970-01-01T00:00:00.000Z')
   const [openPostRequest, setOpenPostRequest] = useState<{ postId: string; postType: string } | null>(null)
+  const [badgeMap, setBadgeMap] = useState<Record<string, string[]>>({})
 
   useEffect(() => {
     setProfileSince(localStorage.getItem('lastSeen_profile') ?? '1970-01-01T00:00:00.000Z')
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/badges').then(r => r.json()).then(d => setBadgeMap(d.badges ?? {}))
   }, [])
 
   useEffect(() => {
@@ -187,9 +192,9 @@ export default function PiLinkApp() {
       <main className="pb-20">
         {isPiBrowser === true && <GuideDrawer />}
         {activeTab === 'dashboard'  && <DashboardTab user={user} />}
-        {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} openPostId={openPostRequest?.postType !== 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
+        {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} badgeMap={badgeMap} openPostId={openPostRequest?.postType !== 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
         {activeTab === 'ranking'    && <RankingTab user={user} />}
-        {activeTab === 'qna'        && <QnaTab user={user} isPremium={isPremium} openPostId={openPostRequest?.postType === 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
+        {activeTab === 'qna'        && <QnaTab user={user} isPremium={isPremium} badgeMap={badgeMap} openPostId={openPostRequest?.postType === 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
         {activeTab === 'profile'    && <ProfileTab user={user} onPremiumChange={setIsPremium} notifSince={profileSince} onNavigateToPost={handleNavigateToPost} />}
       </main>
 

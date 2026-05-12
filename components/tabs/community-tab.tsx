@@ -82,14 +82,20 @@ function PremiumRequired({ onGoProfile }: { onGoProfile?: () => void }) {
   )
 }
 
+function BadgeIcons({ badges }: { badges?: string[] }) {
+  if (!badges?.length) return null
+  return <>{badges.map(b => <img key={b} src={`/badges/badge-${b}.png`} alt={b} className="w-4 h-4 shrink-0 inline" />)}</>
+}
+
 interface Props {
   user: { uid: string; username: string } | null
   isPremium: boolean
+  badgeMap?: Record<string, string[]>
   openPostId?: string
   onPostOpened?: () => void
 }
 
-export default function CommunityTab({ user, isPremium, openPostId, onPostOpened }: Props) {
+export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostId, onPostOpened }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -387,6 +393,7 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                     <span className="flex items-center gap-1">
                       <LevelBadge level={post.level} />
                       <button onClick={() => { closeModal(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }} className="hover:text-violet-600 hover:underline">{post.display_name ?? post.nickname}</button>
+                      <BadgeIcons badges={badgeMap[post.author_uid]} />
                     </span>
                     <span>{formatTime(post.created_at)}</span>
                     <span className="flex items-center gap-0.5"><Eye size={10} /> {post.views}</span>
@@ -444,6 +451,7 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                                   <LevelBadge level={comment.level} />
                                   <button onClick={() => setProfileUser({ uid: comment.author_uid, nickname: comment.nickname })}
                                     className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.display_name ?? comment.nickname}</button>
+                                  <BadgeIcons badges={badgeMap[comment.author_uid]} />
                                 </span>
                                 <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
                                 <button onClick={e => handleCommentLike(e, comment.id, post.id)} disabled={!!likingCommentId}
@@ -470,6 +478,7 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                                     <LevelBadge level={reply.level} />
                                     <button onClick={() => setProfileUser({ uid: reply.author_uid, nickname: reply.nickname })}
                                       className="text-xs font-medium hover:text-violet-600 hover:underline">{reply.display_name ?? reply.nickname}</button>
+                                    <BadgeIcons badges={badgeMap[reply.author_uid]} />
                                   </span>
                                   <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
                                   <button onClick={e => handleCommentLike(e, reply.id, post.id)}
@@ -731,6 +740,7 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                 <LevelBadge level={post.level} />
                 <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
                   className="text-xs text-muted-foreground truncate hover:text-violet-600">{post.display_name ?? post.nickname}</button>
+                <BadgeIcons badges={badgeMap[post.author_uid]} />
               </div>
               <span className="w-10 text-xs text-muted-foreground text-right shrink-0">{formatTime(post.created_at).slice(0,5)}</span>
               <span className="w-12 text-xs text-muted-foreground text-right shrink-0 hidden sm:block flex items-center gap-0.5">
@@ -768,6 +778,7 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                       <LevelBadge level={post.level} />
                       <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
                         className="hover:text-violet-600 hover:underline transition-colors">{post.display_name ?? post.nickname}</button>
+                      <BadgeIcons badges={badgeMap[post.author_uid]} />
                     </span>
                     <span className="ml-auto">{formatTime(post.created_at)}</span>
                     <span className="flex items-center gap-0.5"><Eye size={11} /> {post.views}</span>

@@ -492,21 +492,22 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
               const lv = getLevel(attendance.total_xp)
               const nextThreshold = getNextLevelThreshold(lv)
               const prevThreshold = lv > 1 ? getNextLevelThreshold(lv - 1) ?? 0 : 0
-              const pct = nextThreshold
-                ? Math.min(100, Math.round(((attendance.total_xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100))
-                : 100
+              const xpInLevel = attendance.total_xp - prevThreshold
+              const xpNeeded = nextThreshold !== null ? nextThreshold - prevThreshold : 0
+              const pct = nextThreshold !== null ? Math.min(100, Math.round((xpInLevel / xpNeeded) * 100)) : 100
               return (
-                <div className="space-y-0.5">
-                  <p className="text-xs text-muted-foreground">Lv.{lv} · {attendance.total_xp} XP</p>
-                  {nextThreshold !== null && (
-                    <>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-violet-500 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">{attendance.total_xp} / {nextThreshold} XP → Lv.{lv + 1}</p>
-                    </>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-violet-700">Lv.{lv}</p>
+                  {nextThreshold !== null ? (
+                    <div className="relative w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                      <div className="bg-violet-500 h-4 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-white drop-shadow">
+                        {xpInLevel} / {xpNeeded}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-violet-600 font-medium">최고 레벨 달성!</p>
                   )}
-                  {nextThreshold === null && <p className="text-[10px] text-violet-600 font-medium">최고 레벨 달성!</p>}
                 </div>
               )
             })() : <p className="text-xs text-muted-foreground">Pi Node 운영자</p>}

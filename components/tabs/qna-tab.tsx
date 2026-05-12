@@ -9,7 +9,17 @@ import UserProfileModal from '@/components/user-profile-modal'
 
 function LevelBadge({ level }: { level: number | null }) {
   if (!level) return null
-  const color = level >= 61 ? 'bg-yellow-100 text-yellow-700' : level >= 31 ? 'bg-violet-100 text-violet-700' : level >= 11 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+  const color =
+    level >= 91 ? 'bg-amber-200 text-amber-800' :
+    level >= 81 ? 'bg-red-100 text-red-700' :
+    level >= 71 ? 'bg-rose-100 text-rose-600' :
+    level >= 61 ? 'bg-orange-100 text-orange-700' :
+    level >= 51 ? 'bg-purple-100 text-purple-700' :
+    level >= 41 ? 'bg-violet-100 text-violet-700' :
+    level >= 31 ? 'bg-cyan-100 text-cyan-700' :
+    level >= 21 ? 'bg-blue-100 text-blue-700' :
+    level >= 11 ? 'bg-green-100 text-green-700' :
+                  'bg-gray-100 text-gray-600'
   return <span className={`text-xs px-1 py-0.5 rounded font-medium shrink-0 ${color}`}>Lv.{level}</span>
 }
 

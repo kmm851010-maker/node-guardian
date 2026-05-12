@@ -688,6 +688,14 @@ export default function QnaTab({ user, isPremium, openPostId, onPostOpened }: Pr
                                 <p className="text-xs whitespace-pre-wrap leading-relaxed break-words">{reply.content}</p>
                               </div>
                             </div>
+                            {isMyPost && !post.best_answer_comment_id && reply.author_uid !== user?.uid && (
+                              <button
+                                onClick={() => handleBestAnswer(post.id, reply.id, reply.nickname)}
+                                className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-300 px-2 py-0.5 rounded-full whitespace-nowrap hover:bg-yellow-100 transition-colors mt-1"
+                              >
+                                채택
+                              </button>
+                            )}
                           </div>
                         ))}
 

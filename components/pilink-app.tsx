@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle, Download, BookOpen, Smartphone } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import DashboardTab from './tabs/dashboard-tab'
@@ -35,9 +35,40 @@ export default function PiLinkApp() {
   const [profileSince, setProfileSince] = useState('1970-01-01T00:00:00.000Z')
   const [openPostRequest, setOpenPostRequest] = useState<{ postId: string; postType: string } | null>(null)
   const [badgeMap, setBadgeMap] = useState<Record<string, string[]>>({})
+  const [pullReady, setPullReady] = useState(false)
+  const startYRef = useRef(0)
+  const pullReadyRef = useRef(false)
 
   useEffect(() => {
     setProfileSince(localStorage.getItem('lastSeen_profile') ?? '1970-01-01T00:00:00.000Z')
+  }, [])
+
+  useEffect(() => {
+    const onTouchStart = (e: TouchEvent) => {
+      startYRef.current = e.touches[0].clientY
+      pullReadyRef.current = false
+      setPullReady(false)
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      const dy = startYRef.current - e.touches[0].clientY
+      const atBottom = window.scrollY + window.innerHeight >= document.body.scrollHeight - 20
+      const ready = atBottom && dy > 60
+      pullReadyRef.current = ready
+      setPullReady(ready)
+    }
+    const onTouchEnd = () => {
+      if (pullReadyRef.current) window.location.reload()
+      pullReadyRef.current = false
+      setPullReady(false)
+    }
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchmove', onTouchMove, { passive: true })
+    window.addEventListener('touchend', onTouchEnd)
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onTouchEnd)
+    }
   }, [])
 
   useEffect(() => {
@@ -197,6 +228,13 @@ export default function PiLinkApp() {
         {activeTab === 'qna'        && <QnaTab user={user} isPremium={isPremium} badgeMap={badgeMap} openPostId={openPostRequest?.postType === 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
         {activeTab === 'profile'    && <ProfileTab user={user} onPremiumChange={setIsPremium} notifSince={profileSince} onNavigateToPost={handleNavigateToPost} />}
       </main>
+
+      {/* 하단 오버스크롤 새로고침 인디케이터 */}
+      {pullReady && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-violet-600 text-white text-xs px-4 py-1.5 rounded-full shadow-lg pointer-events-none">
+          ↑ 손 떼면 새로고침
+        </div>
+      )}
 
       {/* 하단 탭 바 */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-background border-t flex">

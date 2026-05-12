@@ -77,9 +77,11 @@ function PremiumRequired({ onGoProfile }: { onGoProfile?: () => void }) {
 interface Props {
   user: { uid: string; username: string } | null
   isPremium: boolean
+  openPostId?: string
+  onPostOpened?: () => void
 }
 
-export default function CommunityTab({ user, isPremium }: Props) {
+export default function CommunityTab({ user, isPremium, openPostId, onPostOpened }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -181,6 +183,32 @@ export default function CommunityTab({ user, isPremium }: Props) {
     setExpandedPost(null)
     setEditingPost(null)
   }
+
+  useEffect(() => {
+    if (!openPostId) return
+    const open = async () => {
+      const existing = posts.find(p => p.id === openPostId)
+      if (!existing) {
+        const res = await fetch(`/api/posts/${openPostId}`)
+        const d = await res.json()
+        if (d.data) {
+          setPosts(prev => prev.find(p => p.id === openPostId) ? prev : [d.data, ...prev])
+          setTimeout(() => { setModalPost(openPostId); setExpandedPost(openPostId) }, 0)
+        }
+      } else {
+        setModalPost(openPostId)
+        setExpandedPost(openPostId)
+      }
+      if (!comments[openPostId]) {
+        const res = await fetch(`/api/posts/${openPostId}/comments`)
+        const d = await res.json()
+        setComments(prev => ({ ...prev, [openPostId]: d.data ?? [] }))
+      }
+      onPostOpened?.()
+    }
+    open()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openPostId])
 
   const handleLike = async (e: React.MouseEvent, postId: string) => {
     e.stopPropagation()

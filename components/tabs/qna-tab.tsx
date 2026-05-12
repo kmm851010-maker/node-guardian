@@ -58,6 +58,8 @@ function formatTime(iso: string) {
 interface Props {
   user: { uid: string; username: string } | null
   isPremium: boolean
+  openPostId?: string
+  onPostOpened?: () => void
 }
 
 // 채택 확인 팝업
@@ -104,7 +106,7 @@ function BestAnswerPopup({
   )
 }
 
-export default function QnaTab({ user, isPremium }: Props) {
+export default function QnaTab({ user, isPremium, openPostId, onPostOpened }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -183,6 +185,30 @@ export default function QnaTab({ user, isPremium }: Props) {
     observer.observe(sentinelRef.current)
     return () => observer.disconnect()
   }, [hasMore, loadingMore, offset, loadPosts])
+
+  useEffect(() => {
+    if (!openPostId) return
+    const open = async () => {
+      const existing = posts.find(p => p.id === openPostId)
+      if (!existing) {
+        const res = await fetch(`/api/posts/${openPostId}`)
+        const d = await res.json()
+        if (d.data) setPosts(prev => prev.find(p => p.id === openPostId) ? prev : [d.data, ...prev])
+      }
+      setExpandedPost(openPostId)
+      if (!comments[openPostId]) {
+        const res = await fetch(`/api/posts/${openPostId}/comments`)
+        const d = await res.json()
+        setComments(prev => ({ ...prev, [openPostId]: d.data ?? [] }))
+      }
+      setTimeout(() => {
+        document.getElementById(`qna-post-${openPostId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+      onPostOpened?.()
+    }
+    open()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openPostId])
 
   const toggleExpand = async (postId: string) => {
     if (expandedPost === postId) { setExpandedPost(null); return }
@@ -491,7 +517,7 @@ export default function QnaTab({ user, isPremium }: Props) {
         const isMyPost = user?.uid === post.author_uid || user?.username === post.author_uid
         const isEditing = editingPost === post.id
         return (
-          <Card key={post.id} className="overflow-hidden">
+          <Card key={post.id} id={`qna-post-${post.id}`} className="overflow-hidden">
             <CardContent className="p-3 cursor-pointer" onClick={() => !isEditing && toggleExpand(post.id)}>
               <div className="flex items-center gap-2 mb-0.5">
                 {post.is_resolved

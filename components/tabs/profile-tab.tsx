@@ -37,7 +37,7 @@ interface NotifItem {
   created_at: string
 }
 
-export default function ProfileTab({ user, onPremiumChange, notifSince }: { user: { uid: string; username: string } | null; onPremiumChange?: (v: boolean) => void; notifSince?: string }) {
+export default function ProfileTab({ user, onPremiumChange, notifSince, onNavigateToPost }: { user: { uid: string; username: string } | null; onPremiumChange?: (v: boolean) => void; notifSince?: string; onNavigateToPost?: (postId: string, postType: string) => void }) {
   const [premium, setPremium] = useState<PremiumStatus>({ isPremium: false })
   const [paying, setPaying] = useState(false)
   const didReauth = useRef(false)
@@ -453,7 +453,7 @@ export default function ProfileTab({ user, onPremiumChange, notifSince }: { user
           </CardHeader>
           <CardContent className="space-y-2 p-3 pt-0">
             {notifications.map(item => (
-              <div key={item.comment_id} className="flex gap-2 bg-muted/50 rounded-lg px-3 py-2">
+              <div key={item.comment_id} className="flex gap-2 bg-muted/50 rounded-lg px-3 py-2 cursor-pointer active:bg-muted" onClick={() => onNavigateToPost?.(item.post_id, item.post_type)}>
                 <span className="shrink-0 mt-0.5 text-violet-500">
                   {item.type === 'new_reply' ? <CornerDownRight size={13} /> : <MessageSquare size={13} />}
                 </span>

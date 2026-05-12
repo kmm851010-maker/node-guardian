@@ -3,6 +3,21 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
+// 글 단건 조회
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const { data, error } = await supabaseServer
+    .from('pilink_posts').select('*').eq('id', id).single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 404 })
+
+  const { data: profile } = await supabaseServer
+    .from('node_profiles').select('display_name, avatar_url')
+    .or(`pi_uid.eq.${data.author_uid},nickname.eq.${data.nickname}`)
+    .maybeSingle()
+
+  return NextResponse.json({ data: { ...data, display_name: profile?.display_name ?? null, avatar_url: profile?.avatar_url ?? null } })
+}
+
 // 글 수정
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

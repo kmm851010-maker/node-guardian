@@ -91,5 +91,9 @@ export async function GET(req: NextRequest) {
   const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.nickname, p.display_name]))
   const enriched = allItems.map(i => ({ ...i, display_name: profileMap[i.nickname] ?? null }))
 
-  return NextResponse.json({ hasNew: enriched.length > 0, items: enriched })
+  const limit = parseInt(searchParams.get('limit') ?? '10')
+  const offset = parseInt(searchParams.get('offset') ?? '0')
+  const paged = enriched.slice(offset, offset + limit)
+
+  return NextResponse.json({ hasNew: enriched.length > 0, items: paged, hasMore: offset + limit < enriched.length })
 }

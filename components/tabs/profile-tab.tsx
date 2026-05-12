@@ -55,6 +55,9 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
   const [showAdModal, setShowAdModal] = useState(false)
   const [adXpEarned, setAdXpEarned] = useState(0)
   const [notifications, setNotifications] = useState<NotifItem[]>([])
+  const [notifOffset, setNotifOffset] = useState(0)
+  const [notifHasMore, setNotifHasMore] = useState(false)
+  const [notifLoading, setNotifLoading] = useState(false)
   const profileKey = `pilink_profile_${user?.uid ?? ''}`
   const [profileData, setProfileData] = useState<{ display_name?: string; avatar_url?: string } | null>(() => {
     if (typeof window === 'undefined' || !user?.uid) return null
@@ -91,10 +94,9 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
       .then(r => r.json())
       .then(setAttendance)
 
-    const since = notifSince ?? '1970-01-01T00:00:00.000Z'
-    fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=${encodeURIComponent(since)}`)
+    fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=1970-01-01T00%3A00%3A00.000Z&limit=10&offset=0`)
       .then(r => r.json())
-      .then(d => setNotifications(d.items ?? []))
+      .then(d => { setNotifications(d.items ?? []); setNotifHasMore(d.hasMore ?? false); setNotifOffset(10) })
 
     fetch(`/api/profile?pi_uid=${user.uid}&username=${encodeURIComponent(user.username)}`)
       .then(r => r.json())
@@ -443,35 +445,58 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
         </CardContent>
       </Card>
 
-      {/* 새 알림 */}
-      {notifications.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Bell size={14} className="text-red-500" /> 새 알림
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 p-3 pt-0">
-            {notifications.map(item => (
-              <div key={item.comment_id} className="flex gap-2 bg-muted/50 rounded-lg px-3 py-2 cursor-pointer active:bg-muted" onClick={() => onNavigateToPost?.(item.post_id, item.post_type)}>
-                <span className="shrink-0 mt-0.5 text-violet-500">
-                  {item.type === 'new_reply' ? <CornerDownRight size={13} /> : <MessageSquare size={13} />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-muted-foreground truncate">
-                    <span className="font-medium text-foreground">{item.display_name ?? item.nickname}</span>
-                    {item.type === 'new_reply' ? ' 님이 내 댓글에 대댓글을 달았습니다' : ' 님이 내 글에 댓글을 달았습니다'}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5 italic">"{item.content}"</p>
-                  <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
-                    {item.post_type === 'qna' ? '[QnA] ' : '[커뮤니티] '}{item.post_title}
-                  </p>
+      {/* 댓글 알림 피드 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Bell size={14} className="text-violet-500" /> 댓글 알림
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {notifications.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">내 글·댓글에 달린 댓글이 없습니다.</p>
+          ) : (
+            <div className="divide-y">
+              {notifications.map(item => (
+                <div key={item.comment_id} className="flex gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-muted/40 active:bg-muted transition-colors" onClick={() => onNavigateToPost?.(item.post_id, item.post_type)}>
+                  <span className="shrink-0 mt-0.5 text-violet-400">
+                    {item.type === 'new_reply' ? <CornerDownRight size={13} /> : <MessageSquare size={13} />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-xs font-medium">{item.display_name ?? item.nickname}</span>
+                      <span className="text-xs text-muted-foreground">{item.type === 'new_reply' ? '대댓글' : '댓글'}</span>
+                      <span className="text-xs text-muted-foreground/60 ml-auto shrink-0">{item.post_type === 'qna' ? 'QnA' : '커뮤니티'}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">📄 {item.post_title}</p>
+                    <p className="text-xs text-foreground/80 truncate mt-0.5">💬 {item.content}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+              ))}
+            </div>
+          )}
+          {notifHasMore && (
+            <div className="px-3 py-2 border-t">
+              <button
+                onClick={async () => {
+                  if (notifLoading || !user) return
+                  setNotifLoading(true)
+                  const res = await fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=1970-01-01T00%3A00%3A00.000Z&limit=10&offset=${notifOffset}`)
+                  const d = await res.json()
+                  setNotifications(prev => [...prev, ...(d.items ?? [])])
+                  setNotifHasMore(d.hasMore ?? false)
+                  setNotifOffset(prev => prev + 10)
+                  setNotifLoading(false)
+                }}
+                disabled={notifLoading}
+                className="w-full text-xs text-violet-600 py-1.5 disabled:opacity-50"
+              >
+                {notifLoading ? '불러오는 중...' : '더 보기'}
+              </button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* 출석 체크 */}
       <Card>

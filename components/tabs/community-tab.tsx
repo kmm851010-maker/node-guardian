@@ -126,9 +126,16 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
   const [piNews, setPiNews] = useState<{ title: string; link: string; date: string }[]>([])
+  const [top3, setTop3] = useState<Post[]>([])
 
   useEffect(() => {
     fetch('/api/pi-news').then(r => r.json()).then(d => setPiNews(d.items ?? []))
+    const nowKST = new Date(Date.now() + 9 * 3600000)
+    const day = nowKST.getUTCDay()
+    const sun = new Date(nowKST.getTime() - day * 86400000)
+    const since = `${sun.getUTCFullYear()}-${String(sun.getUTCMonth() + 1).padStart(2, '0')}-${String(sun.getUTCDate()).padStart(2, '0')}`
+    fetch(`/api/posts?sort=likes&limit=3&exclude_type=qna&since=${since}`)
+      .then(r => r.json()).then(d => setTop3(d.data ?? []))
   }, [])
   const [likingPostId, setLikingPostId] = useState<string | null>(null)
   const [likingCommentId, setLikingCommentId] = useState<string | null>(null)
@@ -587,6 +594,28 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 이번 주 인기 글 TOP3 */}
+      {top3.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+            🏆 이번 주 인기 글
+          </p>
+          {top3.map((post, i) => (
+            <button
+              key={post.id}
+              onClick={() => openPost(post.id)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border bg-gradient-to-r from-violet-50 to-white hover:from-violet-100 transition-colors text-left"
+            >
+              <span className="text-base shrink-0">{['🥇', '🥈', '🥉'][i]}</span>
+              <span className="flex-1 text-xs font-medium truncate">{post.title}</span>
+              <span className="flex items-center gap-0.5 text-xs text-rose-500 shrink-0">
+                <Heart size={11} fill="currentColor" /> {post.likes}
+              </span>
+            </button>
+          ))}
         </div>
       )}
 

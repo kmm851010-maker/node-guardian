@@ -10,14 +10,18 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get('limit') ?? '20')
   const offset = parseInt(searchParams.get('offset') ?? '0')
 
+  const sort = searchParams.get('sort')
+  const since = searchParams.get('since')
+
   let query = supabaseServer
     .from('pilink_posts')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order(sort === 'likes' ? 'likes' : 'created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
   if (type) query = query.eq('post_type', type)
   if (excludeType) query = query.neq('post_type', excludeType)
+  if (since) query = query.gte('created_at', since)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

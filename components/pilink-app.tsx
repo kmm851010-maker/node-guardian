@@ -31,6 +31,7 @@ export default function PiLinkApp() {
   const { user, isLoading, login, logout } = useAuth()
   const [isPremium, setIsPremium] = useState(false)
   const [isPiBrowser, setIsPiBrowser] = useState<boolean | null>(null)
+  const [badges, setBadges] = useState<Partial<Record<Tab, boolean>>>({})
 
   useEffect(() => {
     const hasPiSDK = !!(window as any).Pi
@@ -46,6 +47,71 @@ export default function PiLinkApp() {
       .then(r => r.json())
       .then(d => setIsPremium(d.isPremium ?? false))
   }, [user])
+
+  useEffect(() => {
+    const checkBadges = async () => {
+      const lastSeenCommunity = localStorage.getItem('lastSeen_community') ?? '1970-01-01T00:00:00.000Z'
+      const lastSeenQna = localStorage.getItem('lastSeen_qna') ?? '1970-01-01T00:00:00.000Z'
+
+      const [communityRes, qnaRes] = await Promise.all([
+        fetch('/api/posts?exclude_type=qna&limit=1'),
+        fetch('/api/posts?type=qna&limit=1'),
+      ])
+      const communityData = await communityRes.json()
+      const qnaData = await qnaRes.json()
+
+      const latestCommunity = communityData.data?.[0]?.created_at ?? ''
+      const latestQna = qnaData.data?.[0]?.created_at ?? ''
+
+      const next: Partial<Record<Tab, boolean>> = {
+        community: !!latestCommunity && latestCommunity > lastSeenCommunity,
+        qna: !!latestQna && latestQna > lastSeenQna,
+      }
+
+      if (user) {
+        const lastSeenProfile = localStorage.getItem('lastSeen_profile') ?? '1970-01-01T00:00:00.000Z'
+        const [attendanceRes, claimRes, premiumRes, notifRes] = await Promise.all([
+          fetch(`/api/attendance?pi_uid=${user.uid}`),
+          fetch(`/api/rankings/claim?pi_uid=${user.uid}`),
+          fetch(`/api/premium?pi_uid=${user.uid}`),
+          fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=${encodeURIComponent(lastSeenProfile)}`),
+        ])
+        const attendance = await attendanceRes.json()
+        const claimStatus = await claimRes.json()
+        const premium = await premiumRes.json()
+        const notif = await notifRes.json()
+
+        let profileBadge = false
+        if (!attendance.checked_today) profileBadge = true
+        if (claimStatus.claimable) profileBadge = true
+        if (notif.hasNew) profileBadge = true
+        if (premium.isPremium && premium.expires_at) {
+          const days = Math.ceil((new Date(premium.expires_at).getTime() - Date.now()) / 86400000)
+          if (days <= 7) profileBadge = true
+        }
+        next.profile = profileBadge
+      }
+
+      setBadges(next)
+    }
+
+    checkBadges()
+  }, [user])
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab)
+    const now = new Date().toISOString()
+    if (tab === 'community') {
+      localStorage.setItem('lastSeen_community', now)
+      setBadges(prev => ({ ...prev, community: false }))
+    } else if (tab === 'qna') {
+      localStorage.setItem('lastSeen_qna', now)
+      setBadges(prev => ({ ...prev, qna: false }))
+    } else if (tab === 'profile') {
+      localStorage.setItem('lastSeen_profile', now)
+      setBadges(prev => ({ ...prev, profile: false }))
+    }
+  }
 
   const tabs = isPiBrowser ? PI_TABS : WEB_TABS
 
@@ -118,14 +184,19 @@ export default function PiLinkApp() {
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
-            onClick={() => setActiveTab(id)}
+            onClick={() => handleTabChange(id)}
             className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs transition-colors ${
               activeTab === id
                 ? 'text-violet-600'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon size={20} />
+            <span className="relative">
+              <Icon size={20} />
+              {badges[id] && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+              )}
+            </span>
             {label}
           </button>
         ))}

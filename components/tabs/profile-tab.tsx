@@ -40,6 +40,8 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
   const [savingTelegram, setSavingTelegram] = useState(false)
   const [attendance, setAttendance] = useState<{ checked_today: boolean; week_xp: number; total_xp: number } | null>(null)
   const [checkingIn, setCheckingIn] = useState(false)
+  const [showAdModal, setShowAdModal] = useState(false)
+  const [adXpEarned, setAdXpEarned] = useState(0)
   const profileKey = `pilink_profile_${user?.uid ?? ''}`
   const [profileData, setProfileData] = useState<{ display_name?: string; avatar_url?: string } | null>(() => {
     if (typeof window === 'undefined' || !user?.uid) return null
@@ -245,7 +247,8 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
         week_xp: prev.week_xp + data.xp_earned,
         total_xp: prev.total_xp + data.xp_earned,
       } : null)
-      toast.success(`출석 체크 완료! +${data.xp_earned} XP`)
+      setAdXpEarned(data.xp_earned)
+      setShowAdModal(true)
     } else {
       toast.error(data.error === 'already_checked' ? '오늘은 이미 출석했습니다.' : '출석 체크 실패')
     }
@@ -658,6 +661,39 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
           )}
         </CardContent>
       </Card>
+      {showAdModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+            <div className="p-4 text-center border-b">
+              <p className="font-bold text-lg">🎉 출석 체크 완료!</p>
+              <p className="text-violet-600 font-semibold mt-1">+{adXpEarned} XP 획득</p>
+            </div>
+            <div className="p-3">
+              <ins
+                className="adsbygoogle"
+                style={{ display: 'block' }}
+                data-ad-client="ca-pub-1253412588313642"
+                data-ad-slot="8355356529"
+                data-ad-format="auto"
+                data-full-width-responsive="true"
+                ref={(el) => {
+                  if (el) {
+                    try { ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({}) } catch {}
+                  }
+                }}
+              />
+            </div>
+            <div className="p-4 pt-2">
+              <button
+                onClick={() => setShowAdModal(false)}
+                className="w-full py-2.5 bg-violet-600 text-white font-bold rounded-xl text-sm"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

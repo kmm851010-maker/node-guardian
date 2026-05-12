@@ -52,7 +52,8 @@ export default function PiLinkApp() {
     const onTouchMove = (e: TouchEvent) => {
       const dy = startYRef.current - e.touches[0].clientY
       const atBottom = window.scrollY + window.innerHeight >= document.body.scrollHeight - 20
-      const ready = atBottom && dy > 60
+      const atTop = window.scrollY <= 0
+      const ready = (atBottom && dy > 60) || (atTop && dy < -60)
       pullReadyRef.current = ready
       setPullReady(ready)
     }
@@ -229,10 +230,10 @@ export default function PiLinkApp() {
         {activeTab === 'profile'    && <ProfileTab user={user} onPremiumChange={setIsPremium} notifSince={profileSince} onNavigateToPost={handleNavigateToPost} />}
       </main>
 
-      {/* 하단 오버스크롤 새로고침 인디케이터 */}
+      {/* 오버스크롤 새로고침 인디케이터 */}
       {pullReady && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-violet-600 text-white text-xs px-4 py-1.5 rounded-full shadow-lg pointer-events-none">
-          ↑ 손 떼면 새로고침
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-violet-600 text-white text-xs px-4 py-1.5 rounded-full shadow-lg pointer-events-none">
+          손 떼면 새로고침
         </div>
       )}
 

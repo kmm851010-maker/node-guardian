@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Zap, ExternalLink, Gift, Send, Star, Pencil, Camera, Check, X } from 'lucide-react'
+import { Crown, Zap, ExternalLink, Gift, Send, Star, Pencil, Camera, Check, X, Bell, MessageSquare, CornerDownRight } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
@@ -25,7 +25,19 @@ function getLevel(xp: number): number {
   return Math.min(100, Math.floor(xp / 50) + 1)
 }
 
-export default function ProfileTab({ user, onPremiumChange }: { user: { uid: string; username: string } | null; onPremiumChange?: (v: boolean) => void }) {
+interface NotifItem {
+  type: 'new_comment' | 'new_reply'
+  post_id: string
+  post_title: string
+  post_type: string
+  comment_id: string
+  content: string
+  nickname: string
+  display_name: string | null
+  created_at: string
+}
+
+export default function ProfileTab({ user, onPremiumChange, notifSince }: { user: { uid: string; username: string } | null; onPremiumChange?: (v: boolean) => void; notifSince?: string }) {
   const [premium, setPremium] = useState<PremiumStatus>({ isPremium: false })
   const [paying, setPaying] = useState(false)
   const didReauth = useRef(false)
@@ -42,6 +54,7 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
   const [checkingIn, setCheckingIn] = useState(false)
   const [showAdModal, setShowAdModal] = useState(false)
   const [adXpEarned, setAdXpEarned] = useState(0)
+  const [notifications, setNotifications] = useState<NotifItem[]>([])
   const profileKey = `pilink_profile_${user?.uid ?? ''}`
   const [profileData, setProfileData] = useState<{ display_name?: string; avatar_url?: string } | null>(() => {
     if (typeof window === 'undefined' || !user?.uid) return null
@@ -77,6 +90,11 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
     fetch(`/api/attendance?pi_uid=${user.uid}`)
       .then(r => r.json())
       .then(setAttendance)
+
+    const since = notifSince ?? '1970-01-01T00:00:00.000Z'
+    fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=${encodeURIComponent(since)}`)
+      .then(r => r.json())
+      .then(d => setNotifications(d.items ?? []))
 
     fetch(`/api/profile?pi_uid=${user.uid}&username=${encodeURIComponent(user.username)}`)
       .then(r => r.json())
@@ -424,6 +442,36 @@ export default function ProfileTab({ user, onPremiumChange }: { user: { uid: str
           </div>
         </CardContent>
       </Card>
+
+      {/* 새 알림 */}
+      {notifications.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Bell size={14} className="text-red-500" /> 새 알림
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 p-3 pt-0">
+            {notifications.map(item => (
+              <div key={item.comment_id} className="flex gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                <span className="shrink-0 mt-0.5 text-violet-500">
+                  {item.type === 'new_reply' ? <CornerDownRight size={13} /> : <MessageSquare size={13} />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted-foreground truncate">
+                    <span className="font-medium text-foreground">{item.display_name ?? item.nickname}</span>
+                    {item.type === 'new_reply' ? ' 님이 내 댓글에 대댓글을 달았습니다' : ' 님이 내 글에 댓글을 달았습니다'}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5 italic">"{item.content}"</p>
+                  <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
+                    {item.post_type === 'qna' ? '[QnA] ' : '[커뮤니티] '}{item.post_title}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 출석 체크 */}
       <Card>

@@ -32,6 +32,11 @@ export default function PiLinkApp() {
   const [isPremium, setIsPremium] = useState(false)
   const [isPiBrowser, setIsPiBrowser] = useState<boolean | null>(null)
   const [badges, setBadges] = useState<Partial<Record<Tab, boolean>>>({})
+  const [profileSince, setProfileSince] = useState('1970-01-01T00:00:00.000Z')
+
+  useEffect(() => {
+    setProfileSince(localStorage.getItem('lastSeen_profile') ?? '1970-01-01T00:00:00.000Z')
+  }, [])
 
   useEffect(() => {
     const hasPiSDK = !!(window as any).Pi
@@ -108,6 +113,8 @@ export default function PiLinkApp() {
       localStorage.setItem('lastSeen_qna', now)
       setBadges(prev => ({ ...prev, qna: false }))
     } else if (tab === 'profile') {
+      // 현재 값을 ProfileTab에 전달한 뒤 localStorage 갱신
+      setProfileSince(localStorage.getItem('lastSeen_profile') ?? '1970-01-01T00:00:00.000Z')
       localStorage.setItem('lastSeen_profile', now)
       setBadges(prev => ({ ...prev, profile: false }))
     }
@@ -176,7 +183,7 @@ export default function PiLinkApp() {
         {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} />}
         {activeTab === 'ranking'    && <RankingTab user={user} />}
         {activeTab === 'qna'        && <QnaTab user={user} isPremium={isPremium} />}
-        {activeTab === 'profile'    && <ProfileTab user={user} onPremiumChange={setIsPremium} />}
+        {activeTab === 'profile'    && <ProfileTab user={user} onPremiumChange={setIsPremium} notifSince={profileSince} />}
       </main>
 
       {/* 하단 탭 바 */}

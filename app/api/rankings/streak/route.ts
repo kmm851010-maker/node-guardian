@@ -91,13 +91,13 @@ export async function GET() {
   const currentRanking = enriched
     .filter(s => s.current > 0)
     .sort((a, b) => b.current - a.current)
-    .slice(0, 20)
+    .slice(0, 10)
     .map((s, i) => ({ ...s, rank: i + 1 }))
 
   const maxRanking = enriched
     .filter(s => s.max > 0)
     .sort((a, b) => b.max - a.max)
-    .slice(0, 20)
+    .slice(0, 10)
     .map((s, i) => ({ ...s, rank: i + 1 }))
 
   return NextResponse.json({ currentRanking, maxRanking })

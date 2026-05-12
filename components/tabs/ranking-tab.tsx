@@ -226,7 +226,7 @@ export default function RankingTab({ user }: Props) {
                 {subTab === 'current'
                   ? <Flame size={14} className="text-orange-500" />
                   : <Zap size={14} className="text-yellow-500" />}
-                {subTab === 'current' ? '현재 연속 출석 TOP 20' : '역대 최장 기록 TOP 20'}
+                {subTab === 'current' ? '현재 연속 출석 TOP 10' : '역대 최장 기록 TOP 10'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">

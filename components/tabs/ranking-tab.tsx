@@ -89,7 +89,7 @@ export default function RankingTab({ user }: Props) {
   })()
 
   const SUB_TABS: { key: SubTab; label: string }[] = [
-    { key: 'weekly', label: '주간 인기' },
+    { key: 'weekly', label: '주간 인기멤버' },
     { key: 'current', label: '현재 연속출석' },
     { key: 'alltime', label: '역대 최장출석' },
   ]

@@ -51,5 +51,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   await supabaseServer.rpc('increment_comments', { post_id: id })
-  return NextResponse.json({ data })
+
+  const { data: profile } = await supabaseServer
+    .from('node_profiles')
+    .select('display_name, avatar_url')
+    .or(`pi_uid.eq.${author_uid},nickname.eq.${nickname}`)
+    .maybeSingle()
+
+  return NextResponse.json({ data: { ...data, display_name: profile?.display_name ?? null, avatar_url: profile?.avatar_url ?? null } })
 }

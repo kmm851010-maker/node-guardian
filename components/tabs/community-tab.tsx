@@ -650,7 +650,7 @@ export default function CommunityTab({ user, isPremium }: Props) {
               <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 w-10 text-center ${typeColor(post.post_type)}`}>{typeLabel(post.post_type)}</span>
               <div className="flex-1 min-w-0">
                 <span className="text-sm truncate block">{post.title}
-                  {post.comments_count > 0 && <span className="text-violet-500 text-xs ml-1">[{post.comments_count}]</span>}
+                  <span className="text-violet-500 text-xs ml-1">[{post.comments_count ?? 0}]</span>
                 </span>
               </div>
               <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}

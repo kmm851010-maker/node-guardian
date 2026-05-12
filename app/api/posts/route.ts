@@ -25,10 +25,22 @@ export async function GET(req: NextRequest) {
   if (excludeType) query = query.neq('post_type', excludeType)
   if (since) query = query.gte('created_at', since)
   if (search) {
-    if (searchBy === 'title') query = query.ilike('title', `%${search}%`)
-    else if (searchBy === 'content') query = query.ilike('content', `%${search}%`)
-    else if (searchBy === 'author') query = query.ilike('nickname', `%${search}%`)
-    else query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%,nickname.ilike.%${search}%`)
+    if (searchBy === 'title') {
+      query = query.ilike('title', `%${search}%`)
+    } else if (searchBy === 'content') {
+      query = query.ilike('content', `%${search}%`)
+    } else if (searchBy === 'author') {
+      // display_name(수정된 닉네임) 또는 원래 nickname 으로 검색
+      const { data: matchedProfiles } = await supabaseServer
+        .from('node_profiles')
+        .select('pi_uid')
+        .or(`display_name.ilike.%${search}%,nickname.ilike.%${search}%`)
+      const conditions = [`nickname.ilike.%${search}%`]
+      for (const p of matchedProfiles ?? []) conditions.push(`author_uid.eq.${p.pi_uid}`)
+      query = query.or(conditions.join(','))
+    } else {
+      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%,nickname.ilike.%${search}%`)
+    }
   }
 
   const { data, error } = await query

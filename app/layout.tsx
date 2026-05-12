@@ -23,7 +23,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="beforeInteractive" />
-        <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1253412588313642" crossOrigin="anonymous" strategy="afterInteractive" />
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1253412588313642" crossOrigin="anonymous"></script>
       </head>
       <body className="min-h-screen bg-background text-foreground">
         <AuthProvider>

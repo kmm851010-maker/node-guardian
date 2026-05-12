@@ -7,12 +7,19 @@ import { CheckCircle, Circle, MessageCircle, Heart, CornerDownRight, PenSquare, 
 import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 
+function LevelBadge({ level }: { level: number | null }) {
+  if (!level) return null
+  const color = level >= 61 ? 'bg-yellow-100 text-yellow-700' : level >= 31 ? 'bg-violet-100 text-violet-700' : level >= 11 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+  return <span className={`text-xs px-1 py-0.5 rounded font-medium shrink-0 ${color}`}>Lv.{level}</span>
+}
+
 interface Post {
   id: string
   author_uid: string
   nickname: string
   display_name: string | null
   avatar_url: string | null
+  level: number | null
   title: string
   content: string
   image_url: string | null
@@ -30,6 +37,7 @@ interface Comment {
   nickname: string
   display_name: string | null
   avatar_url: string | null
+  level: number | null
   content: string
   parent_id: string | null
   likes: number
@@ -533,12 +541,15 @@ export default function QnaTab({ user, isPremium, openPostId, onPostOpened }: Pr
                 )}
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <button
-                  onClick={e => { e.stopPropagation(); setProfileUid(post.author_uid) }}
-                  className="hover:text-violet-600 hover:underline transition-colors"
-                >
-                  {post.display_name ?? post.nickname}
-                </button>
+                <span className="flex items-center gap-1">
+                  <LevelBadge level={post.level} />
+                  <button
+                    onClick={e => { e.stopPropagation(); setProfileUid(post.author_uid) }}
+                    className="hover:text-violet-600 hover:underline transition-colors"
+                  >
+                    {post.display_name ?? post.nickname}
+                  </button>
+                </span>
                 <span className="ml-auto">{formatTime(post.created_at)}</span>
                 <span className="flex items-center gap-0.5"><MessageCircle size={11} /> {post.comments_count ?? 0}</span>
               </div>
@@ -597,12 +608,15 @@ export default function QnaTab({ user, isPremium, openPostId, onPostOpened }: Pr
                         <div className={`flex items-start gap-2 ${isBestAnswer ? 'ring-2 ring-yellow-400 rounded-lg' : ''}`}>
                           <div className={`flex-1 rounded-lg px-2.5 py-1.5 space-y-1 ${isBestAnswer ? 'bg-yellow-50' : 'bg-white'}`}>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <button
-                                onClick={() => setProfileUid(comment.author_uid)}
-                                className="text-xs font-medium hover:text-violet-600 hover:underline"
-                              >
-                                {comment.display_name ?? comment.nickname}
-                              </button>
+                              <span className="flex items-center gap-1">
+                                <LevelBadge level={comment.level} />
+                                <button
+                                  onClick={() => setProfileUid(comment.author_uid)}
+                                  className="text-xs font-medium hover:text-violet-600 hover:underline"
+                                >
+                                  {comment.display_name ?? comment.nickname}
+                                </button>
+                              </span>
                               {isBestAnswer && (
                                 <span className="flex items-center gap-0.5 text-xs bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
                                   <Award size={10} /> 채택
@@ -649,12 +663,15 @@ export default function QnaTab({ user, isPremium, openPostId, onPostOpened }: Pr
                             <div className="w-3 h-3 border-l-2 border-b-2 border-muted-foreground/30 rounded-bl-sm mt-1.5 shrink-0" />
                             <div className="flex-1 bg-white rounded-lg px-2.5 py-1.5 space-y-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <button
-                                  onClick={() => setProfileUid(reply.author_uid)}
-                                  className="text-xs font-medium hover:text-violet-600 hover:underline"
-                                >
-                                  {reply.display_name ?? reply.nickname}
-                                </button>
+                                <span className="flex items-center gap-1">
+                                  <LevelBadge level={reply.level} />
+                                  <button
+                                    onClick={() => setProfileUid(reply.author_uid)}
+                                    className="text-xs font-medium hover:text-violet-600 hover:underline"
+                                  >
+                                    {reply.display_name ?? reply.nickname}
+                                  </button>
+                                </span>
                                 <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
                                 <button
                                   onClick={e => handleCommentLike(e, reply.id, post.id)}

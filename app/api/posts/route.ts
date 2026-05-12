@@ -37,9 +37,21 @@ export async function GET(req: NextRequest) {
     for (const p of (profilesByUid ?? [])) profileMapByUid[(p as any).pi_uid] = p
   }
 
+  // XP / 레벨 조회
+  const allProfiles = [...Object.values(profileMapByNick), ...Object.values(profileMapByUid)]
+  const xpUids = [...new Set(allProfiles.map((p: any) => p.pi_uid as string).filter(Boolean))]
+  const xpMap: Record<string, number> = {}
+  if (xpUids.length > 0) {
+    const { data: xpRows } = await supabaseServer
+      .from('attendance').select('pi_uid, xp_earned').in('pi_uid', xpUids)
+    for (const r of (xpRows ?? [])) xpMap[r.pi_uid] = (xpMap[r.pi_uid] ?? 0) + r.xp_earned
+  }
+
   const enriched = (data ?? []).map((p: any) => {
     const profile = profileMapByNick[p.nickname] ?? profileMapByUid[p.author_uid]
-    return { ...p, display_name: profile?.display_name ?? null, avatar_url: profile?.avatar_url ?? null }
+    const totalXp = xpMap[profile?.pi_uid] ?? 0
+    const level = totalXp > 0 ? Math.min(100, Math.floor(totalXp / 50) + 1) : null
+    return { ...p, display_name: profile?.display_name ?? null, avatar_url: profile?.avatar_url ?? null, level }
   })
 
   return NextResponse.json({ data: enriched, hasMore: (data?.length ?? 0) === limit })

@@ -6,12 +6,19 @@ import { Heart, Eye, PenSquare, X, ImagePlus, MessageCircle, CornerDownRight, La
 import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 
+function LevelBadge({ level }: { level: number | null }) {
+  if (!level) return null
+  const color = level >= 61 ? 'bg-yellow-100 text-yellow-700' : level >= 31 ? 'bg-violet-100 text-violet-700' : level >= 11 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+  return <span className={`text-xs px-1 py-0.5 rounded font-medium shrink-0 ${color}`}>Lv.{level}</span>
+}
+
 interface Post {
   id: string
   author_uid: string
   nickname: string
   display_name: string | null
   avatar_url: string | null
+  level: number | null
   post_type: string
   title: string
   content: string
@@ -29,6 +36,7 @@ interface Comment {
   nickname: string
   display_name: string | null
   avatar_url: string | null
+  level: number | null
   content: string
   parent_id: string | null
   likes: number
@@ -369,7 +377,10 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                     <span className="text-sm font-semibold leading-snug">{post.title}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <button onClick={() => { closeModal(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }} className="hover:text-violet-600 hover:underline">{post.display_name ?? post.nickname}</button>
+                    <span className="flex items-center gap-1">
+                      <LevelBadge level={post.level} />
+                      <button onClick={() => { closeModal(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }} className="hover:text-violet-600 hover:underline">{post.display_name ?? post.nickname}</button>
+                    </span>
                     <span>{formatTime(post.created_at)}</span>
                     <span className="flex items-center gap-0.5"><Eye size={10} /> {post.views}</span>
                   </div>
@@ -422,8 +433,11 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                           <div className="flex items-start gap-2">
                             <div className="flex-1 bg-white rounded-xl px-3 py-2 space-y-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <button onClick={() => setProfileUser({ uid: comment.author_uid, nickname: comment.nickname })}
-                                  className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.display_name ?? comment.nickname}</button>
+                                <span className="flex items-center gap-1">
+                                  <LevelBadge level={comment.level} />
+                                  <button onClick={() => setProfileUser({ uid: comment.author_uid, nickname: comment.nickname })}
+                                    className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.display_name ?? comment.nickname}</button>
+                                </span>
                                 <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
                                 <button onClick={e => handleCommentLike(e, comment.id, post.id)} disabled={!!likingCommentId}
                                   className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 disabled:opacity-60 ${
@@ -445,8 +459,11 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                               <CornerDownRight size={11} className="text-muted-foreground mt-1.5 shrink-0" />
                               <div className="flex-1 bg-white rounded-xl px-3 py-2 space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <button onClick={() => setProfileUser({ uid: reply.author_uid, nickname: reply.nickname })}
-                                    className="text-xs font-medium hover:text-violet-600 hover:underline">{reply.display_name ?? reply.nickname}</button>
+                                  <span className="flex items-center gap-1">
+                                    <LevelBadge level={reply.level} />
+                                    <button onClick={() => setProfileUser({ uid: reply.author_uid, nickname: reply.nickname })}
+                                      className="text-xs font-medium hover:text-violet-600 hover:underline">{reply.display_name ?? reply.nickname}</button>
+                                  </span>
                                   <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
                                   <button onClick={e => handleCommentLike(e, reply.id, post.id)}
                                     className={`ml-auto flex items-center gap-0.5 text-xs rounded-full px-2 py-0.5 transition-all active:scale-95 ${
@@ -681,8 +698,11 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                   {(post.comments_count ?? 0) > 0 && <span className="text-violet-500 text-xs ml-1">[{post.comments_count}]</span>}
                 </span>
               </div>
-              <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
-                className="w-14 text-xs text-muted-foreground text-right truncate shrink-0 hover:text-violet-600">{post.display_name ?? post.nickname}</button>
+              <div className="w-20 flex items-center justify-end gap-1 shrink-0">
+                <LevelBadge level={post.level} />
+                <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
+                  className="text-xs text-muted-foreground truncate hover:text-violet-600">{post.display_name ?? post.nickname}</button>
+              </div>
               <span className="w-10 text-xs text-muted-foreground text-right shrink-0">{formatTime(post.created_at).slice(0,5)}</span>
               <span className="w-12 text-xs text-muted-foreground text-right shrink-0 hidden sm:block flex items-center gap-0.5">
                 <Eye size={10} className="inline" /> {post.views}
@@ -715,8 +735,11 @@ export default function CommunityTab({ user, isPremium, openPostId, onPostOpened
                   {/* 본문 1줄 미리보기 */}
                   <p className="text-xs text-muted-foreground truncate mb-1">{post.content}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
-                      className="hover:text-violet-600 hover:underline transition-colors">{post.display_name ?? post.nickname}</button>
+                    <span className="flex items-center gap-1">
+                      <LevelBadge level={post.level} />
+                      <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
+                        className="hover:text-violet-600 hover:underline transition-colors">{post.display_name ?? post.nickname}</button>
+                    </span>
                     <span className="ml-auto">{formatTime(post.created_at)}</span>
                     <span className="flex items-center gap-0.5"><Eye size={11} /> {post.views}</span>
                     <span className="flex items-center gap-0.5"><MessageCircle size={11} /> {post.comments_count}</span>

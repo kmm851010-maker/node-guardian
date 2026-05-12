@@ -24,6 +24,14 @@ interface StreakEntry {
   max: number
 }
 
+interface AdoptionEntry {
+  rank: number
+  pi_uid: string
+  nickname: string
+  display_name: string | null
+  count: number
+}
+
 const RANK_EMOJI = ['🥇', '🥈', '🥉']
 const RANK_BG = [
   'bg-yellow-50 border-yellow-200',
@@ -42,7 +50,7 @@ interface Props {
   user: { uid: string; username: string } | null
 }
 
-type SubTab = 'weekly' | 'current' | 'alltime'
+type SubTab = 'weekly' | 'current' | 'alltime' | 'adoption'
 
 export default function RankingTab({ user }: Props) {
   const [subTab, setSubTab] = useState<SubTab>('weekly')
@@ -54,6 +62,10 @@ export default function RankingTab({ user }: Props) {
   const [maxRanking, setMaxRanking] = useState<StreakEntry[]>([])
   const [streakLoading, setStreakLoading] = useState(false)
   const [streakLoaded, setStreakLoaded] = useState(false)
+
+  const [adoptionRanking, setAdoptionRanking] = useState<AdoptionEntry[]>([])
+  const [adoptionLoading, setAdoptionLoading] = useState(false)
+  const [adoptionLoaded, setAdoptionLoaded] = useState(false)
 
   const [profileUid, setProfileUid] = useState<string | null>(null)
 
@@ -81,6 +93,19 @@ export default function RankingTab({ user }: Props) {
     }
   }, [subTab, streakLoaded])
 
+  useEffect(() => {
+    if (subTab === 'adoption' && !adoptionLoaded) {
+      setAdoptionLoading(true)
+      fetch('/api/rankings/adoption')
+        .then(r => r.json())
+        .then(d => {
+          setAdoptionRanking(d.ranking ?? [])
+          setAdoptionLoading(false)
+          setAdoptionLoaded(true)
+        })
+    }
+  }, [subTab, adoptionLoaded])
+
   const nextSunday = (() => {
     if (!weekStart) return ''
     const d = new Date(weekStart)
@@ -92,6 +117,7 @@ export default function RankingTab({ user }: Props) {
     { key: 'weekly', label: '주간 인기멤버' },
     { key: 'current', label: '현재 연속출석' },
     { key: 'alltime', label: '역대 최장출석' },
+    { key: 'adoption', label: '지식In' },
   ]
 
   const activeEntries = subTab === 'current' ? currentRanking : maxRanking
@@ -280,6 +306,82 @@ export default function RankingTab({ user }: Props) {
             <Card className="border-dashed">
               <CardContent className="p-3 text-center text-xs text-muted-foreground">
                 아직 랭킹에 없습니다. 매일 출석체크로 기록을 쌓아보세요!
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+      {/* 지식In */}
+      {subTab === 'adoption' && (
+        <>
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="p-3">
+              <div className="flex items-start gap-2">
+                <Info size={14} className="text-amber-500 mt-0.5 shrink-0" />
+                <div className="text-xs text-amber-700 space-y-0.5">
+                  <p className="font-semibold">지식In 랭킹 🎓</p>
+                  <p>QnA에서 채택된 답변 수 기준입니다.</p>
+                  <p>채택될수록 지식인으로 인정받습니다!</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Trophy size={14} className="text-amber-500" />
+                채택 왕 TOP 10
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {adoptionLoading ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">불러오는 중...</div>
+              ) : adoptionRanking.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm space-y-2">
+                  <Trophy size={28} className="mx-auto opacity-30" />
+                  <p>아직 채택된 답변이 없습니다.</p>
+                  <p className="text-xs">QnA에서 좋은 답변을 달아보세요!</p>
+                </div>
+              ) : (
+                adoptionRanking.map(entry => {
+                  const isMe = user?.uid === entry.pi_uid
+                  return (
+                    <div
+                      key={entry.pi_uid}
+                      className={`flex items-center gap-3 p-3 rounded-xl border ${
+                        RANK_BG[entry.rank - 1] ?? (isMe ? 'bg-violet-50 border-violet-200' : 'bg-muted/30 border-muted')
+                      }`}
+                    >
+                      <span className="text-xl w-8 text-center shrink-0">
+                        {RANK_EMOJI[entry.rank - 1] ?? entry.rank}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <button
+                          onClick={() => setProfileUid(entry.pi_uid)}
+                          className="text-sm font-semibold hover:text-violet-600 hover:underline transition-colors truncate block text-left"
+                        >
+                          {entry.rank === 1 && <Crown size={12} className="inline text-yellow-500 mr-1" />}
+                          {entry.display_name ?? `@${entry.nickname}`}
+                          {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">(나)</span>}
+                        </button>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <span className="text-amber-500">🎓</span>
+                          <span className="font-medium text-amber-600">{entry.count}회</span>
+                          <span>채택</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </CardContent>
+          </Card>
+
+          {user && !adoptionLoading && adoptionRanking.length > 0 && !adoptionRanking.find(e => e.pi_uid === user.uid) && (
+            <Card className="border-dashed">
+              <CardContent className="p-3 text-center text-xs text-muted-foreground">
+                아직 랭킹에 없습니다. QnA에서 좋은 답변으로 채택을 받아보세요!
               </CardContent>
             </Card>
           )}

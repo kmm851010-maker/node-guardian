@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
+import { addXp, getLevel } from '@/lib/xp'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const enriched = (data ?? []).map((c: any) => {
     const profile = profileMapByNick[c.nickname] ?? profileMapByUid[c.author_uid]
     const totalXp = xpMap[profile?.pi_uid] ?? 0
-    const level = totalXp > 0 ? Math.min(100, Math.floor(totalXp / 50) + 1) : null
+    const level = totalXp > 0 ? getLevel(totalXp) : null
     return { ...c, display_name: profile?.display_name ?? null, avatar_url: profile?.avatar_url ?? null, level }
   })
 
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   await supabaseServer.rpc('increment_comments', { post_id: id })
+  await addXp(author_uid, 3) // 댓글 작성 +3 XP
 
   const { data: profile } = await supabaseServer
     .from('node_profiles')

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
+import { getLevel } from '@/lib/xp'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
   const enriched = (data ?? []).map((p: any) => {
     const profile = profileMapByNick[p.nickname] ?? profileMapByUid[p.author_uid]
     const totalXp = xpMap[profile?.pi_uid] ?? 0
-    const level = totalXp > 0 ? Math.min(100, Math.floor(totalXp / 50) + 1) : null
+    const level = totalXp > 0 ? getLevel(totalXp) : null
     return { ...p, display_name: profile?.display_name ?? null, avatar_url: profile?.avatar_url ?? null, level }
   })
 

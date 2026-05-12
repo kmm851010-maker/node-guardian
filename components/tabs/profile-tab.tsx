@@ -30,7 +30,21 @@ interface ClaimStatus {
 }
 
 function getLevel(xp: number): number {
-  return Math.min(100, Math.floor(xp / 50) + 1)
+  if (xp >= 15650) return 100
+  if (xp >= 3650)  return 40 + Math.floor((xp - 3650) / 200)
+  if (xp >= 2150)  return 30 + Math.floor((xp - 2150) / 150)
+  if (xp >= 1150)  return 20 + Math.floor((xp - 1150) / 100)
+  if (xp >= 450)   return 10 + Math.floor((xp - 450)  / 70)
+  return Math.floor(xp / 50) + 1
+}
+
+function getNextLevelThreshold(level: number): number | null {
+  if (level >= 100) return null
+  if (level < 10)  return level * 50
+  if (level < 20)  return 450  + (level - 10) * 70
+  if (level < 30)  return 1150 + (level - 20) * 100
+  if (level < 40)  return 2150 + (level - 30) * 150
+  return 3650 + (level - 40) * 200
 }
 
 interface NotifItem {
@@ -474,11 +488,28 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
             {profileData?.display_name && (
               <p className="text-xs text-muted-foreground">@{user.username}</p>
             )}
-            <p className="text-xs text-muted-foreground">
-              {attendance
-                ? `Lv.${getLevel(attendance.total_xp)} · ${attendance.total_xp} XP`
-                : 'Pi Node 운영자'}
-            </p>
+            {attendance ? (() => {
+              const lv = getLevel(attendance.total_xp)
+              const nextThreshold = getNextLevelThreshold(lv)
+              const prevThreshold = lv > 1 ? getNextLevelThreshold(lv - 1) ?? 0 : 0
+              const pct = nextThreshold
+                ? Math.min(100, Math.round(((attendance.total_xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100))
+                : 100
+              return (
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Lv.{lv} · {attendance.total_xp} XP</p>
+                  {nextThreshold !== null && (
+                    <>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-violet-500 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{attendance.total_xp} / {nextThreshold} XP → Lv.{lv + 1}</p>
+                    </>
+                  )}
+                  {nextThreshold === null && <p className="text-[10px] text-violet-600 font-medium">최고 레벨 달성!</p>}
+                </div>
+              )
+            })() : <p className="text-xs text-muted-foreground">Pi Node 운영자</p>}
           </div>
         </CardContent>
       </Card>

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
+import { addXp } from '@/lib/xp'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { author_uid } = await req.json()
@@ -27,6 +28,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // 좋아요
     await supabaseServer.from('post_likes').insert({ post_id, author_uid })
     await supabaseServer.rpc('increment_likes', { post_id })
+
+    // 게시글 주인에게 좋아요 XP +2
+    const { data: postData } = await supabaseServer
+      .from('pilink_posts').select('author_uid').eq('id', post_id).maybeSingle()
+    if (postData?.author_uid && postData.author_uid !== author_uid) {
+      await addXp(postData.author_uid, 5)
+    }
 
     // 게시글 작성자에게 텔레그램 알림
     const { data: post } = await supabaseServer

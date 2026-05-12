@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
+import { addXp } from '@/lib/xp'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -27,5 +28,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   await supabaseServer.rpc('increment_comment_likes', { p_comment_id: id })
+
+  // 댓글 주인에게 좋아요 XP +2
+  const { data: commentData } = await supabaseServer
+    .from('post_comments').select('author_uid').eq('id', id).maybeSingle()
+  if (commentData?.author_uid && commentData.author_uid !== author_uid) {
+    await addXp(commentData.author_uid, 2)
+  }
+
   return NextResponse.json({ liked: true })
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Heart, Eye, PenSquare, X, ImagePlus, MessageCircle, CornerDownRight, LayoutList, LayoutGrid, Pencil, Trash2, Crown } from 'lucide-react'
+import { Heart, Eye, PenSquare, X, ImagePlus, MessageCircle, CornerDownRight, LayoutList, LayoutGrid, Pencil, Trash2, Crown, Search, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 
@@ -147,6 +147,39 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
   const [likingCommentId, setLikingCommentId] = useState<string | null>(null)
   const viewedPosts = useRef<Set<string>>(new Set())
   const [profileUser, setProfileUser] = useState<{ uid: string; nickname: string } | null>(null)
+
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchBy, setSearchBy] = useState<'title' | 'content' | 'author'>('title')
+  const [searchResults, setSearchResults] = useState<Post[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+
+  const runSearch = async (query: string, by: string) => {
+    if (!query.trim()) return
+    setSearchLoading(true)
+    const res = await fetch(`/api/posts?search=${encodeURIComponent(query)}&search_by=${by}&exclude_type=qna&limit=50`)
+    const data = await res.json()
+    setSearchResults(data.data ?? [])
+    setSearchLoading(false)
+  }
+
+  const handleSearch = () => {
+    const q = searchInput.trim()
+    if (!q) return
+    setSearchQuery(q)
+    runSearch(q, searchBy)
+  }
+
+  const handleSearchByChange = (by: 'title' | 'content' | 'author') => {
+    setSearchBy(by)
+    if (searchQuery) runSearch(searchQuery, by)
+  }
+
+  const clearSearch = () => {
+    setSearchInput('')
+    setSearchQuery('')
+    setSearchResults([])
+  }
 
   const loadPosts = useCallback(async (currentOffset: number) => {
     const res = await fetch(`/api/posts?limit=20&offset=${currentOffset}&exclude_type=qna`)
@@ -557,8 +590,76 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
         )
       })()}
 
+      {/* 검색 바 */}
+      <div className="flex gap-2">
+        <div className="flex-1 flex items-center gap-2 border rounded-xl px-3 py-2 bg-white focus-within:border-violet-400 transition-colors">
+          <Search size={14} className="text-muted-foreground shrink-0" />
+          <input
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            placeholder="게시글 검색..."
+            className="flex-1 text-sm outline-none bg-transparent"
+          />
+          {searchInput && (
+            <button onClick={clearSearch}><XCircle size={14} className="text-muted-foreground hover:text-foreground" /></button>
+          )}
+        </div>
+        <button onClick={handleSearch}
+          className="px-3 py-2 bg-violet-600 text-white rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors">
+          검색
+        </button>
+      </div>
+
+      {/* 검색 결과 */}
+      {searchQuery && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground flex-1">
+              <span className="font-semibold text-foreground">"{searchQuery}"</span> 검색 결과 {searchResults.length}건
+            </span>
+          </div>
+          {/* 서브탭 */}
+          <div className="flex gap-1.5">
+            {(['title', 'content', 'author'] as const).map(by => (
+              <button key={by} onClick={() => handleSearchByChange(by)}
+                className={`text-xs px-3 py-1 rounded-full border transition-colors ${searchBy === by ? 'bg-violet-600 text-white border-violet-600' : 'text-muted-foreground hover:bg-muted'}`}>
+                {by === 'title' ? '제목' : by === 'content' ? '내용' : '작성자'}
+              </button>
+            ))}
+          </div>
+          {searchLoading ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">검색 중...</div>
+          ) : searchResults.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">검색 결과가 없습니다.</div>
+          ) : (
+            searchResults.map(post => (
+              <div key={post.id} onClick={() => openPost(post.id)}
+                className="flex items-start gap-2 p-3 rounded-xl border bg-white hover:bg-muted/30 cursor-pointer transition-colors">
+                <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${typeColor(post.post_type)}`}>{typeLabel(post.post_type)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{post.title}</p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{post.content}</p>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <LevelBadge level={post.level} />
+                      {post.display_name ?? post.nickname}
+                      <BadgeIcons badges={badgeMap[post.author_uid]} />
+                    </span>
+                    <span className="ml-auto flex items-center gap-1">
+                      <Heart size={10} className="text-rose-400" fill="currentColor" /> {post.likes}
+                    </span>
+                    <span>{formatTime(post.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
       {/* Pi Core Team 공지 */}
-      {piNews.length > 0 && (
+      {!searchQuery && piNews.length > 0 && (
         <div className="rounded-xl border border-violet-200 bg-violet-50 overflow-hidden">
           <div className="px-3 py-2 bg-violet-100 flex items-center gap-1.5">
             <span className="text-xs font-bold text-violet-700">📢 Pi Core Team 공지 · 뉴스</span>
@@ -607,7 +708,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
       )}
 
       {/* 이번 주 인기 글 TOP3 */}
-      {top3.length > 0 && (
+      {!searchQuery && top3.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
             🏆 이번 주 인기 글
@@ -629,7 +730,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
       )}
 
       {/* 상단 툴바 */}
-      <div className="flex items-center gap-2">
+      {!searchQuery && <div className="flex items-center gap-2">
         {/* 뷰 토글 */}
         <div className="flex border rounded-lg overflow-hidden">
           <button onClick={() => setViewMode('list')}
@@ -655,10 +756,10 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
             <span>글쓰기는 프리미엄 전용</span>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* 글쓰기 폼 */}
-      {showForm && (
+      {!searchQuery && showForm && (
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -717,7 +818,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
       )}
 
       {/* 목록 뷰 */}
-      {viewMode === 'list' && (
+      {!searchQuery && viewMode === 'list' && (
         <div className="border rounded-xl overflow-hidden divide-y">
           {/* 헤더 */}
           <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 text-xs text-muted-foreground font-medium">
@@ -752,7 +853,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
       )}
 
       {/* 카드 뷰 */}
-      {viewMode === 'card' && posts.map(post => {
+      {!searchQuery && viewMode === 'card' && posts.map(post => {
         const isLiked = likedPosts.has(post.id)
         const isMyPost = user?.uid === post.author_uid || user?.username === post.author_uid
         const isEditing = editingPost === post.id
@@ -811,9 +912,9 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
       })}
 
 
-      <div ref={sentinelRef} className="h-4" />
-      {loadingMore && <div className="text-center text-xs text-muted-foreground py-2">불러오는 중...</div>}
-      {!hasMore && posts.length > 0 && <div className="text-center text-xs text-muted-foreground py-2">모든 게시글을 불러왔습니다.</div>}
+      {!searchQuery && <div ref={sentinelRef} className="h-4" />}
+      {!searchQuery && loadingMore && <div className="text-center text-xs text-muted-foreground py-2">불러오는 중...</div>}
+      {!searchQuery && !hasMore && posts.length > 0 && <div className="text-center text-xs text-muted-foreground py-2">모든 게시글을 불러왔습니다.</div>}
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, Circle, MessageCircle, Heart, CornerDownRight, PenSquare, X, Award, Pencil, Trash2, Crown, ImagePlus } from 'lucide-react'
+import { CheckCircle, Circle, MessageCircle, Heart, CornerDownRight, PenSquare, X, Award, Pencil, Trash2, Crown, ImagePlus, Search, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 
@@ -139,6 +139,39 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onP
   const [likingPostId, setLikingPostId] = useState<string | null>(null)
   const [likingCommentId, setLikingCommentId] = useState<string | null>(null)
   const [profileUid, setProfileUid] = useState<string | null>(null)
+
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchBy, setSearchBy] = useState<'title' | 'content' | 'author'>('title')
+  const [searchResults, setSearchResults] = useState<Post[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+
+  const runSearch = async (query: string, by: string) => {
+    if (!query.trim()) return
+    setSearchLoading(true)
+    const res = await fetch(`/api/posts?search=${encodeURIComponent(query)}&search_by=${by}&type=qna&limit=50`)
+    const data = await res.json()
+    setSearchResults(data.data ?? [])
+    setSearchLoading(false)
+  }
+
+  const handleSearch = () => {
+    const q = searchInput.trim()
+    if (!q) return
+    setSearchQuery(q)
+    runSearch(q, searchBy)
+  }
+
+  const handleSearchByChange = (by: 'title' | 'content' | 'author') => {
+    setSearchBy(by)
+    if (searchQuery) runSearch(searchQuery, by)
+  }
+
+  const clearSearch = () => {
+    setSearchInput('')
+    setSearchQuery('')
+    setSearchResults([])
+  }
 
   // 채택 팝업
   const [bestAnswerPending, setBestAnswerPending] = useState<{
@@ -454,19 +487,89 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onP
         </div>
       )}
 
-      {user && isPremium && !showForm && (
+      {/* 검색 바 */}
+      <div className="flex gap-2">
+        <div className="flex-1 flex items-center gap-2 border rounded-xl px-3 py-2 bg-white focus-within:border-violet-400 transition-colors">
+          <Search size={14} className="text-muted-foreground shrink-0" />
+          <input
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            placeholder="질문 검색..."
+            className="flex-1 text-sm outline-none bg-transparent"
+          />
+          {searchInput && (
+            <button onClick={clearSearch}><XCircle size={14} className="text-muted-foreground hover:text-foreground" /></button>
+          )}
+        </div>
+        <button onClick={handleSearch}
+          className="px-3 py-2 bg-violet-600 text-white rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors">
+          검색
+        </button>
+      </div>
+
+      {/* 검색 결과 */}
+      {searchQuery && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground flex-1">
+              <span className="font-semibold text-foreground">"{searchQuery}"</span> 검색 결과 {searchResults.length}건
+            </span>
+          </div>
+          <div className="flex gap-1.5">
+            {(['title', 'content', 'author'] as const).map(by => (
+              <button key={by} onClick={() => handleSearchByChange(by)}
+                className={`text-xs px-3 py-1 rounded-full border transition-colors ${searchBy === by ? 'bg-violet-600 text-white border-violet-600' : 'text-muted-foreground hover:bg-muted'}`}>
+                {by === 'title' ? '제목' : by === 'content' ? '내용' : '작성자'}
+              </button>
+            ))}
+          </div>
+          {searchLoading ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">검색 중...</div>
+          ) : searchResults.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">검색 결과가 없습니다.</div>
+          ) : (
+            searchResults.map(post => (
+              <Card key={post.id} className="overflow-hidden cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => { setExpandedPost(post.id); if (!comments[post.id]) { fetch(`/api/posts/${post.id}/comments`).then(r => r.json()).then(d => setComments(prev => ({ ...prev, [post.id]: d.data ?? [] }))) } }}>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    {post.is_resolved
+                      ? <CheckCircle size={13} className="text-green-500 shrink-0" />
+                      : <Circle size={13} className="text-muted-foreground shrink-0" />}
+                    <span className="text-sm font-semibold flex-1 truncate">{post.title}</span>
+                    {post.is_resolved && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full shrink-0">해결됨</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mb-1">{post.content}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <LevelBadge level={post.level} />
+                      {post.display_name ?? post.nickname}
+                      <BadgeIcons badges={badgeMap[post.author_uid]} />
+                    </span>
+                    <span className="ml-auto flex items-center gap-0.5"><MessageCircle size={11} /> {post.comments_count ?? 0}</span>
+                    <span>{formatTime(post.created_at)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+
+      {!searchQuery && user && isPremium && !showForm && (
         <button onClick={() => setShowForm(true)}
           className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-blue-300 rounded-xl text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors">
           <PenSquare size={16} /> 질문 작성
         </button>
       )}
-      {user && !isPremium && (
+      {!searchQuery && user && !isPremium && (
         <div className="flex items-center justify-center gap-1.5 py-2 text-xs text-amber-600">
           <Crown size={12} className="text-amber-500" /> 질문 작성은 프리미엄 전용입니다.
         </div>
       )}
 
-      {showForm && (
+      {!searchQuery && showForm && (
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -510,23 +613,23 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onP
         </Card>
       )}
 
-      <div className="flex gap-2">
+      {!searchQuery && <div className="flex gap-2">
         {(['all', 'open', 'resolved'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`text-xs px-3 py-1 rounded-full border transition-colors ${filter === f ? 'bg-violet-600 text-white border-violet-600' : 'text-muted-foreground'}`}>
             {f === 'all' ? '전체' : f === 'open' ? '미해결' : '해결됨'}
           </button>
         ))}
-      </div>
+      </div>}
 
-      {filtered.length === 0 && (
+      {!searchQuery && filtered.length === 0 && (
         <div className="text-center py-12 text-muted-foreground text-sm">
           <MessageCircle className="mx-auto mb-2 opacity-30" size={32} />
           <p>질문이 없습니다.</p>
         </div>
       )}
 
-      {filtered.map(post => {
+      {!searchQuery && filtered.map(post => {
         const isLiked = likedPosts.has(post.id)
         const isMyPost = user?.uid === post.author_uid || user?.username === post.author_uid
         const isEditing = editingPost === post.id
@@ -759,9 +862,9 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onP
         )
       })}
 
-      <div ref={sentinelRef} className="h-4" />
-      {loadingMore && <div className="text-center text-xs text-muted-foreground py-2">불러오는 중...</div>}
-      {!hasMore && posts.length > 0 && <div className="text-center text-xs text-muted-foreground py-2">모든 게시글을 불러왔습니다.</div>}
+      {!searchQuery && <div ref={sentinelRef} className="h-4" />}
+      {!searchQuery && loadingMore && <div className="text-center text-xs text-muted-foreground py-2">불러오는 중...</div>}
+      {!searchQuery && !hasMore && posts.length > 0 && <div className="text-center text-xs text-muted-foreground py-2">모든 게시글을 불러왔습니다.</div>}
     </div>
   )
 }

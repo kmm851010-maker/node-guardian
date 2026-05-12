@@ -12,6 +12,8 @@ export async function GET(req: NextRequest) {
 
   const sort = searchParams.get('sort')
   const since = searchParams.get('since')
+  const search = searchParams.get('search')
+  const searchBy = searchParams.get('search_by') ?? 'title'
 
   let query = supabaseServer
     .from('pilink_posts')
@@ -22,6 +24,12 @@ export async function GET(req: NextRequest) {
   if (type) query = query.eq('post_type', type)
   if (excludeType) query = query.neq('post_type', excludeType)
   if (since) query = query.gte('created_at', since)
+  if (search) {
+    if (searchBy === 'title') query = query.ilike('title', `%${search}%`)
+    else if (searchBy === 'content') query = query.ilike('content', `%${search}%`)
+    else if (searchBy === 'author') query = query.ilike('nickname', `%${search}%`)
+    else query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%,nickname.ilike.%${search}%`)
+  }
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

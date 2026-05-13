@@ -463,7 +463,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onP
   return (
     <div className="p-4 space-y-2">
       {profileUid && (
-        <UserProfileModal uid={profileUid} onClose={() => setProfileUid(null)} />
+        <UserProfileModal uid={profileUid} viewerUsername={user?.username} onClose={() => setProfileUid(null)} />
       )}
       {bestAnswerPending && (
         <BestAnswerPopup

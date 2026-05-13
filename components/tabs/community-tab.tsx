@@ -57,6 +57,7 @@ const POST_TYPES = [
   { value: 'general', label: '일반',  color: 'bg-gray-100 text-gray-700' },
   { value: 'brag',    label: '자랑',  color: 'bg-yellow-100 text-yellow-700' },
   { value: 'issue',   label: '이슈',  color: 'bg-red-100 text-red-700' },
+  { value: 'notice',  label: '📢 공지', color: 'bg-blue-100 text-blue-700' },
 ]
 function typeColor(type: string) {
   return POST_TYPES.find(t => t.value === type)?.color ?? 'bg-gray-100 text-gray-700'
@@ -108,6 +109,7 @@ interface Props {
 export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostId, onPostOpened }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const [isStaff, setIsStaff] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [offset, setOffset] = useState(0)
@@ -143,6 +145,13 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
   const [piNews, setPiNews] = useState<{ title: string; link: string; date: string }[]>([])
   const [top3, setTop3] = useState<Post[]>([])
+
+  useEffect(() => {
+    if (user) {
+      fetch(`/api/staff?pi_uid=${encodeURIComponent(user.uid)}`)
+        .then(r => r.json()).then(d => setIsStaff(d.isStaff ?? false))
+    }
+  }, [user])
 
   useEffect(() => {
     fetch('/api/pi-news').then(r => r.json()).then(d => setPiNews(d.items ?? []))
@@ -409,7 +418,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
 
   return (
     <div className="p-4 space-y-2">
-      {profileUser && <UserProfileModal uid={profileUser.uid} nickname={profileUser.nickname} onClose={() => setProfileUser(null)} />}
+      {profileUser && <UserProfileModal uid={profileUser.uid} nickname={profileUser.nickname} viewerUsername={user?.username} onClose={() => setProfileUser(null)} />}
 
       {/* 게시글 상세 모달 */}
       {modalPost && (() => {
@@ -777,7 +786,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
               <button onClick={() => setShowForm(false)}><X size={16} className="text-muted-foreground" /></button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {POST_TYPES.map(t => (
+              {POST_TYPES.filter(t => t.value !== 'notice' || isStaff).map(t => (
                 <button key={t.value} onClick={() => setPostType(t.value)}
                   className={`text-xs px-3 py-1 rounded-full border-2 transition-colors ${postType === t.value ? 'border-violet-500 ' + t.color : 'border-transparent ' + t.color}`}>
                   {t.label}

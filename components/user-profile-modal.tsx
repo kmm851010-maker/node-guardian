@@ -30,13 +30,17 @@ const RANK_EMOJI = ['🥇', '🥈', '🥉']
 interface Props {
   uid: string
   nickname?: string
+  viewerUsername?: string
   onClose: () => void
 }
 
-export default function UserProfileModal({ uid, nickname, onClose }: Props) {
+export default function UserProfileModal({ uid, nickname, viewerUsername, onClose }: Props) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [userBadges, setUserBadges] = useState<string[]>([])
+  const [isStaff, setIsStaff] = useState(false)
+  const [staffLoading, setStaffLoading] = useState(false)
+  const isMaster = viewerUsername === 'doosanprince'
 
   useEffect(() => {
     const url = nickname
@@ -48,6 +52,9 @@ export default function UserProfileModal({ uid, nickname, onClose }: Props) {
     fetch('/api/badges')
       .then(r => r.json())
       .then(d => setUserBadges((d.badges ?? {})[uid] ?? []))
+    fetch(`/api/staff?pi_uid=${encodeURIComponent(uid)}`)
+      .then(r => r.json())
+      .then(d => setIsStaff(d.isStaff ?? false))
   }, [uid, nickname])
 
   return (
@@ -80,9 +87,36 @@ export default function UserProfileModal({ uid, nickname, onClose }: Props) {
               )}
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-muted">
-            <X size={18} className="text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isMaster && !loading && (
+              <button
+                disabled={staffLoading}
+                onClick={async () => {
+                  setStaffLoading(true)
+                  await fetch('/api/staff', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_uid: uid, master_username: viewerUsername, action: isStaff ? 'remove' : 'appoint' }),
+                  })
+                  setIsStaff(prev => !prev)
+                  setStaffLoading(false)
+                }}
+                className={`text-xs px-2.5 py-1 rounded-full font-medium border transition-colors disabled:opacity-50 ${
+                  isStaff
+                    ? 'border-red-300 text-red-600 hover:bg-red-50'
+                    : 'border-violet-300 text-violet-600 hover:bg-violet-50'
+                }`}
+              >
+                {staffLoading ? '...' : isStaff ? '스탭 해지' : '스탭 임명'}
+              </button>
+            )}
+            {isStaff && (
+              <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-medium">스탭</span>
+            )}
+            <button onClick={onClose} className="p-1 rounded-full hover:bg-muted">
+              <X size={18} className="text-muted-foreground" />
+            </button>
+          </div>
         </div>
 
         {loading ? (

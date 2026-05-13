@@ -32,7 +32,7 @@ export default function PiLinkApp() {
   const [isPremium, setIsPremium] = useState(false)
   const [isPiBrowser, setIsPiBrowser] = useState<boolean | null>(null)
   const [isAndroidBrowser, setIsAndroidBrowser] = useState(false)
-  const [apkUrl, setApkUrl] = useState('https://expo.dev/artifacts/eas/nDyFxB6h6Kc2posCCz1rrP.apk')
+  const [apkUrl, setApkUrl] = useState('https://github.com/kmm851010-maker/node-guardian/releases/latest/download/LinkPiMonitor.apk')
   const [badges, setBadges] = useState<Partial<Record<Tab, boolean>>>({})
   const [profileSince, setProfileSince] = useState('1970-01-01T00:00:00.000Z')
   const [openPostRequest, setOpenPostRequest] = useState<{ postId: string; postType: string } | null>(null)

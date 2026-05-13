@@ -459,6 +459,21 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  {isStaff && !isEditing && (
+                    <button
+                      onClick={async () => {
+                        const newType = post.post_type === 'notice' ? 'general' : 'notice'
+                        const res = await fetch(`/api/posts/${post.id}`, {
+                          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ pi_uid: user?.uid, username: user?.username, post_type: newType }),
+                        })
+                        if (res.ok) setPosts(prev => prev.map(p => p.id === post.id ? { ...p, post_type: newType } : p))
+                      }}
+                      className={`text-xs px-2 py-1 rounded-full border transition-colors ${post.post_type === 'notice' ? 'border-blue-300 text-blue-600 bg-blue-50' : 'border-gray-300 text-gray-500 hover:border-blue-300 hover:text-blue-600'}`}
+                    >
+                      {post.post_type === 'notice' ? '공지 해제' : '📢 공지'}
+                    </button>
+                  )}
                   {isMyPost && !isEditing && (
                     <>
                       <button onClick={() => { setEditingPost(post.id); setEditTitle(post.title); setEditContent(post.content) }} className="p-1.5 text-muted-foreground hover:text-violet-600"><Pencil size={14} /></button>

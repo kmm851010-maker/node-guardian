@@ -42,6 +42,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   return NextResponse.json({ data })
 }
 
+// 공지 지정/해제 (스탭/마스터 전용)
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const { pi_uid, username, post_type } = await req.json()
+
+  const isMaster = username?.toLowerCase() === 'doosanprince'
+  if (!isMaster) {
+    const { data: staffRow } = await supabaseServer
+      .from('staff_members').select('pi_uid').eq('pi_uid', pi_uid).maybeSingle()
+    if (!staffRow) return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+  }
+
+  const { data, error } = await supabaseServer
+    .from('pilink_posts').update({ post_type }).eq('id', id).select().single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ data })
+}
+
 // 글 삭제
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

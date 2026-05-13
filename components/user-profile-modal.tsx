@@ -88,6 +88,9 @@ export default function UserProfileModal({ uid, nickname, viewerUsername, onClos
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {!loading && profile?.nickname?.toLowerCase() === 'doosanprince' && (
+              <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">운영자</span>
+            )}
             {isMaster && !loading && (
               <button
                 disabled={staffLoading}

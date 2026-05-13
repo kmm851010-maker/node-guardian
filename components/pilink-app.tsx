@@ -35,6 +35,8 @@ export default function PiLinkApp() {
   const [profileSince, setProfileSince] = useState('1970-01-01T00:00:00.000Z')
   const [openPostRequest, setOpenPostRequest] = useState<{ postId: string; postType: string } | null>(null)
   const [badgeMap, setBadgeMap] = useState<Record<string, string[]>>({})
+  const [roleMap, setRoleMap] = useState<Record<string, 'master' | 'staff'>>({})
+
   const [pullReady, setPullReady] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const startYRef = useRef(0)
@@ -79,7 +81,7 @@ export default function PiLinkApp() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/badges').then(r => r.json()).then(d => setBadgeMap(d.badges ?? {}))
+    fetch('/api/badges').then(r => r.json()).then(d => { setBadgeMap(d.badges ?? {}); setRoleMap(d.roleMap ?? {}) })
   }, [])
 
   useEffect(() => {
@@ -230,9 +232,9 @@ export default function PiLinkApp() {
       <main className="pb-20">
         {isPiBrowser === true && activeTab === 'dashboard' && <GuideDrawer />}
         {activeTab === 'dashboard'  && <DashboardTab user={user} />}
-        {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} badgeMap={badgeMap} openPostId={openPostRequest?.postType !== 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
-        {activeTab === 'ranking'    && <RankingTab user={user} />}
-        {activeTab === 'qna'        && <QnaTab user={user} isPremium={isPremium} badgeMap={badgeMap} openPostId={openPostRequest?.postType === 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
+        {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} badgeMap={badgeMap} roleMap={roleMap} openPostId={openPostRequest?.postType !== 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
+        {activeTab === 'ranking'    && <RankingTab user={user} roleMap={roleMap} />}
+        {activeTab === 'qna'        && <QnaTab user={user} isPremium={isPremium} badgeMap={badgeMap} roleMap={roleMap} openPostId={openPostRequest?.postType === 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
         {activeTab === 'profile'    && <ProfileTab user={user} onPremiumChange={setIsPremium} notifSince={profileSince} onNavigateToPost={handleNavigateToPost} />}
       </main>
 

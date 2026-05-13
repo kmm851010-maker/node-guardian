@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Trophy, Heart, Crown, Info, Flame, Zap } from 'lucide-react'
 import UserProfileModal from '@/components/user-profile-modal'
+import { RoleName } from '@/components/role-name'
 
 interface RankEntry {
   id: string
@@ -48,11 +49,12 @@ function getWeekLabel(weekStart: string): string {
 
 interface Props {
   user: { uid: string; username: string } | null
+  roleMap?: Record<string, 'master' | 'staff'>
 }
 
 type SubTab = 'weekly' | 'current' | 'alltime' | 'adoption'
 
-export default function RankingTab({ user }: Props) {
+export default function RankingTab({ user, roleMap = {} }: Props) {
   const [subTab, setSubTab] = useState<SubTab>('weekly')
   const [rankings, setRankings] = useState<RankEntry[]>([])
   const [weekStart, setWeekStart] = useState<string>('')
@@ -193,7 +195,7 @@ export default function RankingTab({ user }: Props) {
                         className="text-sm font-semibold hover:text-violet-600 hover:underline transition-colors truncate block text-left"
                       >
                         {entry.rank === 1 && <Crown size={12} className="inline text-yellow-500 mr-1" />}
-                        @{entry.nickname}
+                        <RoleName name={`@${entry.nickname}`} role={roleMap[entry.pi_uid]} />
                       </button>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                         <Heart size={11} className="text-rose-400" fill="currentColor" />
@@ -284,7 +286,7 @@ export default function RankingTab({ user }: Props) {
                           className="text-sm font-semibold hover:text-violet-600 hover:underline transition-colors truncate block text-left"
                         >
                           {entry.rank === 1 && <Crown size={12} className="inline text-yellow-500 mr-1" />}
-                          {entry.display_name ?? `@${entry.nickname}`}
+                          <RoleName name={entry.display_name ?? `@${entry.nickname}`} role={roleMap[entry.pi_uid]} />
                           {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">(나)</span>}
                         </button>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
@@ -362,7 +364,7 @@ export default function RankingTab({ user }: Props) {
                           className="text-sm font-semibold hover:text-violet-600 hover:underline transition-colors truncate block text-left"
                         >
                           {entry.rank === 1 && <Crown size={12} className="inline text-yellow-500 mr-1" />}
-                          {entry.display_name ?? `@${entry.nickname}`}
+                          <RoleName name={entry.display_name ?? `@${entry.nickname}`} role={roleMap[entry.pi_uid]} />
                           {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">(나)</span>}
                         </button>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">

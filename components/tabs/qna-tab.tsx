@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Circle, MessageCircle, Heart, CornerDownRight, PenSquare, X, Award, Pencil, Trash2, Crown, ImagePlus, Search, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
+import { RoleName } from '@/components/role-name'
 
 function LevelBadge({ level }: { level: number | null }) {
   if (!level) return null
@@ -82,6 +83,7 @@ interface Props {
   user: { uid: string; username: string } | null
   isPremium: boolean
   badgeMap?: Record<string, string[]>
+  roleMap?: Record<string, 'master' | 'staff'>
   openPostId?: string
   onPostOpened?: () => void
 }
@@ -130,7 +132,7 @@ function BestAnswerPopup({
   )
 }
 
-export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onPostOpened }: Props) {
+export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, openPostId, onPostOpened }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -554,7 +556,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onP
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <LevelBadge level={post.level} />
-                      {post.display_name ?? post.nickname}
+                      <RoleName name={post.display_name ?? post.nickname} role={roleMap[post.author_uid]} />
                       <BadgeIcons badges={badgeMap[post.author_uid]} />
                     </span>
                     <span className="ml-auto flex items-center gap-0.5"><MessageCircle size={11} /> {post.comments_count ?? 0}</span>
@@ -666,7 +668,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onP
                     onClick={e => { e.stopPropagation(); setProfileUid(post.author_uid) }}
                     className="hover:text-violet-600 hover:underline transition-colors"
                   >
-                    {post.display_name ?? post.nickname}
+                    <RoleName name={post.display_name ?? post.nickname} role={roleMap[post.author_uid]} />
                   </button>
                   <BadgeIcons badges={badgeMap[post.author_uid]} />
                 </span>
@@ -734,7 +736,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onP
                                   onClick={() => setProfileUid(comment.author_uid)}
                                   className="text-xs font-medium hover:text-violet-600 hover:underline"
                                 >
-                                  {comment.display_name ?? comment.nickname}
+                                  <RoleName name={comment.display_name ?? comment.nickname} role={roleMap[comment.author_uid]} />
                                 </button>
                                 <BadgeIcons badges={badgeMap[comment.author_uid]} />
                               </span>
@@ -790,7 +792,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, openPostId, onP
                                     onClick={() => setProfileUid(reply.author_uid)}
                                     className="text-xs font-medium hover:text-violet-600 hover:underline"
                                   >
-                                    {reply.display_name ?? reply.nickname}
+                                    <RoleName name={reply.display_name ?? reply.nickname} role={roleMap[reply.author_uid]} />
                                   </button>
                                   <BadgeIcons badges={badgeMap[reply.author_uid]} />
                                 </span>

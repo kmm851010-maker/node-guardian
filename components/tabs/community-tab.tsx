@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Heart, Eye, PenSquare, X, ImagePlus, MessageCircle, CornerDownRight, LayoutList, LayoutGrid, Pencil, Trash2, Crown, Search, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
+import { RoleName } from '@/components/role-name'
 
 function LevelBadge({ level }: { level: number | null }) {
   if (!level) return null
@@ -102,11 +103,12 @@ interface Props {
   user: { uid: string; username: string } | null
   isPremium: boolean
   badgeMap?: Record<string, string[]>
+  roleMap?: Record<string, 'master' | 'staff'>
   openPostId?: string
   onPostOpened?: () => void
 }
 
-export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostId, onPostOpened }: Props) {
+export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap = {}, openPostId, onPostOpened }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [isStaff, setIsStaff] = useState(false)
@@ -451,7 +453,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <LevelBadge level={post.level} />
-                      <button onClick={() => { closeModal(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }} className="hover:text-violet-600 hover:underline">{post.display_name ?? post.nickname}</button>
+                      <button onClick={() => { closeModal(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }} className="hover:text-violet-600 hover:underline"><RoleName name={post.display_name ?? post.nickname} role={roleMap[post.author_uid]} /></button>
                       <BadgeIcons badges={badgeMap[post.author_uid]} />
                     </span>
                     <span>{formatTime(post.created_at)}</span>
@@ -524,7 +526,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
                                 <span className="flex items-center gap-1">
                                   <LevelBadge level={comment.level} />
                                   <button onClick={() => setProfileUser({ uid: comment.author_uid, nickname: comment.nickname })}
-                                    className="text-xs font-medium hover:text-violet-600 hover:underline">{comment.display_name ?? comment.nickname}</button>
+                                    className="text-xs font-medium hover:text-violet-600 hover:underline"><RoleName name={comment.display_name ?? comment.nickname} role={roleMap[comment.author_uid]} /></button>
                                   <BadgeIcons badges={badgeMap[comment.author_uid]} />
                                 </span>
                                 <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
@@ -551,7 +553,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
                                   <span className="flex items-center gap-1">
                                     <LevelBadge level={reply.level} />
                                     <button onClick={() => setProfileUser({ uid: reply.author_uid, nickname: reply.nickname })}
-                                      className="text-xs font-medium hover:text-violet-600 hover:underline">{reply.display_name ?? reply.nickname}</button>
+                                      className="text-xs font-medium hover:text-violet-600 hover:underline"><RoleName name={reply.display_name ?? reply.nickname} role={roleMap[reply.author_uid]} /></button>
                                     <BadgeIcons badges={badgeMap[reply.author_uid]} />
                                   </span>
                                   <span className="text-xs text-muted-foreground">{formatTime(reply.created_at)}</span>
@@ -684,7 +686,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <LevelBadge level={post.level} />
-                      {post.display_name ?? post.nickname}
+                      <RoleName name={post.display_name ?? post.nickname} role={roleMap[post.author_uid]} />
                       <BadgeIcons badges={badgeMap[post.author_uid]} />
                     </span>
                     <span className="ml-auto flex items-center gap-1">
@@ -900,7 +902,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
               <div className="w-20 flex items-center justify-end gap-1 shrink-0">
                 <LevelBadge level={post.level} />
                 <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
-                  className="text-xs text-muted-foreground truncate hover:text-violet-600">{post.display_name ?? post.nickname}</button>
+                  className="text-xs text-muted-foreground truncate hover:text-violet-600"><RoleName name={post.display_name ?? post.nickname} role={roleMap[post.author_uid]} /></button>
                 <BadgeIcons badges={badgeMap[post.author_uid]} />
               </div>
               <span className="w-10 text-xs text-muted-foreground text-right shrink-0">{formatTime(post.created_at).slice(0,5)}</span>
@@ -938,7 +940,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
                     <span className="flex items-center gap-1">
                       <LevelBadge level={post.level} />
                       <button onClick={e => { e.stopPropagation(); setProfileUser({ uid: post.author_uid, nickname: post.nickname }) }}
-                        className="hover:text-violet-600 hover:underline transition-colors">{post.display_name ?? post.nickname}</button>
+                        className="hover:text-violet-600 hover:underline transition-colors"><RoleName name={post.display_name ?? post.nickname} role={roleMap[post.author_uid]} /></button>
                       <BadgeIcons badges={badgeMap[post.author_uid]} />
                     </span>
                     <span className="ml-auto">{formatTime(post.created_at)}</span>

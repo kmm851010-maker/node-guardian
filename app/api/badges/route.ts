@@ -60,6 +60,8 @@ export async function GET() {
     { data: weeklyRankings },
     { data: attendanceRows },
     { data: adoptedPosts },
+    { data: staffMembers },
+    { data: masterProfile },
   ] = await Promise.all([
     // 주간 인기멤버 TOP3
     supabaseServer.from('weekly_rankings').select('pi_uid, rank').eq('week_start', weekStart).lte('rank', 3),
@@ -67,6 +69,10 @@ export async function GET() {
     supabaseServer.from('attendance').select('pi_uid, checked_date').order('checked_date', { ascending: true }),
     // 채택된 글 전체
     supabaseServer.from('pilink_posts').select('best_answer_comment_id').not('best_answer_comment_id', 'is', null),
+    // 스탭 목록
+    supabaseServer.from('staff_members').select('pi_uid'),
+    // 마스터 프로필
+    supabaseServer.from('node_profiles').select('pi_uid').eq('nickname', 'doosanprince').maybeSingle(),
   ])
 
   // 주간 인기멤버 TOP3 → badge-trophy
@@ -129,5 +135,11 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ badges: badgeMap })
+  const roleMap: Record<string, 'master' | 'staff'> = {}
+  if (masterProfile?.pi_uid) roleMap[masterProfile.pi_uid] = 'master'
+  for (const s of staffMembers ?? []) {
+    if (!roleMap[s.pi_uid]) roleMap[s.pi_uid] = 'staff'
+  }
+
+  return NextResponse.json({ badges: badgeMap, roleMap })
 }

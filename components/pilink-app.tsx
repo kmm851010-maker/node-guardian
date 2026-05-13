@@ -228,7 +228,7 @@ export default function PiLinkApp() {
 
       {/* 탭 컨텐츠 */}
       <main className="pb-20">
-        {isPiBrowser === true && <GuideDrawer />}
+        {isPiBrowser === true && activeTab === 'dashboard' && <GuideDrawer />}
         {activeTab === 'dashboard'  && <DashboardTab user={user} />}
         {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} badgeMap={badgeMap} openPostId={openPostRequest?.postType !== 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
         {activeTab === 'ranking'    && <RankingTab user={user} />}

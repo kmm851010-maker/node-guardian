@@ -145,6 +145,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
   const [piNews, setPiNews] = useState<{ title: string; link: string; date: string }[]>([])
   const [top3, setTop3] = useState<Post[]>([])
+  const [notices, setNotices] = useState<Post[]>([])
 
   useEffect(() => {
     if (user) {
@@ -161,6 +162,8 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
     const since = `${sun.getUTCFullYear()}-${String(sun.getUTCMonth() + 1).padStart(2, '0')}-${String(sun.getUTCDate()).padStart(2, '0')}`
     fetch(`/api/posts?sort=likes&limit=3&exclude_type=qna&since=${since}`)
       .then(r => r.json()).then(d => setTop3(d.data ?? []))
+    fetch('/api/posts?type=notice&limit=3')
+      .then(r => r.json()).then(d => setNotices(d.data ?? []))
   }, [])
   const [likingPostId, setLikingPostId] = useState<string | null>(null)
   const [likingCommentId, setLikingCommentId] = useState<string | null>(null)
@@ -723,6 +726,25 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 최근 공지 */}
+      {!searchQuery && notices.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+            📢 공지사항
+          </p>
+          {notices.map(post => (
+            <button
+              key={post.id}
+              onClick={() => openPost(post.id)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
+            >
+              <span className="flex-1 text-xs font-medium truncate text-blue-900">{post.title}</span>
+              <span className="text-xs text-blue-400 shrink-0">{formatTime(post.created_at)}</span>
+            </button>
+          ))}
         </div>
       )}
 

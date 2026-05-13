@@ -25,11 +25,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: subs } = await supabaseServer
-    .from('telegram_subscriptions')
-    .select('pi_uid, chat_id')
+  const [{ data: telegramSubs }, { data: expoSubs }] = await Promise.all([
+    supabaseServer.from('telegram_subscriptions').select('pi_uid, chat_id'),
+    supabaseServer.from('expo_push_tokens').select('pi_uid'),
+  ])
 
-  if (!subs || subs.length === 0) return NextResponse.json({ ok: true, checked: 0 })
+  // 두 테이블의 pi_uid 합집합
+  const piUidSet = new Set<string>()
+  const chatIdMap: Record<string, string> = {}
+  for (const s of telegramSubs ?? []) { piUidSet.add(s.pi_uid); chatIdMap[s.pi_uid] = s.chat_id }
+  for (const s of expoSubs ?? []) { piUidSet.add(s.pi_uid) }
+
+  const subs = Array.from(piUidSet).map(pi_uid => ({ pi_uid, chat_id: chatIdMap[pi_uid] ?? null }))
+
+  if (subs.length === 0) return NextResponse.json({ ok: true, checked: 0 })
 
   const now = Date.now()
   const offlineThreshold = new Date(now - OFFLINE_THRESHOLD_MS).toISOString()
@@ -40,7 +49,7 @@ export async function GET(req: NextRequest) {
   const BATCH_SIZE = 50
   const BATCH_DELAY_MS = 200
 
-  const processSub = async (sub: { pi_uid: string; chat_id: string }) => {
+  const processSub = async (sub: { pi_uid: string; chat_id: string | null }) => {
     const { data: status } = await supabaseServer
       .from('node_status')
       .select('last_seen')
@@ -71,7 +80,7 @@ export async function GET(req: NextRequest) {
           message: `노드 가디언 응답 없음 — PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`,
         })
         await Promise.allSettled([
-          sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`),
+          sub.chat_id ? sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
           sendPushToUser(sub.pi_uid, 'critical', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
           sendExpoToUser(sub.pi_uid, 'node_offline', '🔴 노드 가디언 응답 없음', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
         ])
@@ -98,7 +107,7 @@ export async function GET(req: NextRequest) {
               message: `노드 가디언 응답 없음 — ${timeAgo(status.last_seen)}째 미복구 중`,
             })
             await Promise.allSettled([
-              sendTelegramMessage(sub.chat_id, `🔴 <b>[재알림] 노드 가디언 응답 없음</b>\n\n마지막 신호: ${timeAgo(status.last_seen)}\n⚠️ 아직 복구되지 않았습니다.\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`),
+              sub.chat_id ? sendTelegramMessage(sub.chat_id, `🔴 <b>[재알림] 노드 가디언 응답 없음</b>\n\n마지막 신호: ${timeAgo(status.last_seen)}\n⚠️ 아직 복구되지 않았습니다.\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
               sendPushToUser(sub.pi_uid, 'critical', `[재알림] 마지막 신호: ${timeAgo(status.last_seen)} — 아직 복구되지 않았습니다.`),
               sendExpoToUser(sub.pi_uid, 'node_offline', '🔴 [재알림] 노드 가디언 응답 없음', `마지막 신호: ${timeAgo(status.last_seen)} — 아직 복구되지 않았습니다.`),
             ])
@@ -113,7 +122,7 @@ export async function GET(req: NextRequest) {
             message: `노드 가디언 응답 없음 — PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`,
           })
           await Promise.allSettled([
-            sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`),
+            sub.chat_id ? sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
             sendPushToUser(sub.pi_uid, 'critical', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
             sendExpoToUser(sub.pi_uid, 'node_offline', '🔴 노드 가디언 응답 없음', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
           ])
@@ -140,7 +149,7 @@ export async function GET(req: NextRequest) {
             message: '노드 가디언 재접속 — 정상 모니터링이 재개됐습니다.',
           })
           await Promise.allSettled([
-            sendTelegramMessage(sub.chat_id, `✅ <b>노드 가디언 재접속</b>\n\n정상 모니터링이 재개됐습니다.\n\n다음 중단은 막을 수 있습니다.\n운영자들의 노하우가 커뮤니티에 쌓이고 있어요.\n👉 <a href="https://linkpi.io">linkpi.io</a>`),
+            sub.chat_id ? sendTelegramMessage(sub.chat_id, `✅ <b>노드 가디언 재접속</b>\n\n정상 모니터링이 재개됐습니다.\n\n다음 중단은 막을 수 있습니다.\n운영자들의 노하우가 커뮤니티에 쌓이고 있어요.\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
             sendPushToUser(sub.pi_uid, 'recovery', '노드 가디언 재접속 — 정상 모니터링이 재개됐습니다.'),
             sendExpoToUser(sub.pi_uid, 'node_online', '✅ 노드 가디언 재접속', '정상 모니터링이 재개됐습니다.'),
           ])

@@ -149,8 +149,12 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
 
   useEffect(() => {
     if (user) {
-      fetch(`/api/staff?pi_uid=${encodeURIComponent(user.uid)}`)
-        .then(r => r.json()).then(d => setIsStaff(d.isStaff ?? false))
+      if (user.username.toLowerCase() === 'doosanprince') {
+        setIsStaff(true)
+      } else {
+        fetch(`/api/staff?pi_uid=${encodeURIComponent(user.uid)}`)
+          .then(r => r.json()).then(d => setIsStaff(d.isStaff ?? false))
+      }
     }
   }, [user])
 
@@ -808,7 +812,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, openPostI
               <button onClick={() => setShowForm(false)}><X size={16} className="text-muted-foreground" /></button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {POST_TYPES.filter(t => t.value !== 'notice' || isStaff).map(t => (
+              {POST_TYPES.filter(t => t.value !== 'notice' || isStaff || user?.username === 'doosanprince').map(t => (
                 <button key={t.value} onClick={() => setPostType(t.value)}
                   className={`text-xs px-3 py-1 rounded-full border-2 transition-colors ${postType === t.value ? 'border-violet-500 ' + t.color : 'border-transparent ' + t.color}`}>
                   {t.label}

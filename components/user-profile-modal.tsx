@@ -40,7 +40,7 @@ export default function UserProfileModal({ uid, nickname, viewerUsername, onClos
   const [userBadges, setUserBadges] = useState<string[]>([])
   const [isStaff, setIsStaff] = useState(false)
   const [staffLoading, setStaffLoading] = useState(false)
-  const isMaster = viewerUsername === 'doosanprince'
+  const isMaster = viewerUsername?.toLowerCase() === 'doosanprince'
 
   useEffect(() => {
     const url = nickname

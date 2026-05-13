@@ -240,7 +240,7 @@ export default function PiLinkApp() {
             <p className="text-xs text-violet-600 mt-0.5">PC 꺼짐·포트 이상 즉시 알림 · 무료</p>
           </div>
           <a
-            href="https://expo.dev/artifacts/eas/k2gPVa7QunnjF8n11kRWRt.apk"
+            href="https://expo.dev/artifacts/eas/nDyFxB6h6Kc2posCCz1rrP.apk"
             className="shrink-0 bg-violet-600 text-white text-xs font-bold px-3 py-2 rounded-lg"
           >
             앱 설치

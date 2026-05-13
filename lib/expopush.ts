@@ -8,20 +8,26 @@ export async function sendExpoToUser(pi_uid: string, event_type: string, title: 
 
   if (!rows?.length) return
 
-  // 사용자가 해당 알림 종류를 껐으면 제외
-  const tokens = rows
+  const messages = rows
     .filter(r => (r.prefs ?? {})[event_type] !== false)
-    .map(r => r.token as string)
-    .filter(Boolean)
+    .map(r => {
+      const soundNum = (r.prefs ?? {}).sound ?? '1'
+      return {
+        to: r.token as string,
+        title,
+        body,
+        channelId: `sound-${soundNum}`,
+        sound: 'default',
+      }
+    })
+    .filter(m => m.to)
 
-  if (!tokens.length) return
+  if (!messages.length) return
 
   const res = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify(
-      tokens.map(token => ({ to: token, sound: 'default', title, body }))
-    ),
+    body: JSON.stringify(messages),
   }).catch((e) => { console.error('[expopush] fetch error:', e); return null })
 
   if (res) {
@@ -29,7 +35,7 @@ export async function sendExpoToUser(pi_uid: string, event_type: string, title: 
     if (!res.ok || json?.errors?.length) {
       console.error('[expopush] Expo push failed:', JSON.stringify(json))
     } else {
-      console.log('[expopush] sent to', tokens.length, 'token(s), data:', JSON.stringify(json?.data))
+      console.log('[expopush] sent to', messages.length, 'token(s), data:', JSON.stringify(json?.data))
     }
   }
 }

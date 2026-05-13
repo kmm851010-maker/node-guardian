@@ -11,12 +11,12 @@ export async function sendExpoToUser(pi_uid: string, event_type: string, title: 
   const messages = rows
     .filter(r => (r.prefs ?? {})[event_type] !== false)
     .map(r => {
-      const soundNum = (r.prefs ?? {}).sound ?? '1'
+      const soundPref = (r.prefs ?? {}).sound ?? 'default'
       return {
         to: r.token as string,
         title,
         body,
-        channelId: `sound-${soundNum}`,
+        channelId: `sound-${soundPref}`,
         sound: 'default',
       }
     })

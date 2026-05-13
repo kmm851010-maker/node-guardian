@@ -31,6 +31,7 @@ export default function PiLinkApp() {
   const { user, isLoading, login, logout } = useAuth()
   const [isPremium, setIsPremium] = useState(false)
   const [isPiBrowser, setIsPiBrowser] = useState<boolean | null>(null)
+  const [isAndroidBrowser, setIsAndroidBrowser] = useState(false)
   const [badges, setBadges] = useState<Partial<Record<Tab, boolean>>>({})
   const [profileSince, setProfileSince] = useState('1970-01-01T00:00:00.000Z')
   const [openPostRequest, setOpenPostRequest] = useState<{ postId: string; postType: string } | null>(null)
@@ -87,8 +88,10 @@ export default function PiLinkApp() {
   useEffect(() => {
     const hasPiSDK = !!(window as any).Pi
     const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)
+    const isAndroid = /android/i.test(navigator.userAgent)
     const isPi = hasPiSDK && isMobile
     setIsPiBrowser(isPi)
+    setIsAndroidBrowser(isAndroid)
     if (isPi) setActiveTab('dashboard')
   }, [])
 
@@ -225,6 +228,23 @@ export default function PiLinkApp() {
             <span className="font-semibold">로그인 및 커뮤니티 참여는 Pi Browser에서만 가능합니다.</span>
             <br />게시글·댓글 조회는 이 브라우저에서도 가능합니다.
           </p>
+        </div>
+      )}
+
+      {/* 안드로이드 앱 다운로드 배너 (모바일 브라우저 전용, Pi Browser·PC 제외) */}
+      {isAndroidBrowser && (
+        <div className="mx-4 mt-2 flex items-center gap-3 bg-violet-50 border border-violet-200 rounded-xl px-4 py-3">
+          <Download size={16} className="text-violet-600 shrink-0" />
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-violet-800">LinkPiMonitor 앱으로 노드 알림 받기</p>
+            <p className="text-xs text-violet-600 mt-0.5">PC 꺼짐·포트 이상 즉시 알림 · 무료</p>
+          </div>
+          <a
+            href="https://expo.dev/artifacts/eas/k2gPVa7QunnjF8n11kRWRt.apk"
+            className="shrink-0 bg-violet-600 text-white text-xs font-bold px-3 py-2 rounded-lg"
+          >
+            앱 설치
+          </a>
         </div>
       )}
 

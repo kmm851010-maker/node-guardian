@@ -32,6 +32,7 @@ export default function PiLinkApp() {
   const [isPremium, setIsPremium] = useState(false)
   const [isPiBrowser, setIsPiBrowser] = useState<boolean | null>(null)
   const [isAndroidBrowser, setIsAndroidBrowser] = useState(false)
+  const [apkUrl, setApkUrl] = useState('https://expo.dev/artifacts/eas/nDyFxB6h6Kc2posCCz1rrP.apk')
   const [badges, setBadges] = useState<Partial<Record<Tab, boolean>>>({})
   const [profileSince, setProfileSince] = useState('1970-01-01T00:00:00.000Z')
   const [openPostRequest, setOpenPostRequest] = useState<{ postId: string; postType: string } | null>(null)
@@ -93,6 +94,9 @@ export default function PiLinkApp() {
     setIsPiBrowser(isPi)
     setIsAndroidBrowser(isAndroid)
     if (isPi) setActiveTab('dashboard')
+    if (isAndroid) {
+      fetch('/api/app-version').then(r => r.json()).then(d => { if (d.apk_url) setApkUrl(d.apk_url) }).catch(() => {})
+    }
   }, [])
 
   useEffect(() => {
@@ -240,7 +244,7 @@ export default function PiLinkApp() {
             <p className="text-xs text-violet-600 mt-0.5">PC 꺼짐·포트 이상 즉시 알림 · 무료</p>
           </div>
           <a
-            href="https://expo.dev/artifacts/eas/nDyFxB6h6Kc2posCCz1rrP.apk"
+            href={apkUrl}
             className="shrink-0 bg-violet-600 text-white text-xs font-bold px-3 py-2 rounded-lg"
           >
             앱 설치

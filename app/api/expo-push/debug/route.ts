@@ -26,19 +26,23 @@ export async function POST(req: NextRequest) {
 
   if (!rows?.length) return NextResponse.json({ error: 'No tokens found for this user' })
 
-  const tokens = rows.map(r => r.token as string).filter(Boolean)
+  const messages = rows.map(r => {
+    const soundPref = (r.prefs ?? {}).sound ?? 'default'
+    return {
+      to: r.token as string,
+      title: title ?? '테스트 알림',
+      body: body ?? '알림이 정상 작동합니다.',
+      channelId: `sound-${soundPref}`,
+      sound: 'default',
+    }
+  }).filter(m => m.to)
 
   const res = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify(tokens.map(token => ({
-      to: token,
-      sound: 'default',
-      title: title ?? '테스트 알림',
-      body: body ?? '알림이 정상 작동합니다.',
-    }))),
+    body: JSON.stringify(messages),
   })
   const json = await res.json()
 
-  return NextResponse.json({ tokens, expo_response: json })
+  return NextResponse.json({ tokens: messages.map(m => m.to), expo_response: json })
 }

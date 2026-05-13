@@ -16,11 +16,20 @@ export async function sendExpoToUser(pi_uid: string, event_type: string, title: 
 
   if (!tokens.length) return
 
-  await fetch('https://exp.host/--/api/v2/push/send', {
+  const res = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
     headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify(
       tokens.map(token => ({ to: token, sound: 'default', title, body }))
     ),
-  }).catch(() => {})
+  }).catch((e) => { console.error('[expopush] fetch error:', e); return null })
+
+  if (res) {
+    const json = await res.json().catch(() => null)
+    if (!res.ok || json?.errors?.length) {
+      console.error('[expopush] Expo push failed:', JSON.stringify(json))
+    } else {
+      console.log('[expopush] sent to', tokens.length, 'token(s), data:', JSON.stringify(json?.data))
+    }
+  }
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, ChevronDown, ChevronUp, Smartphone, Monitor, Download, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react'
 
-const DOWNLOAD_URL = 'https://github.com/kmm851010-maker/node-guardian/releases/latest/download/NodeGuardian.exe'
+const DOWNLOAD_URL = 'https://github.com/kmm851010-maker/node-guardian/releases/download/v1.0.1/NodeGuardian.exe'
 
 type GuideTab = 'pi' | 'pc'
 

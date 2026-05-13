@@ -197,7 +197,7 @@ export default function PiLinkApp() {
             사용법
           </a>
           <a
-            href="https://github.com/kmm851010-maker/node-guardian/releases/latest/download/NodeGuardian.exe"
+            href="https://github.com/kmm851010-maker/node-guardian/releases/download/v1.0.1/NodeGuardian.exe"
             className="flex items-center gap-1 text-xs bg-violet-600 text-white px-3 py-1.5 rounded-full hover:bg-violet-700 transition-colors"
           >
             <Download size={14} />

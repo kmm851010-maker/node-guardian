@@ -80,13 +80,23 @@ export async function GET() {
   }
   const streaks = Object.entries(byUid).map(([pi_uid, dates]) => ({ pi_uid, ...calcStreaks(dates) }))
 
-  // 현재 연속출석 TOP3 → badge-flame
-  const flameTop = [...streaks].filter(s => s.current > 0).sort((a, b) => b.current - a.current).slice(0, 3)
-  for (const s of flameTop) addBadge(s.pi_uid, 'flame')
+  // 현재 연속출석 TOP3 (동점 동일 순위) → badge-flame
+  const currentSorted = [...streaks].filter(s => s.current > 0).sort((a, b) => b.current - a.current)
+  let flameRank = 1
+  for (let i = 0; i < currentSorted.length; i++) {
+    if (i > 0 && currentSorted[i].current < currentSorted[i - 1].current) flameRank = i + 1
+    if (flameRank > 3) break
+    addBadge(currentSorted[i].pi_uid, 'flame')
+  }
 
-  // 역대 최장출석 TOP5 → badge-crown
-  const crownTop = [...streaks].filter(s => s.max > 0).sort((a, b) => b.max - a.max).slice(0, 5)
-  for (const s of crownTop) addBadge(s.pi_uid, 'crown')
+  // 역대 최장출석 TOP5 (동점 동일 순위) → badge-crown
+  const maxSorted = [...streaks].filter(s => s.max > 0).sort((a, b) => b.max - a.max)
+  let crownRank = 1
+  for (let i = 0; i < maxSorted.length; i++) {
+    if (i > 0 && maxSorted[i].max < maxSorted[i - 1].max) crownRank = i + 1
+    if (crownRank > 5) break
+    addBadge(maxSorted[i].pi_uid, 'crown')
+  }
 
   // 채택 댓글 조회
   const commentIds = (adoptedPosts ?? []).map((p: any) => p.best_answer_comment_id as string)
@@ -94,19 +104,29 @@ export async function GET() {
     const { data: adoptedComments } = await supabaseServer
       .from('post_comments').select('id, author_uid, created_at').in('id', commentIds)
 
-    // 역대 지식In TOP5 → badge-diamond
+    // 역대 지식In TOP5 (동점 동일 순위) → badge-diamond
     const allTimeCount: Record<string, number> = {}
     for (const c of adoptedComments ?? []) allTimeCount[c.author_uid] = (allTimeCount[c.author_uid] ?? 0) + 1
-    Object.entries(allTimeCount).sort((a, b) => b[1] - a[1]).slice(0, 5)
-      .forEach(([uid]) => addBadge(uid, 'diamond'))
+    const diamondSorted = Object.entries(allTimeCount).sort((a, b) => b[1] - a[1])
+    let diamondRank = 1
+    for (let i = 0; i < diamondSorted.length; i++) {
+      if (i > 0 && diamondSorted[i][1] < diamondSorted[i - 1][1]) diamondRank = i + 1
+      if (diamondRank > 5) break
+      addBadge(diamondSorted[i][0], 'diamond')
+    }
 
-    // 주간 지식In TOP3 → badge-scholar
+    // 주간 지식In TOP3 (동점 동일 순위) → badge-scholar
     const weeklyCount: Record<string, number> = {}
     for (const c of adoptedComments ?? []) {
       if (c.created_at >= weekStart) weeklyCount[c.author_uid] = (weeklyCount[c.author_uid] ?? 0) + 1
     }
-    Object.entries(weeklyCount).sort((a, b) => b[1] - a[1]).slice(0, 3)
-      .forEach(([uid]) => addBadge(uid, 'scholar'))
+    const scholarSorted = Object.entries(weeklyCount).sort((a, b) => b[1] - a[1])
+    let scholarRank = 1
+    for (let i = 0; i < scholarSorted.length; i++) {
+      if (i > 0 && scholarSorted[i][1] < scholarSorted[i - 1][1]) scholarRank = i + 1
+      if (scholarRank > 3) break
+      addBadge(scholarSorted[i][0], 'scholar')
+    }
   }
 
   return NextResponse.json({ badges: badgeMap })

@@ -19,6 +19,17 @@ function prevDay(dateStr: string): string {
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`
 }
 
+function assignRanks<T>(sorted: T[], getVal: (x: T) => number, maxRank: number): (T & { rank: number })[] {
+  const result: (T & { rank: number })[] = []
+  let rank = 1
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && getVal(sorted[i]) < getVal(sorted[i - 1])) rank = i + 1
+    if (rank > maxRank) break
+    result.push({ ...sorted[i], rank })
+  }
+  return result
+}
+
 function calcStreaks(dates: string[]): { current: number; max: number } {
   if (!dates.length) return { current: 0, max: 0 }
 
@@ -88,17 +99,15 @@ export async function GET() {
     display_name: profileMap[s.pi_uid]?.display_name ?? null,
   }))
 
-  const currentRanking = enriched
-    .filter(s => s.current > 0)
-    .sort((a, b) => b.current - a.current)
-    .slice(0, 10)
-    .map((s, i) => ({ ...s, rank: i + 1 }))
+  const currentRanking = assignRanks(
+    enriched.filter(s => s.current > 0).sort((a, b) => b.current - a.current),
+    x => x.current, 10
+  )
 
-  const maxRanking = enriched
-    .filter(s => s.max > 0)
-    .sort((a, b) => b.max - a.max)
-    .slice(0, 10)
-    .map((s, i) => ({ ...s, rank: i + 1 }))
+  const maxRanking = assignRanks(
+    enriched.filter(s => s.max > 0).sort((a, b) => b.max - a.max),
+    x => x.max, 10
+  )
 
   return NextResponse.json({ currentRanking, maxRanking })
 }

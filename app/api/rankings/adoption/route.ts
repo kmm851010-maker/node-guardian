@@ -37,7 +37,7 @@ export async function GET() {
     : { data: [] }
   const profileMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.pi_uid, p]))
 
-  const ranking = Object.entries(countMap)
+  const sorted = Object.entries(countMap)
     .map(([pi_uid, { nickname, count }]) => ({
       pi_uid,
       nickname: profileMap[pi_uid]?.nickname ?? nickname,
@@ -45,8 +45,14 @@ export async function GET() {
       count,
     }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
-    .map((entry, i) => ({ ...entry, rank: i + 1 }))
+
+  const ranking: ({ pi_uid: string; nickname: string; display_name: string | null; count: number; rank: number })[] = []
+  let rank = 1
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i].count < sorted[i - 1].count) rank = i + 1
+    if (rank > 10) break
+    ranking.push({ ...sorted[i], rank })
+  }
 
   return NextResponse.json({ ranking })
 }

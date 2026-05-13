@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
+import { sendPushToUser } from '@/lib/webpush'
 
 const OFFLINE_THRESHOLD_MS = 15 * 60 * 1000   // 15분 이상 신호 없으면 오프라인
 const REPEAT_INTERVAL_MS   = 60 * 60 * 1000   // 오프라인 지속 시 1시간마다 재알림
@@ -68,10 +69,10 @@ export async function GET(req: NextRequest) {
           severity: 'critical',
           message: `노드 가디언 응답 없음 — PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`,
         })
-        await sendTelegramMessage(
-          sub.chat_id,
-          `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`
-        )
+        await Promise.allSettled([
+          sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`),
+          sendPushToUser(sub.pi_uid, 'critical', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
+        ])
         offlineAlerts++
       } else {
         // 이전 node_offline 이후 node_online이 없으면 아직 오프라인 → 재알림 체크
@@ -94,10 +95,10 @@ export async function GET(req: NextRequest) {
               severity: 'critical',
               message: `노드 가디언 응답 없음 — ${timeAgo(status.last_seen)}째 미복구 중`,
             })
-            await sendTelegramMessage(
-              sub.chat_id,
-              `🔴 <b>[재알림] 노드 가디언 응답 없음</b>\n\n마지막 신호: ${timeAgo(status.last_seen)}\n⚠️ 아직 복구되지 않았습니다.\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`
-            )
+            await Promise.allSettled([
+              sendTelegramMessage(sub.chat_id, `🔴 <b>[재알림] 노드 가디언 응답 없음</b>\n\n마지막 신호: ${timeAgo(status.last_seen)}\n⚠️ 아직 복구되지 않았습니다.\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`),
+              sendPushToUser(sub.pi_uid, 'critical', `[재알림] 마지막 신호: ${timeAgo(status.last_seen)} — 아직 복구되지 않았습니다.`),
+            ])
             offlineAlerts++
           }
         } else {
@@ -108,10 +109,10 @@ export async function GET(req: NextRequest) {
             severity: 'critical',
             message: `노드 가디언 응답 없음 — PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`,
           })
-          await sendTelegramMessage(
-            sub.chat_id,
-            `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`
-          )
+          await Promise.allSettled([
+            sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`),
+            sendPushToUser(sub.pi_uid, 'critical', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
+          ])
           offlineAlerts++
         }
       }
@@ -134,10 +135,10 @@ export async function GET(req: NextRequest) {
             severity: 'recovery',
             message: '노드 가디언 재접속 — 정상 모니터링이 재개됐습니다.',
           })
-          await sendTelegramMessage(
-            sub.chat_id,
-            `✅ <b>노드 가디언 재접속</b>\n\n정상 모니터링이 재개됐습니다.\n\n다음 중단은 막을 수 있습니다.\n운영자들의 노하우가 커뮤니티에 쌓이고 있어요.\n👉 <a href="https://linkpi.io">linkpi.io</a>`
-          )
+          await Promise.allSettled([
+            sendTelegramMessage(sub.chat_id, `✅ <b>노드 가디언 재접속</b>\n\n정상 모니터링이 재개됐습니다.\n\n다음 중단은 막을 수 있습니다.\n운영자들의 노하우가 커뮤니티에 쌓이고 있어요.\n👉 <a href="https://linkpi.io">linkpi.io</a>`),
+            sendPushToUser(sub.pi_uid, 'recovery', '노드 가디언 재접속 — 정상 모니터링이 재개됐습니다.'),
+          ])
           recoveryAlerts++
         }
       }

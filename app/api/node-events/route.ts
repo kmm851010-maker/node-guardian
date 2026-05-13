@@ -1,52 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
-import webpush from 'web-push'
+import { sendPushToUser } from '@/lib/webpush'
 import { sendTelegramMessage } from '@/lib/telegram'
-
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-)
-
-// severity별 알림 제목
-const PUSH_TITLE: Record<string, string> = {
-  critical: '🚨 노드 이상 감지',
-  warning:  '⚠️ 노드 경고',
-  recovery: '✅ 노드 복구',
-  info:     '🟢 노드 정보',
-}
-
-async function sendPushToUser(pi_uid: string, severity: string, message: string) {
-  const { data: subs } = await supabaseServer
-    .from('push_subscriptions')
-    .select('*')
-    .eq('pi_uid', pi_uid)
-
-  if (!subs || subs.length === 0) return
-
-  const payload = JSON.stringify({
-    title: PUSH_TITLE[severity] ?? '📡 PiLink',
-    body: message,
-  })
-
-  await Promise.allSettled(
-    subs.map(sub =>
-      webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        payload,
-      ).catch(async (err) => {
-        // 만료된 구독 삭제
-        if (err.statusCode === 410) {
-          await supabaseServer
-            .from('push_subscriptions')
-            .delete()
-            .eq('id', sub.id)
-        }
-      })
-    )
-  )
-}
 
 async function sendTelegramToUser(pi_uid: string, severity: string, message: string) {
   const { data } = await supabaseServer

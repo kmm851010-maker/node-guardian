@@ -17,15 +17,22 @@ async function translateToKo(text: string): Promise<string> {
 
 export async function GET() {
   try {
-    const res = await fetch(
-      'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fminepi.com%2Fblog%2Ffeed%2F',
-      { next: { revalidate: 1800 } }
-    )
-    const json = await res.json()
+    const res = await fetch('https://minepi.com/blog/feed/', {
+      next: { revalidate: 1800 },
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    })
+    const xml = await res.text()
 
-    if (json.status !== 'ok') return NextResponse.json({ items: [] })
-
-    const raw = (json.items as { title: string; link: string; pubDate: string }[]).slice(0, 5)
+    const itemMatches = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)]
+    const raw = itemMatches.slice(0, 5).map(m => {
+      const block = m[1]
+      const title   = block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/)?.[1]
+                   ?? block.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? ''
+      const link    = block.match(/<link>([\s\S]*?)<\/link>/)?.[1]
+                   ?? block.match(/<guid[^>]*>([\s\S]*?)<\/guid>/)?.[1] ?? ''
+      const pubDate = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] ?? ''
+      return { title: title.trim(), link: link.trim(), pubDate: pubDate.trim() }
+    })
 
     const items = await Promise.all(
       raw.map(async item => ({

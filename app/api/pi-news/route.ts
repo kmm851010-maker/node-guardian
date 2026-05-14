@@ -18,7 +18,7 @@ async function translateToKo(text: string): Promise<string> {
 export async function GET() {
   try {
     const res = await fetch(
-      'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fminepi.com%2Fblog%2Ffeed',
+      'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fminepi.com%2Fblog%2Ffeed%2F',
       { next: { revalidate: 1800 } }
     )
     const json = await res.json()

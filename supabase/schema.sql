@@ -91,3 +91,13 @@ CREATE POLICY "public read node_status"     ON node_status     FOR SELECT USING 
 CREATE POLICY "public read pilink_posts"    ON pilink_posts    FOR SELECT USING (true);
 CREATE POLICY "public read pilink_comments" ON pilink_comments FOR SELECT USING (true);
 CREATE POLICY "public read pilink_likes"    ON pilink_likes    FOR SELECT USING (true);
+
+-- pi_news (파이 코어팀 블로그 뉴스 캐시)
+CREATE TABLE IF NOT EXISTS pi_news (
+  id         TEXT PRIMARY KEY,
+  title      TEXT NOT NULL,
+  title_ko   TEXT,
+  link       TEXT NOT NULL,
+  pub_date   TEXT NOT NULL,
+  fetched_at TIMESTAMPTZ DEFAULT NOW()
+);

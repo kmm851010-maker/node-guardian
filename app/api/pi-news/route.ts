@@ -1,42 +1,20 @@
-export const revalidate = 1800 // 30분 캐시
+export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-
-async function translateToKo(text: string): Promise<string> {
-  try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=${encodeURIComponent(text)}`
-    const res = await fetch(url)
-    const json = await res.json()
-    // 응답 구조: [[[번역문, 원문, ...], ...], ...]
-    const translated = (json[0] as [string, string][]).map(seg => seg[0]).join('')
-    return translated || text
-  } catch {
-    return text
-  }
-}
+import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET() {
-  try {
-    const res = await fetch(
-      'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fminepi.com%2Fblog%2Ffeed%2F',
-      { next: { revalidate: 1800 } }
-    )
-    const json = await res.json()
+  const { data } = await supabaseServer
+    .from('pi_news')
+    .select('title_ko, link, pub_date')
+    .order('pub_date', { ascending: false })
+    .limit(5)
 
-    if (json.status !== 'ok') return NextResponse.json({ items: [] })
+  const items = (data ?? []).map(row => ({
+    title: row.title_ko,
+    link:  row.link,
+    date:  row.pub_date ? new Date(row.pub_date).toLocaleDateString('ko-KR') : '',
+  }))
 
-    const raw = (json.items as { title: string; link: string; pubDate: string }[]).slice(0, 5)
-
-    const items = await Promise.all(
-      raw.map(async item => ({
-        title: await translateToKo(item.title),
-        link:  item.link,
-        date:  item.pubDate ? new Date(item.pubDate).toLocaleDateString('ko-KR') : '',
-      }))
-    )
-
-    return NextResponse.json({ items })
-  } catch {
-    return NextResponse.json({ items: [] })
-  }
+  return NextResponse.json({ items })
 }

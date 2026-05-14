@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         })
         await Promise.allSettled([
           sendTelegramToUser(pi_uid, 'recovery', '✅ 노드 가디언 재접속\n\n정상 모니터링이 재개됐습니다.'),
-          sendExpoToUser(pi_uid, 'node_online', '✅ 노드 가디언 재접속', '정상 모니터링이 재개됐습니다.'),
+          sendExpoToUser(pi_uid, 'node_online', `✅ [@${pi_uid}] 재접속`, '정상 모니터링이 재개됐습니다.'),
         ])
       }
     }
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
   if (severity !== 'info' && event_type !== 'heartbeat') {
     await Promise.allSettled([
       sendPushToUser(pi_uid, severity, message),
-      sendExpoToUser(pi_uid, event_type, severity === 'critical' ? '🚨 노드 이상 감지' : severity === 'warning' ? '⚠️ 노드 경고' : severity === 'recovery' ? '✅ 노드 복구' : '📡 PiLink', message),
+      sendExpoToUser(pi_uid, event_type, severity === 'critical' ? `🚨 [@${pi_uid}] 노드 이상` : severity === 'warning' ? `⚠️ [@${pi_uid}] 노드 경고` : severity === 'recovery' ? `✅ [@${pi_uid}] 복구` : `📡 [@${pi_uid}]`, message),
       sendTelegramToUser(pi_uid, severity, message),
     ])
   }

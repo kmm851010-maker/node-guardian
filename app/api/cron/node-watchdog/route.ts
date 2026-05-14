@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
         await Promise.allSettled([
           sub.chat_id ? sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
           sendPushToUser(sub.pi_uid, 'critical', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
-          sendExpoToUser(sub.pi_uid, 'node_offline', '🔴 노드 가디언 응답 없음', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
+          sendExpoToUser(sub.pi_uid, 'node_offline', `🔴 [@${sub.pi_uid}] 응답 없음`, `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
         ])
         offlineAlerts++
       } else {
@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
             await Promise.allSettled([
               sub.chat_id ? sendTelegramMessage(sub.chat_id, `🔴 <b>[재알림] 노드 가디언 응답 없음</b>\n\n마지막 신호: ${timeAgo(status.last_seen)}\n⚠️ 아직 복구되지 않았습니다.\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
               sendPushToUser(sub.pi_uid, 'critical', `[재알림] 마지막 신호: ${timeAgo(status.last_seen)} — 아직 복구되지 않았습니다.`),
-              sendExpoToUser(sub.pi_uid, 'node_offline', '🔴 [재알림] 노드 가디언 응답 없음', `마지막 신호: ${timeAgo(status.last_seen)} — 아직 복구되지 않았습니다.`),
+              sendExpoToUser(sub.pi_uid, 'node_offline', `🔴 [@${sub.pi_uid}] 재알림`, `마지막 신호: ${timeAgo(status.last_seen)} — 아직 복구되지 않았습니다.`),
             ])
             offlineAlerts++
           }
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
           await Promise.allSettled([
             sub.chat_id ? sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
             sendPushToUser(sub.pi_uid, 'critical', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
-            sendExpoToUser(sub.pi_uid, 'node_offline', '🔴 노드 가디언 응답 없음', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
+            sendExpoToUser(sub.pi_uid, 'node_offline', `🔴 [@${sub.pi_uid}] 응답 없음`, `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
           ])
           offlineAlerts++
         }
@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
           await Promise.allSettled([
             sub.chat_id ? sendTelegramMessage(sub.chat_id, `✅ <b>노드 가디언 재접속</b>\n\n정상 모니터링이 재개됐습니다.\n\n다음 중단은 막을 수 있습니다.\n운영자들의 노하우가 커뮤니티에 쌓이고 있어요.\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
             sendPushToUser(sub.pi_uid, 'recovery', '노드 가디언 재접속 — 정상 모니터링이 재개됐습니다.'),
-            sendExpoToUser(sub.pi_uid, 'node_online', '✅ 노드 가디언 재접속', '정상 모니터링이 재개됐습니다.'),
+            sendExpoToUser(sub.pi_uid, 'node_online', `✅ [@${sub.pi_uid}] 재접속`, '정상 모니터링이 재개됐습니다.'),
           ])
           recoveryAlerts++
         }

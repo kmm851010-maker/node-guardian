@@ -16,3 +16,19 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
+
+export async function DELETE(req: NextRequest) {
+  const { pi_uid, token } = await req.json()
+  if (!pi_uid || !token) {
+    return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+  }
+
+  const { error } = await supabaseServer
+    .from('expo_push_tokens')
+    .delete()
+    .eq('pi_uid', pi_uid)
+    .eq('token', token)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

@@ -32,7 +32,7 @@ export default function PiLinkApp() {
   const [isPremium, setIsPremium] = useState(false)
   const [isPiBrowser, setIsPiBrowser] = useState<boolean | null>(null)
   const [isAndroidBrowser, setIsAndroidBrowser] = useState(false)
-  const [apkUrl, setApkUrl] = useState('https://github.com/kmm851010-maker/node-guardian/releases/latest/download/LinkPiMonitor.apk')
+  const [apkUrl, setApkUrl] = useState('https://github.com/kmm851010-maker/linkpi-monitor-apk/releases/latest/download/LinkPiMonitor.apk')
   const [badges, setBadges] = useState<Partial<Record<Tab, boolean>>>({})
   const [profileSince, setProfileSince] = useState('1970-01-01T00:00:00.000Z')
   const [openPostRequest, setOpenPostRequest] = useState<{ postId: string; postType: string } | null>(null)
@@ -197,7 +197,7 @@ export default function PiLinkApp() {
             사용법
           </a>
           <a
-            href="https://github.com/kmm851010-maker/node-guardian/releases/download/v1.0.1/NodeGuardian.exe"
+            href="https://github.com/kmm851010-maker/node-guardian/releases/latest/download/NodeGuardian.exe"
             className="flex items-center gap-1 text-xs bg-violet-600 text-white px-3 py-1.5 rounded-full hover:bg-violet-700 transition-colors"
           >
             <Download size={14} />

@@ -170,7 +170,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
     const since = `${sun.getUTCFullYear()}-${String(sun.getUTCMonth() + 1).padStart(2, '0')}-${String(sun.getUTCDate()).padStart(2, '0')}`
     fetch(`/api/posts?sort=likes&limit=3&exclude_type=qna&since=${since}`)
       .then(r => r.json()).then(d => setTop3(d.data ?? []))
-    fetch('/api/posts?type=notice&limit=3')
+    fetch('/api/posts?type=notice&limit=5')
       .then(r => r.json()).then(d => setNotices(d.data ?? []))
   }, [])
   const [likingPostId, setLikingPostId] = useState<string | null>(null)
@@ -763,10 +763,10 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
             <button
               key={post.id}
               onClick={() => openPost(post.id)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
+              className="w-full flex flex-col gap-1 px-3 py-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
             >
-              <span className="flex-1 text-xs font-medium truncate text-blue-900">{post.title}</span>
-              <span className="text-xs text-blue-400 shrink-0">{formatTime(post.created_at)}</span>
+              <span className="text-xs font-medium line-clamp-3 text-blue-900 leading-snug">{post.title}</span>
+              <span className="text-xs text-blue-400">{formatTime(post.created_at)} · {post.display_name ?? post.nickname}</span>
             </button>
           ))}
         </div>

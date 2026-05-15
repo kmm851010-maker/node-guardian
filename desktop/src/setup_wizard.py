@@ -46,44 +46,15 @@ def is_configured() -> bool:
 
 
 def show_pair_code_dialog(code: str) -> None:
-    """앱 연동 코드 팝업 표시"""
-    root = tk.Tk()
-    root.title("LinkPiMonitor 앱 연동 코드")
-    root.geometry("400x300")
-    root.resizable(False, False)
-    root.configure(bg='#1e1e2e')
-    root.lift()
-    root.attributes('-topmost', True)
-    root.protocol("WM_DELETE_WINDOW", root.destroy)
-
-    style = ttk.Style()
-    style.theme_use('clam')
-    style.configure('TLabel', background='#1e1e2e', foreground='#cdd6f4', font=('맑은 고딕', 10))
-    style.configure('Title.TLabel', background='#1e1e2e', foreground='#cba6f7', font=('맑은 고딕', 13, 'bold'))
-    style.configure('Sub.TLabel', background='#1e1e2e', foreground='#a6adc8', font=('맑은 고딕', 9))
-    style.configure('Exp.TLabel', background='#1e1e2e', foreground='#f38ba8', font=('맑은 고딕', 9))
-
-    ttk.Label(root, text="📱 LinkPiMonitor 앱 연동 코드", style='Title.TLabel').pack(pady=(24, 8))
-    ttk.Label(root, text="아래 6자리 코드를 LinkPiMonitor 앱 등록 화면에 입력하세요.", style='Sub.TLabel').pack(pady=(0, 16))
-
-    code_frame = tk.Frame(root, bg='#313244')
-    code_frame.pack(pady=4)
+    """앱 연동 코드 팝업 표시 (Windows 네이티브 다이얼로그)"""
+    import ctypes
     spaced = '  '.join(list(code))
-    tk.Label(code_frame, text=spaced, bg='#313244', fg='#cba6f7',
-             font=('맑은 고딕', 38, 'bold'), padx=24, pady=16).pack()
-
-    ttk.Label(root, text="⏱ 유효 시간: 10분", style='Exp.TLabel').pack(pady=(14, 4))
-    ttk.Label(root, text="코드는 1회만 사용 가능합니다.", style='Sub.TLabel').pack()
-
-    tk.Button(
-        root, text="확인",
-        bg='#cba6f7', fg='#1e1e2e',
-        font=('맑은 고딕', 11, 'bold'),
-        relief='flat', cursor='hand2',
-        command=root.destroy
-    ).pack(pady=20, ipadx=24, ipady=6)
-
-    root.mainloop()
+    message = (
+        f"아래 6자리 코드를 LinkPiMonitor 앱 등록 화면에 입력하세요.\n\n"
+        f"        {spaced}\n\n"
+        f"유효 시간: 10분  |  1회 사용 후 만료"
+    )
+    ctypes.windll.user32.MessageBoxW(0, message, "📱 LinkPiMonitor 앱 연동 코드", 0x40)
 
 
 def show_update_notice(required_version: str, download_url: str) -> None:

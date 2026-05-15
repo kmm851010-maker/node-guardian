@@ -43,6 +43,9 @@ class TrayIcon:
     def _noop(self): pass
 
     def _show_pair_code(self):
+        threading.Thread(target=self._show_pair_code_thread, daemon=True).start()
+
+    def _show_pair_code_thread(self):
         import ctypes
         from src.notifier.pilink import generate_pair_code
         from src.setup_wizard import show_pair_code_dialog

@@ -2,6 +2,7 @@ import os
 import threading
 import pystray
 from PIL import Image, ImageDraw
+from tkinter import messagebox
 
 
 def _make_icon(color: str) -> Image.Image:
@@ -34,11 +35,22 @@ class TrayIcon:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("상태: 확인 중", self._noop, enabled=False),
                 pystray.Menu.SEPARATOR,
+                pystray.MenuItem("📱 앱 연동 코드", self._show_pair_code),
+                pystray.Menu.SEPARATOR,
                 pystray.MenuItem("종료", self._quit),
             )
         )
 
     def _noop(self): pass
+
+    def _show_pair_code(self):
+        from src.notifier.pilink import generate_pair_code
+        from src.setup_wizard import show_pair_code_dialog
+        code = generate_pair_code()
+        if code:
+            show_pair_code_dialog(code)
+        else:
+            messagebox.showerror("오류", "연동 코드 생성에 실패했습니다.\n설정(.env)에 PILINK_PI_UID가 입력되어 있는지 확인하세요.")
 
     def _quit(self):
         self._on_quit()
@@ -61,6 +73,8 @@ class TrayIcon:
             pystray.MenuItem("Node Guardian", None, enabled=False),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(label, self._noop, enabled=False),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("📱 앱 연동 코드", self._show_pair_code),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("종료", self._quit),
         )

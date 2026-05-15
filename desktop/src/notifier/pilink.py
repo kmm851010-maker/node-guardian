@@ -16,6 +16,26 @@ def _version_tuple(v: str) -> tuple:
         return (0, 0, 0)
 
 
+def generate_pair_code() -> str | None:
+    """앱 연동용 6자리 코드를 서버에서 발급"""
+    url = PILINK_API_URL or "https://pilink.vercel.app"
+    if not PILINK_PI_UID:
+        return None
+    try:
+        res = requests.post(
+            f"{url}/api/guardian-pair/generate",
+            json={"pi_uid": PILINK_PI_UID},
+            headers={"x-pilink-secret": PILINK_API_SECRET},
+            timeout=5,
+        )
+        if res.status_code == 200:
+            return res.json().get('code')
+        logging.warning(f"연동 코드 발급 실패: {res.status_code} {res.text}")
+    except Exception as e:
+        logging.warning(f"연동 코드 발급 오류: {e}")
+    return None
+
+
 def check_version() -> dict | None:
     """서버에서 최소 버전 정보 조회. 업데이트 필요 시 dict 반환, 정상이면 None."""
     url = PILINK_API_URL or "https://pilink.vercel.app"

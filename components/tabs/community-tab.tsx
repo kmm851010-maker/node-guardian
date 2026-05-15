@@ -684,7 +684,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                 className="flex items-start gap-2 p-3 rounded-xl border bg-white hover:bg-muted/30 cursor-pointer transition-colors">
                 <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${typeColor(post.post_type)}`}>{typeLabel(post.post_type)}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{post.title}</p>
+                  <p className="text-sm font-medium line-clamp-2">{post.title}</p>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{post.content}</p>
                   <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
@@ -898,7 +898,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
               onClick={() => openPost(post.id)}>
               <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 w-10 text-center ${typeColor(post.post_type)}`}>{typeLabel(post.post_type)}</span>
               <div className="flex-1 min-w-0">
-                <span className="text-sm truncate block">{post.title}
+                <span className="text-sm line-clamp-2">{post.title}
                   {(post.comments_count ?? 0) > 0 && <span className="text-violet-500 text-xs ml-1">[{post.comments_count}]</span>}
                 </span>
               </div>
@@ -929,7 +929,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${typeColor(post.post_type)}`}>{typeLabel(post.post_type)}</span>
-                    <span className="text-xs font-semibold flex-1 truncate">{post.title}</span>
+                    <span className="text-xs font-semibold flex-1 line-clamp-2">{post.title}</span>
                     {isMyPost && !isEditing && (
                       <div className="flex items-center gap-1 ml-1" onClick={e => e.stopPropagation()}>
                         <button onClick={() => startEdit(post)} className="p-1 text-muted-foreground hover:text-violet-600 transition-colors"><Pencil size={12} /></button>

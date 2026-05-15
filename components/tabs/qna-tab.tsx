@@ -552,7 +552,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                     {post.is_resolved
                       ? <CheckCircle size={13} className="text-green-500 shrink-0" />
                       : <Circle size={13} className="text-muted-foreground shrink-0" />}
-                    <span className="text-sm font-semibold flex-1 truncate">{post.title}</span>
+                    <span className="text-sm font-semibold flex-1 line-clamp-2">{post.title}</span>
                     {post.is_resolved && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full shrink-0">해결됨</span>}
                   </div>
                   <p className="text-xs text-muted-foreground truncate mb-1">{post.content}</p>

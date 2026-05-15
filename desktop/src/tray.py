@@ -2,7 +2,6 @@ import os
 import threading
 import pystray
 from PIL import Image, ImageDraw
-from tkinter import messagebox
 
 
 def _make_icon(color: str) -> Image.Image:
@@ -44,13 +43,20 @@ class TrayIcon:
     def _noop(self): pass
 
     def _show_pair_code(self):
-        from src.notifier.pilink import generate_pair_code
-        from src.setup_wizard import show_pair_code_dialog
-        code = generate_pair_code()
-        if code:
-            show_pair_code_dialog(code)
-        else:
-            messagebox.showerror("오류", "연동 코드 생성에 실패했습니다.\n설정(.env)에 PILINK_PI_UID가 입력되어 있는지 확인하세요.")
+        def _run():
+            import tkinter as tk
+            from tkinter import messagebox as mb
+            from src.notifier.pilink import generate_pair_code
+            from src.setup_wizard import show_pair_code_dialog
+            code = generate_pair_code()
+            if code:
+                show_pair_code_dialog(code)
+            else:
+                root = tk.Tk()
+                root.withdraw()
+                mb.showerror("오류", "연동 코드 생성에 실패했습니다.\n설정(.env)에 PILINK_PI_UID가 입력되어 있는지 확인하세요.")
+                root.destroy()
+        threading.Thread(target=_run, daemon=True).start()
 
     def _quit(self):
         self._on_quit()

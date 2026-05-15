@@ -3,8 +3,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
-// 14일 이상 비활성 노드 상태 정리 (구독 여부 무관)
-const STALE_DAYS = 14
+// 30일 이상 비활성 노드 상태 정리
+const STALE_DAYS = 30
 // node_events 2주 보관
 const EVENT_RETAIN_DAYS = 14
 

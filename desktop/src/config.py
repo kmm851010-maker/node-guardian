@@ -1,4 +1,4 @@
-CURRENT_VERSION = '2.0.4'
+CURRENT_VERSION = '1.2.0'
 
 CHECK_INTERVAL = 30
 CRITICAL_THRESHOLD = 3        # critical 3회 연속 → 알림 (90초)

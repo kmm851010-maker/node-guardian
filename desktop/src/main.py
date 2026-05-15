@@ -1,9 +1,18 @@
 import time
 import logging
+import os
+import sys
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
+from dotenv import load_dotenv
 
 KST = timezone(timedelta(hours=9))
+
+# exe 위치 기준 절대 경로 (자동 실행 시 작업 디렉토리 문제 방지)
+if getattr(sys, 'frozen', False):
+    APP_DIR = Path(sys.executable).parent
+else:
+    APP_DIR = Path(__file__).parent.parent
 
 from src.detectors.reboot_detector import check_reboot
 from src.detectors.process_detector import get_node_status
@@ -11,12 +20,13 @@ from src.detectors.port_detector import get_port_status, check_ports
 from src.notifier.telegram import send_message
 from src.notifier import pilink
 from src.tray import TrayIcon
-from src.setup_wizard import show_update_notice
+from src.setup_wizard import show_update_notice, is_configured, run_setup_wizard
 
 # 로깅 (로컬 전용)
-Path("logs").mkdir(exist_ok=True)
+LOG_DIR = APP_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
 logging.basicConfig(
-    filename="logs/guardian.log",
+    filename=str(LOG_DIR / "guardian.log"),
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     encoding="utf-8",
@@ -70,6 +80,18 @@ def _elapsed(since: datetime | None) -> str:
 
 def main():
     logging.info("Node Guardian 시작")
+
+    # .env 로드 (초기 실행 전)
+    from src.setup_wizard import get_env_path
+    load_dotenv(get_env_path(), override=True)
+
+    # 초기 설정 마법사 (미설정 시)
+    if not is_configured():
+        completed = run_setup_wizard()
+        if not completed:
+            return
+        # 설정 완료 후 .env 재로드
+        load_dotenv(get_env_path(), override=True)
 
     # 버전 체크 (업데이트 필요 시 팝업 표시 후 계속 실행)
     update_info = pilink.check_version()

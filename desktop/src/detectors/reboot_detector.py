@@ -1,8 +1,14 @@
+import sys
 import psutil
 from datetime import datetime
 from pathlib import Path
 
-LAST_BOOT_FILE = Path("logs/last_boot.txt")
+if getattr(sys, 'frozen', False):
+    _APP_DIR = Path(sys.executable).parent
+else:
+    _APP_DIR = Path(__file__).parent.parent.parent
+
+LAST_BOOT_FILE = _APP_DIR / "logs" / "last_boot.txt"
 
 def get_current_boot_time() -> datetime:
     return datetime.fromtimestamp(psutil.boot_time())

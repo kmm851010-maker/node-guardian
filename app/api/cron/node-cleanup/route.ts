@@ -5,11 +5,21 @@ import { supabaseServer } from '@/lib/supabase-server'
 
 // 30일 이상 신호 없는 노드 상태 정리
 const STALE_DAYS = 30
+// node_events 2주 보관
+const EVENT_RETAIN_DAYS = 14
 
 export async function GET(req: NextRequest) {
   const auth   = req.headers.get('authorization')
   const cronOk = !process.env.CRON_SECRET || auth === `Bearer ${process.env.CRON_SECRET}`
   if (!cronOk) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // node_events 2주 이상 된 것 삭제
+  const eventCutoff = new Date(Date.now() - EVENT_RETAIN_DAYS * 86400 * 1000).toISOString()
+  const { error: eventDeleteError, count: deletedEvents } = await supabaseServer
+    .from('node_events')
+    .delete({ count: 'exact' })
+    .lt('created_at', eventCutoff)
+  if (eventDeleteError) console.error('node_events cleanup error:', eventDeleteError.message)
 
   const cutoff = new Date(Date.now() - STALE_DAYS * 86400 * 1000).toISOString()
 
@@ -52,8 +62,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    deleted: ghostUids.length,
+    deleted_nodes: ghostUids.length,
+    deleted_events: deletedEvents ?? 0,
     protected: activeUids.size,
-    ghost_uids: ghostUids,
   })
 }

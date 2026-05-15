@@ -6,6 +6,7 @@ import { Heart, Eye, PenSquare, X, ImagePlus, MessageCircle, CornerDownRight, La
 import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 import { RoleName } from '@/components/role-name'
+import ImageLightbox from '@/components/image-lightbox'
 
 function LevelBadge({ level }: { level: number | null }) {
   if (!level) return null
@@ -126,6 +127,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
   // 수정
   const [editingPost, setEditingPost] = useState<string | null>(null)
@@ -427,6 +429,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
 
   return (
     <div className="p-4 space-y-2">
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       {profileUser && <UserProfileModal uid={profileUser.uid} nickname={profileUser.nickname} viewerUsername={user?.username} onClose={() => setProfileUser(null)} />}
 
       {/* 게시글 상세 모달 */}
@@ -509,7 +512,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                   <div className="px-4 py-3 space-y-3">
                     <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
                     {post.image_url && (
-                      <img src={post.image_url} alt="post" className="w-full h-auto rounded-xl border" />
+                      <img src={post.image_url} alt="post" className="w-full h-auto rounded-xl border cursor-zoom-in" onClick={() => setLightboxSrc(post.image_url!)} />
                     )}
                   </div>
                 )}

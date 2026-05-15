@@ -7,6 +7,7 @@ import { CheckCircle, Circle, MessageCircle, Heart, CornerDownRight, PenSquare, 
 import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 import { RoleName } from '@/components/role-name'
+import ImageLightbox from '@/components/image-lightbox'
 
 function LevelBadge({ level }: { level: number | null }) {
   if (!level) return null
@@ -199,6 +200,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
   const [editingPost, setEditingPost] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -464,6 +466,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
 
   return (
     <div className="p-4 space-y-2">
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       {profileUid && (
         <UserProfileModal uid={profileUid} viewerUsername={user?.username} onClose={() => setProfileUid(null)} />
       )}
@@ -714,7 +717,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                   <div className="px-3 py-2 bg-muted/20 space-y-2">
                     <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
                     {post.image_url && (
-                      <img src={post.image_url} alt="post" className="w-full h-auto rounded-xl border" />
+                      <img src={post.image_url} alt="post" className="w-full h-auto rounded-xl border cursor-zoom-in" onClick={() => setLightboxSrc(post.image_url!)} />
                     )}
                   </div>
                 )}

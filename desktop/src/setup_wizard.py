@@ -2,6 +2,7 @@
 import sys
 import os
 import winreg
+import webbrowser
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -42,6 +43,69 @@ def is_configured() -> bool:
     with open(path, encoding='utf-8') as f:
         content = f.read()
     return 'PILINK_PI_UID=' in content and 'PILINK_PI_UID=\n' not in content
+
+
+def show_update_notice(required_version: str, download_url: str) -> None:
+    """업데이트 필요 시 안내 팝업 표시"""
+    root = tk.Tk()
+    root.title("Node Guardian 업데이트 필요")
+    root.geometry("500x420")
+    root.resizable(False, False)
+    root.configure(bg='#1e1e2e')
+    root.lift()
+    root.attributes('-topmost', True)
+
+    style = ttk.Style()
+    style.theme_use('clam')
+    style.configure('TLabel', background='#1e1e2e', foreground='#cdd6f4', font=('맑은 고딕', 10))
+    style.configure('Title.TLabel', background='#1e1e2e', foreground='#f38ba8', font=('맑은 고딕', 13, 'bold'))
+    style.configure('Sub.TLabel', background='#1e1e2e', foreground='#a6adc8', font=('맑은 고딕', 9))
+    style.configure('Step.TLabel', background='#1e1e2e', foreground='#cdd6f4', font=('맑은 고딕', 10))
+
+    ttk.Label(root, text=f"🔄  Node Guardian v{required_version} 업데이트 필요", style='Title.TLabel').pack(pady=(24, 6))
+    ttk.Label(root, text="보안 및 기능 개선을 위해 새 버전 설치가 필요합니다.", style='Sub.TLabel').pack(pady=(0, 18))
+
+    frame = tk.Frame(root, bg='#2a2a3e', bd=0)
+    frame.pack(padx=30, fill='x', pady=(0, 16))
+
+    instructions = (
+        "📋  설치 방법\n\n"
+        "  1. 아래 [새 버전 다운로드] 버튼을 클릭해 파일을 받으세요.\n\n"
+        "  2. 기존 Node Guardian을 종료하세요. (트레이 아이콘 → 종료)\n\n"
+        "  3. 기존 설치 폴더에서 .env 파일을 삭제하세요.\n"
+        "       예) C:\\NodeGuardian\\.env\n\n"
+        "  4. 다운로드한 NodeGuardian.exe를 기존 폴더에 덮어쓰세요.\n\n"
+        "  5. 새 파일을 실행하면 설정 마법사가 자동으로 시작됩니다.\n"
+        "       Pi 사용자명을 다시 입력해 설정을 완료하세요."
+    )
+
+    text = tk.Text(frame, bg='#2a2a3e', fg='#cdd6f4', font=('맑은 고딕', 9),
+                   relief='flat', wrap='word', height=12, padx=16, pady=14,
+                   state='normal', cursor='arrow')
+    text.insert('1.0', instructions)
+    text.config(state='disabled')
+    text.pack(fill='x')
+
+    btn_frame = tk.Frame(root, bg='#1e1e2e')
+    btn_frame.pack(pady=16, fill='x', padx=30)
+
+    tk.Button(
+        btn_frame, text="새 버전 다운로드",
+        bg='#cba6f7', fg='#1e1e2e',
+        font=('맑은 고딕', 11, 'bold'),
+        relief='flat', cursor='hand2',
+        command=lambda: webbrowser.open(download_url)
+    ).pack(side='left', ipadx=16, ipady=6)
+
+    tk.Button(
+        btn_frame, text="나중에",
+        bg='#313244', fg='#a6adc8',
+        font=('맑은 고딕', 10),
+        relief='flat', cursor='hand2',
+        command=root.destroy
+    ).pack(side='right', ipadx=12, ipady=6)
+
+    root.mainloop()
 
 
 def run_setup_wizard() -> bool:

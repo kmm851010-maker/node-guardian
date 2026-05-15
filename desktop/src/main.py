@@ -11,6 +11,7 @@ from src.detectors.port_detector import get_port_status, check_ports
 from src.notifier.telegram import send_message
 from src.notifier import pilink
 from src.tray import TrayIcon
+from src.setup_wizard import show_update_notice
 
 # 로깅 (로컬 전용)
 Path("logs").mkdir(exist_ok=True)
@@ -69,6 +70,14 @@ def _elapsed(since: datetime | None) -> str:
 
 def main():
     logging.info("Node Guardian 시작")
+
+    # 버전 체크 (업데이트 필요 시 팝업 표시 후 계속 실행)
+    update_info = pilink.check_version()
+    if update_info:
+        show_update_notice(
+            required_version=update_info.get('required_version', ''),
+            download_url=update_info.get('download_url', 'https://github.com/kmm851010-maker/node-guardian/releases/latest'),
+        )
 
     # 트레이 아이콘 시작
     tray = TrayIcon(on_quit=lambda: None)

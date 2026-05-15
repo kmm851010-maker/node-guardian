@@ -1,11 +1,34 @@
 import os
 import requests
 import logging
+from src.config import CURRENT_VERSION
 
 PILINK_API_URL = os.getenv("PILINK_API_URL", "")
 PILINK_API_SECRET = os.getenv("PILINK_API_SECRET", "")
 PILINK_PI_UID = os.getenv("PILINK_PI_UID", "")
 PILINK_NICKNAME = os.getenv("PILINK_NICKNAME", "")
+
+
+def _version_tuple(v: str) -> tuple:
+    try:
+        return tuple(int(x) for x in v.split('.'))
+    except Exception:
+        return (0, 0, 0)
+
+
+def check_version() -> dict | None:
+    """서버에서 최소 버전 정보 조회. 업데이트 필요 시 dict 반환, 정상이면 None."""
+    url = PILINK_API_URL or "https://pilink.vercel.app"
+    try:
+        res = requests.get(f"{url}/api/guardian-version", timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            required = data.get('required_version', '0.0.0')
+            if _version_tuple(required) > _version_tuple(CURRENT_VERSION):
+                return data
+    except Exception as e:
+        logging.warning(f"버전 확인 실패: {e}")
+    return None
 
 
 def send_event(

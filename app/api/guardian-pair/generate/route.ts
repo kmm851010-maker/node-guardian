@@ -9,7 +9,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { pi_uid } = await req.json()
+  const body = await req.json()
+  const pi_uid = body.pi_uid?.toLowerCase()
   if (!pi_uid) return NextResponse.json({ error: 'Missing pi_uid' }, { status: 400 })
 
   const code = Math.floor(100000 + Math.random() * 900000).toString()

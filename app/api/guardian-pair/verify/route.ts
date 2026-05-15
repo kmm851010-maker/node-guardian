@@ -4,7 +4,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
-  const { pi_uid, code } = await req.json()
+  const body = await req.json()
+  const pi_uid = body.pi_uid?.toLowerCase()
+  const code = body.code
   if (!pi_uid || !code) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }

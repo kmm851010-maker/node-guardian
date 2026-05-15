@@ -24,7 +24,7 @@ def generate_pair_code() -> str | None:
     try:
         res = requests.post(
             f"{url}/api/guardian-pair/generate",
-            json={"pi_uid": PILINK_PI_UID},
+            json={"pi_uid": PILINK_PI_UID.lower()},
             headers={"x-pilink-secret": PILINK_API_SECRET},
             timeout=5,
         )

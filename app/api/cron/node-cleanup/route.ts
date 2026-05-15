@@ -3,8 +3,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
-// 30일 이상 신호 없는 노드 상태 정리
-const STALE_DAYS = 30
+// 14일 이상 비활성 노드 상태 정리 (구독 여부 무관)
+const STALE_DAYS = 14
 // node_events 2주 보관
 const EVENT_RETAIN_DAYS = 14
 
@@ -13,57 +13,53 @@ export async function GET(req: NextRequest) {
   const cronOk = !process.env.CRON_SECRET || auth === `Bearer ${process.env.CRON_SECRET}`
   if (!cronOk) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const cutoff = new Date(Date.now() - STALE_DAYS * 86400 * 1000).toISOString()
+
   // node_events 2주 이상 된 것 삭제
-  const eventCutoff = new Date(Date.now() - EVENT_RETAIN_DAYS * 86400 * 1000).toISOString()
   const { error: eventDeleteError, count: deletedEvents } = await supabaseServer
     .from('node_events')
     .delete({ count: 'exact' })
-    .lt('created_at', eventCutoff)
+    .lt('created_at', cutoff)
   if (eventDeleteError) console.error('node_events cleanup error:', eventDeleteError.message)
 
-  const cutoff = new Date(Date.now() - STALE_DAYS * 86400 * 1000).toISOString()
-
-  // 30일 이상 last_seen 없는 node_status 조회
+  // 14일 이상 비활성 node_status 조회
   const { data: staleNodes, error: fetchError } = await supabaseServer
     .from('node_status')
     .select('pi_uid')
     .lt('last_seen', cutoff)
 
   if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
-  if (!staleNodes || staleNodes.length === 0) {
-    return NextResponse.json({ ok: true, deleted: 0 })
-  }
+  if (!staleNodes || staleNodes.length === 0)
+    return NextResponse.json({ ok: true, deleted_nodes: 0, deleted_events: deletedEvents ?? 0 })
 
-  // 구독(telegram, expo)이 없는 pi_uid만 삭제 (실제 사용자 보호)
   const staleUids = staleNodes.map(n => n.pi_uid)
 
-  const [{ data: telegramSubs }, { data: expoSubs }] = await Promise.all([
-    supabaseServer.from('telegram_subscriptions').select('pi_uid').in('pi_uid', staleUids),
-    supabaseServer.from('expo_push_tokens').select('pi_uid').in('pi_uid', staleUids),
-  ])
+  // 유료 프리미엄 구독자 보호
+  const { data: premiumUsers } = await supabaseServer
+    .from('premium_users')
+    .select('pi_uid')
+    .in('pi_uid', staleUids)
+    .gt('expires_at', new Date().toISOString())
 
-  const activeUids = new Set<string>([
-    ...(telegramSubs ?? []).map(s => s.pi_uid),
-    ...(expoSubs ?? []).map(s => s.pi_uid),
-  ])
+  const subscribedUids = new Set<string>(
+    (premiumUsers ?? []).map(s => s.pi_uid)
+  )
 
-  // 구독 없는 유령 계정만 삭제
-  const ghostUids = staleUids.filter(uid => !activeUids.has(uid))
-  if (ghostUids.length === 0) {
-    return NextResponse.json({ ok: true, deleted: 0, protected: staleUids.length })
-  }
+  const toDelete = staleUids.filter(uid => !subscribedUids.has(uid))
+  if (toDelete.length === 0)
+    return NextResponse.json({ ok: true, deleted_nodes: 0, deleted_events: deletedEvents ?? 0, protected: subscribedUids.size })
 
-  const { error: deleteError } = await supabaseServer
+  const { error: deleteError, count: deletedNodes } = await supabaseServer
     .from('node_status')
-    .delete()
-    .in('pi_uid', ghostUids)
+    .delete({ count: 'exact' })
+    .in('pi_uid', toDelete)
 
   if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
 
   return NextResponse.json({
     ok: true,
-    deleted_nodes: ghostUids.length,
+    deleted_nodes: deletedNodes ?? 0,
     deleted_events: deletedEvents ?? 0,
-    protected: activeUids.size,
+    protected: subscribedUids.size,
   })
 }

@@ -161,7 +161,7 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                 <div className="text-xs text-violet-700 space-y-0.5">
                   <p className="font-semibold">주간 인기 랭킹 🏆</p>
                   <p>게시글·QnA 활동 점수로 매주 1~10위를 선정합니다.</p>
-                  <p className="text-violet-600">❤️ 좋아요 ×1점 &nbsp;·&nbsp; 🎓 채택 ×5점 &nbsp;·&nbsp; 💬 받은댓글 ×1점 &nbsp;·&nbsp; 👁 조회수 10회당 1점</p>
+                  <p className="text-violet-600">❤️ 좋아요 &nbsp;·&nbsp; 🎓 답변 채택 &nbsp;·&nbsp; 💬 받은 댓글 &nbsp;·&nbsp; 👁 조회수</p>
                   <p>선정된 분께는 <span className="font-bold">프리미엄 1주일</span>이 즉시 지급됩니다.</p>
                   {nextSunday && <p className="text-violet-500">다음 갱신: {nextSunday} 00:00 (KST)</p>}
                 </div>

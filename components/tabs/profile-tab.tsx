@@ -26,6 +26,9 @@ interface ClaimStatus {
   claimed: boolean
   rank?: number
   total_likes?: number
+  best_answer_count?: number
+  comment_count?: number
+  view_score?: number
   week_start?: string
 }
 
@@ -720,7 +723,11 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
                 {claimStatus.rank}위 선정 🎉
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {claimStatus.week_start} 주 · ❤️ {claimStatus.total_likes}개 받음
+                {claimStatus.week_start} 주
+                {claimStatus.total_likes ? ` · ❤️ ${claimStatus.total_likes}` : ''}
+                {claimStatus.best_answer_count ? ` · 🎓 ${claimStatus.best_answer_count}` : ''}
+                {claimStatus.comment_count ? ` · 💬 ${claimStatus.comment_count}` : ''}
+                {claimStatus.view_score ? ` · 👁 ${claimStatus.view_score * 10}` : ''}
               </p>
             </div>
             {claimStatus.claimable ? (

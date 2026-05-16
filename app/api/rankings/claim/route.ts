@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
 
   const { data } = await supabaseServer
     .from('weekly_rankings')
-    .select('rank, total_likes, claimed, week_start')
+    .select('rank, total_likes, best_answer_count, comment_count, view_score, claimed, week_start')
     .eq('pi_uid', pi_uid)
     .eq('week_start', validWeek)
     .lte('rank', 10)
@@ -90,6 +90,9 @@ export async function GET(req: NextRequest) {
     claimed: data.claimed,
     rank: data.rank,
     total_likes: data.total_likes,
+    best_answer_count: data.best_answer_count,
+    comment_count: data.comment_count,
+    view_score: data.view_score,
     week_start: data.week_start,
   })
 }

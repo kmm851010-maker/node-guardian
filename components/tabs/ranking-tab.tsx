@@ -13,6 +13,10 @@ interface RankEntry {
   pi_uid: string
   nickname: string
   total_likes: number
+  best_answer_count: number
+  comment_count: number
+  view_score: number
+  total_score: number
   claimed: boolean
 }
 
@@ -156,7 +160,8 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                 <Info size={14} className="text-violet-500 mt-0.5 shrink-0" />
                 <div className="text-xs text-violet-700 space-y-0.5">
                   <p className="font-semibold">주간 인기 랭킹 🏆</p>
-                  <p>커뮤니티 & QnA 게시글·댓글의 좋아요 합산으로 매주 1~10위를 선정합니다.</p>
+                  <p>게시글·QnA 활동 점수로 매주 1~10위를 선정합니다.</p>
+                  <p className="text-violet-600">❤️ 좋아요 ×1점 &nbsp;·&nbsp; 🎓 채택 ×5점 &nbsp;·&nbsp; 💬 받은댓글 ×1점 &nbsp;·&nbsp; 👁 조회수 10회당 1점</p>
                   <p>선정된 분께는 <span className="font-bold">프리미엄 1주일</span>이 즉시 지급됩니다.</p>
                   {nextSunday && <p className="text-violet-500">다음 갱신: {nextSunday} 00:00 (KST)</p>}
                 </div>
@@ -198,9 +203,12 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                         <RoleName name={`@${entry.nickname}`} role={roleMap[entry.pi_uid]} />
                       </button>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                        <Heart size={11} className="text-rose-400" fill="currentColor" />
-                        <span className="font-medium text-rose-500">{entry.total_likes}</span>
-                        <span>좋아요</span>
+                        <span className="font-semibold text-violet-600">{entry.total_score ?? entry.total_likes}점</span>
+                        <span className="text-muted-foreground/60">·</span>
+                        <span>❤️{entry.total_likes}</span>
+                        {entry.best_answer_count > 0 && <span>🎓{entry.best_answer_count}</span>}
+                        {entry.comment_count > 0 && <span>💬{entry.comment_count}</span>}
+                        {entry.view_score > 0 && <span>👁{entry.view_score}</span>}
                       </div>
                     </div>
                     {entry.claimed && (

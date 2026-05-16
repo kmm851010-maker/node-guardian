@@ -203,12 +203,10 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                         <RoleName name={`@${entry.nickname}`} role={roleMap[entry.pi_uid]} />
                       </button>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                        <span className="font-semibold text-violet-600">{entry.total_score ?? entry.total_likes}점</span>
-                        <span className="text-muted-foreground/60">·</span>
-                        <span>❤️{entry.total_likes}</span>
-                        {entry.best_answer_count > 0 && <span>🎓{entry.best_answer_count}</span>}
-                        {entry.comment_count > 0 && <span>💬{entry.comment_count}</span>}
-                        {entry.view_score > 0 && <span>👁{entry.view_score}</span>}
+                        {entry.total_likes > 0 && <span>❤️</span>}
+                        {entry.best_answer_count > 0 && <span>🎓</span>}
+                        {entry.comment_count > 0 && <span>💬</span>}
+                        {entry.view_score > 0 && <span>👁</span>}
                       </div>
                     </div>
                     {entry.claimed && (

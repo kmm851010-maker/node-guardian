@@ -3,10 +3,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
-// 30일 이상 비활성 노드 상태 정리
+// 30일 이상 비활성 노드 상태 정리 / node_events 30일 보관
 const STALE_DAYS = 30
-// node_events 2주 보관
-const EVENT_RETAIN_DAYS = 14
 
 export async function GET(req: NextRequest) {
   const auth   = req.headers.get('authorization')

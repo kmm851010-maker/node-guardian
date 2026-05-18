@@ -35,6 +35,7 @@ class TrayIcon:
                 pystray.MenuItem("상태: 확인 중", self._noop, enabled=False),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("📱 앱 연동 코드", self._show_pair_code),
+                pystray.MenuItem("📖 사용법", self._show_guide),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("종료", self._quit),
             )
@@ -44,6 +45,10 @@ class TrayIcon:
 
     def _show_pair_code(self):
         threading.Thread(target=self._show_pair_code_thread, daemon=True).start()
+
+    def _show_guide(self):
+        from src.setup_wizard import show_guide_dialog
+        show_guide_dialog()
 
     def _show_pair_code_thread(self):
         import ctypes
@@ -83,6 +88,7 @@ class TrayIcon:
             pystray.MenuItem(label, self._noop, enabled=False),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("📱 앱 연동 코드", self._show_pair_code),
+            pystray.MenuItem("📖 사용법", self._show_guide),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("종료", self._quit),
         )

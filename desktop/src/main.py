@@ -21,6 +21,7 @@ from src.notifier.telegram import send_message
 from src.notifier import pilink
 from src.tray import TrayIcon
 from src.setup_wizard import show_update_notice, is_configured, run_setup_wizard
+from src.memory_optimizer import optimize_memory
 
 # 로깅 (로컬 전용)
 LOG_DIR = APP_DIR / "logs"
@@ -61,6 +62,10 @@ WARNING_THRESHOLD = 10        # warning 10회 연속 → 알림 (5분)
 PORT_CRITICAL_DURATION = 180  # 포트 전체 닫힘 3분 지속 → 알림
 PORT_PARTIAL_DURATION = 600   # 포트 일부 닫힘 10분 지속 → 알림
 REPEAT_INTERVAL = 3600        # 이상 상태 지속 시 1시간마다 재알림
+MEMORY_OPTIMIZE_INTERVAL = 1800  # 메모리 최적화 주기 (초) — 기본 30분
+
+# 메모리 최적화 활성화 플래그 (트레이에서 토글 가능)
+memory_optimize_enabled = True
 
 
 def _should_repeat(last_alert_time: datetime | None) -> bool:
@@ -102,7 +107,17 @@ def main():
         )
 
     # 트레이 아이콘 시작
-    tray = TrayIcon(on_quit=lambda: None)
+    def _toggle_memory_optimize():
+        global memory_optimize_enabled
+        memory_optimize_enabled = not memory_optimize_enabled
+        logging.info(f"메모리 최적화 {'활성화' if memory_optimize_enabled else '비활성화'}")
+
+    tray = TrayIcon(
+        on_quit=lambda: None,
+        on_memory_optimize=optimize_memory,
+        get_memory_optimize_enabled=lambda: memory_optimize_enabled,
+        on_toggle_memory_optimize=_toggle_memory_optimize,
+    )
     tray.run()
     tray.set_status("unknown", "시작 중...")
 
@@ -252,6 +267,14 @@ def main():
             if state._heartbeat_count >= 10:
                 pilink.send_event("heartbeat", "info", "heartbeat")
                 state._heartbeat_count = 0
+
+            # 메모리 최적화: MEMORY_OPTIMIZE_INTERVAL 주기마다 실행
+            if not hasattr(state, '_memory_loop_count'):
+                state._memory_loop_count = 0
+            state._memory_loop_count += 1
+            if memory_optimize_enabled and state._memory_loop_count * CHECK_INTERVAL >= MEMORY_OPTIMIZE_INTERVAL:
+                optimize_memory()
+                state._memory_loop_count = 0
 
             time.sleep(CHECK_INTERVAL)
 

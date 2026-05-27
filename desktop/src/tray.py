@@ -22,8 +22,11 @@ ICON_COLORS = {
 
 
 class TrayIcon:
-    def __init__(self, on_quit):
+    def __init__(self, on_quit, on_memory_optimize=None, get_memory_optimize_enabled=None, on_toggle_memory_optimize=None):
         self._on_quit = on_quit
+        self._on_memory_optimize = on_memory_optimize
+        self._get_memory_optimize_enabled = get_memory_optimize_enabled or (lambda: True)
+        self._on_toggle_memory_optimize = on_toggle_memory_optimize
         self._status = "unknown"
         self._icon = pystray.Icon(
             name="NodeGuardian",
@@ -37,11 +40,26 @@ class TrayIcon:
                 pystray.MenuItem("📱 앱 연동 코드", self._show_pair_code),
                 pystray.MenuItem("📖 사용법", self._show_guide),
                 pystray.Menu.SEPARATOR,
+                pystray.MenuItem("🧹 메모리 최적화 지금 실행", self._run_memory_optimize),
+                pystray.MenuItem(
+                    lambda item: f"{'✅' if self._get_memory_optimize_enabled() else '⬜'} 자동 최적화 (30분)",
+                    self._toggle_memory_optimize,
+                    checked=lambda item: self._get_memory_optimize_enabled(),
+                ),
+                pystray.Menu.SEPARATOR,
                 pystray.MenuItem("종료", self._quit),
             )
         )
 
-    def _noop(self): pass
+    def _noop(self, *args): pass
+
+    def _run_memory_optimize(self):
+        if self._on_memory_optimize:
+            threading.Thread(target=self._on_memory_optimize, daemon=True).start()
+
+    def _toggle_memory_optimize(self):
+        if self._on_toggle_memory_optimize:
+            self._on_toggle_memory_optimize()
 
     def _show_pair_code(self):
         threading.Thread(target=self._show_pair_code_thread, daemon=True).start()
@@ -89,6 +107,13 @@ class TrayIcon:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("📱 앱 연동 코드", self._show_pair_code),
             pystray.MenuItem("📖 사용법", self._show_guide),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("🧹 메모리 최적화 지금 실행", self._run_memory_optimize),
+            pystray.MenuItem(
+                lambda item: f"{'✅' if self._get_memory_optimize_enabled() else '⬜'} 자동 최적화 (30분)",
+                self._toggle_memory_optimize,
+                checked=lambda item: self._get_memory_optimize_enabled(),
+            ),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("종료", self._quit),
         )

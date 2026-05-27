@@ -24,6 +24,7 @@ a = Analysis(
         'src.notifier.telegram',
         'src.notifier.pilink',
         'src.setup_wizard',
+        'src.memory_optimizer',
         'tkinter',
         'tkinter.ttk',
         'tkinter.messagebox',

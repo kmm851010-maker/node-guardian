@@ -65,7 +65,7 @@ def _enable_privilege(name: str) -> bool:
         kernel32.CloseHandle(token)
 
 
-def _nt_memory_command(command: int) -> bool:
+def _nt_memory_command(command: int) -> tuple[bool, int]:
     cmd = ctypes.c_ulong(command)
     status = ntdll.NtSetSystemInformation(
         _SystemMemoryListInformation,
@@ -73,7 +73,7 @@ def _nt_memory_command(command: int) -> bool:
         ctypes.sizeof(cmd),
     )
     # NTSTATUS 0 = STATUS_SUCCESS
-    return status == 0
+    return status == 0, status
 
 
 def _empty_per_process() -> bool:
@@ -102,13 +102,13 @@ def _empty_per_process() -> bool:
     return emptied > 0
 
 
-def empty_working_sets() -> bool:
+def empty_working_sets() -> tuple[bool, int]:
     _enable_privilege("SeDebugPrivilege")
     _enable_privilege("SeProfileSingleProcessPrivilege")
     return _nt_memory_command(_MemoryEmptyWorkingSets)
 
 
-def flush_modified_page_list() -> bool:
+def flush_modified_page_list() -> tuple[bool, int]:
     _enable_privilege("SeProfileSingleProcessPrivilege")
     return _nt_memory_command(_MemoryFlushModifiedList)
 
@@ -118,18 +118,20 @@ def optimize_memory() -> bool:
     Working Sets + Modified Page List 최적화.
     관리자 권한이 있으면 시스템 전체, 없으면 프로세스별 폴백.
     """
-    if _is_admin():
-        ok1 = empty_working_sets()
-        ok2 = flush_modified_page_list()
+    admin = _is_admin()
+    if admin:
+        ok1, s1 = empty_working_sets()
+        ok2, s2 = flush_modified_page_list()
+        logging.info(f"메모리 최적화 — admin={admin}, ws_status=0x{s1 & 0xFFFFFFFF:08X}, mpl_status=0x{s2 & 0xFFFFFFFF:08X}")
         if ok1 and ok2:
-            logging.info("메모리 최적화 완료 (관리자 — 시스템 전체)")
-        else:
-            logging.warning(f"메모리 최적화 부분 실패 — working_sets={ok1}, modified_page_list={ok2}")
-        return ok1 and ok2
+            return True
+        # 실패 시 로그에 상세 기록 후 상태코드를 예외로 전달
+        raise RuntimeError(
+            f"관리자 권한 확인: {'예' if admin else '아니오'}\n"
+            f"WorkingSets NTSTATUS: 0x{s1 & 0xFFFFFFFF:08X}\n"
+            f"ModifiedPageList NTSTATUS: 0x{s2 & 0xFFFFFFFF:08X}"
+        )
     else:
         ok = _empty_per_process()
-        if ok:
-            logging.info("메모리 최적화 완료 (일반 권한 — 프로세스별)")
-        else:
-            logging.warning("메모리 최적화 실패 (일반 권한)")
+        logging.info(f"메모리 최적화 (프로세스별) — ok={ok}")
         return ok

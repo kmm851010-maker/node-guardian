@@ -12,8 +12,8 @@ ntdll.NtSetSystemInformation.restype = ctypes.c_long
 ntdll.NtSetSystemInformation.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_ulong]
 
 _SystemMemoryListInformation = 80
-_MemoryEmptyWorkingSets = 2
-_MemoryFlushModifiedList = 3
+_MemoryEmptyWorkingSets = 0   # SYSTEM_MEMORY_LIST_COMMAND enum
+_MemoryFlushModifiedList = 1
 
 SE_PRIVILEGE_ENABLED = 0x00000002
 TOKEN_ADJUST_PRIVILEGES = 0x0020

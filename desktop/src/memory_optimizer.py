@@ -48,9 +48,11 @@ class _MemoryOptimizeResult(Exception):
         self.success = success
         self.detail = detail
 
-_SystemMemoryListInformation   = 80
-_MemoryEmptyWorkingSets        = 0   # SYSTEM_MEMORY_LIST_COMMAND
-_MemoryFlushModifiedList       = 1
+_SystemMemoryListInformation          = 80
+_MemoryEmptyWorkingSets               = 0   # SYSTEM_MEMORY_LIST_COMMAND
+_MemoryFlushModifiedList              = 1
+_MemoryPurgeLowPriorityStandbyList    = 3
+_MemoryPurgeStandbyList               = 2
 
 SE_PRIVILEGE_ENABLED      = 0x00000002
 TOKEN_ADJUST_PRIVILEGES   = 0x0020
@@ -166,19 +168,24 @@ def optimize_memory() -> bool:
 
         ok1, s1 = _nt_memory_command(_MemoryEmptyWorkingSets)
         ok2, s2 = _nt_memory_command(_MemoryFlushModifiedList)
+        ok3, s3 = _nt_memory_command(_MemoryPurgeLowPriorityStandbyList)
+        ok4, s4 = _nt_memory_command(_MemoryPurgeStandbyList)
         logging.info(
-            f"NtSetSystemInformation — ws=0x{s1 & 0xFFFFFFFF:08X}, mpl=0x{s2 & 0xFFFFFFFF:08X}"
+            f"NtSetSystemInformation — "
+            f"ws=0x{s1 & 0xFFFFFFFF:08X}, mpl=0x{s2 & 0xFFFFFFFF:08X}, "
+            f"lpsl=0x{s3 & 0xFFFFFFFF:08X}, psl=0x{s4 & 0xFFFFFFFF:08X}"
         )
-
         detail = (
             f"관리자 권한: {'예' if admin else '아니오'}\n"
-            f"WorkingSets      NTSTATUS: 0x{s1 & 0xFFFFFFFF:08X} ({'OK' if ok1 else 'FAIL'})\n"
-            f"ModifiedPageList NTSTATUS: 0x{s2 & 0xFFFFFFFF:08X} ({'OK' if ok2 else 'FAIL'})"
+            f"EmptyWorkingSets          : 0x{s1 & 0xFFFFFFFF:08X} ({'OK' if ok1 else 'FAIL'})\n"
+            f"FlushModifiedList         : 0x{s2 & 0xFFFFFFFF:08X} ({'OK' if ok2 else 'FAIL'})\n"
+            f"PurgeLowPriorityStandby   : 0x{s3 & 0xFFFFFFFF:08X} ({'OK' if ok3 else 'FAIL'})\n"
+            f"PurgeStandbyList          : 0x{s4 & 0xFFFFFFFF:08X} ({'OK' if ok4 else 'FAIL'})"
         )
-        if ok1 and ok2:
-            logging.info("메모리 최적화 완료 (시스템 전체)")
-            raise _MemoryOptimizeResult(True, detail)
-        raise _MemoryOptimizeResult(False, detail)
+        success = ok1 and ok4  # Working Set + Standby List 정리가 핵심
+        logging.info(f"메모리 최적화 {'완료' if success else '부분 실패'} (시스템 전체)")
+        logging.info(f"메모리 최적화 {'완료' if success else '부분 실패'} (시스템 전체)")
+        raise _MemoryOptimizeResult(success, detail)
     else:
         ok = _empty_per_process()
         logging.info(f"메모리 최적화 (프로세스별) — ok={ok}")

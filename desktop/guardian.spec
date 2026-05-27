@@ -62,5 +62,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='dist/linkpi.ico',
+    icon='linkpi.ico',
 )

@@ -42,6 +42,12 @@ ntdll.NtSetSystemInformation.argtypes = [
 ]
 
 # ── 상수 ──────────────────────────────────────────────────────────────────
+class _MemoryOptimizeResult(Exception):
+    def __init__(self, success: bool, detail: str):
+        super().__init__(detail)
+        self.success = success
+        self.detail = detail
+
 _SystemMemoryListInformation   = 80
 _MemoryEmptyWorkingSets        = 0   # SYSTEM_MEMORY_LIST_COMMAND
 _MemoryFlushModifiedList       = 1
@@ -164,15 +170,15 @@ def optimize_memory() -> bool:
             f"NtSetSystemInformation — ws=0x{s1 & 0xFFFFFFFF:08X}, mpl=0x{s2 & 0xFFFFFFFF:08X}"
         )
 
+        detail = (
+            f"관리자 권한: {'예' if admin else '아니오'}\n"
+            f"WorkingSets      NTSTATUS: 0x{s1 & 0xFFFFFFFF:08X} ({'OK' if ok1 else 'FAIL'})\n"
+            f"ModifiedPageList NTSTATUS: 0x{s2 & 0xFFFFFFFF:08X} ({'OK' if ok2 else 'FAIL'})"
+        )
         if ok1 and ok2:
             logging.info("메모리 최적화 완료 (시스템 전체)")
-            return True
-
-        raise RuntimeError(
-            f"관리자 권한: {'예' if admin else '아니오'}\n"
-            f"WorkingSets    NTSTATUS: 0x{s1 & 0xFFFFFFFF:08X}\n"
-            f"ModifiedPageList NTSTATUS: 0x{s2 & 0xFFFFFFFF:08X}"
-        )
+            raise _MemoryOptimizeResult(True, detail)
+        raise _MemoryOptimizeResult(False, detail)
     else:
         ok = _empty_per_process()
         logging.info(f"메모리 최적화 (프로세스별) — ok={ok}")

@@ -59,19 +59,20 @@ class TrayIcon:
 
     def _run_memory_optimize_thread(self):
         import ctypes
+        from src.memory_optimizer import _MemoryOptimizeResult
         try:
             ok = self._on_memory_optimize()
+            # 관리자 권한 없는 경우 (프로세스별 폴백) — 단순 결과
             if ok:
                 ctypes.windll.user32.MessageBoxW(0, "메모리 최적화가 완료됐습니다.", "Node Guardian", 0x40)
             else:
-                ctypes.windll.user32.MessageBoxW(
-                    0,
-                    "메모리 최적화에 실패했습니다.\n(프로세스별 처리 결과 없음)",
-                    "Node Guardian",
-                    0x30,
-                )
-        except RuntimeError as e:
-            ctypes.windll.user32.MessageBoxW(0, f"메모리 최적화 실패:\n\n{e}", "Node Guardian — 오류", 0x30)
+                ctypes.windll.user32.MessageBoxW(0, "메모리 최적화에 실패했습니다.", "Node Guardian", 0x30)
+        except _MemoryOptimizeResult as r:
+            icon = 0x40 if r.success else 0x30  # 정보 or 경고
+            title = "Node Guardian — 메모리 최적화 완료" if r.success else "Node Guardian — 메모리 최적화 실패"
+            ctypes.windll.user32.MessageBoxW(0, r.detail, title, icon)
+        except Exception as e:
+            ctypes.windll.user32.MessageBoxW(0, f"예외 발생:\n{e}", "Node Guardian — 오류", 0x30)
 
     def _toggle_memory_optimize(self):
         if self._on_toggle_memory_optimize:

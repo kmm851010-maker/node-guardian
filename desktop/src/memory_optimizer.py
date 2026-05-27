@@ -3,22 +3,53 @@ import ctypes
 import ctypes.wintypes
 import logging
 
-ntdll = ctypes.WinDLL('ntdll')
+ntdll    = ctypes.WinDLL('ntdll')
 advapi32 = ctypes.WinDLL('advapi32')
 kernel32 = ctypes.WinDLL('kernel32')
 
-# NtSetSystemInformation 타입 명시
-ntdll.NtSetSystemInformation.restype = ctypes.c_long
-ntdll.NtSetSystemInformation.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_ulong]
+# ── 함수 타입 명시 (64비트 HANDLE 잘림 방지) ──────────────────────────────
+kernel32.GetCurrentProcess.restype  = ctypes.wintypes.HANDLE
+kernel32.GetCurrentProcess.argtypes = []
 
-_SystemMemoryListInformation = 80
-_MemoryEmptyWorkingSets = 0   # SYSTEM_MEMORY_LIST_COMMAND enum
-_MemoryFlushModifiedList = 1
+kernel32.CloseHandle.restype  = ctypes.wintypes.BOOL
+kernel32.CloseHandle.argtypes = [ctypes.wintypes.HANDLE]
 
-SE_PRIVILEGE_ENABLED = 0x00000002
-TOKEN_ADJUST_PRIVILEGES = 0x0020
-TOKEN_QUERY = 0x0008
-PROCESS_SET_QUOTA = 0x0100
+kernel32.OpenProcess.restype  = ctypes.wintypes.HANDLE
+kernel32.OpenProcess.argtypes = [ctypes.wintypes.DWORD, ctypes.wintypes.BOOL, ctypes.wintypes.DWORD]
+
+kernel32.SetProcessWorkingSetSizeEx.restype  = ctypes.wintypes.BOOL
+kernel32.SetProcessWorkingSetSizeEx.argtypes = [
+    ctypes.wintypes.HANDLE, ctypes.c_size_t, ctypes.c_size_t, ctypes.wintypes.DWORD
+]
+
+advapi32.OpenProcessToken.restype  = ctypes.wintypes.BOOL
+advapi32.OpenProcessToken.argtypes = [
+    ctypes.wintypes.HANDLE,
+    ctypes.wintypes.DWORD,
+    ctypes.POINTER(ctypes.wintypes.HANDLE),
+]
+
+advapi32.LookupPrivilegeValueW.restype  = ctypes.wintypes.BOOL
+advapi32.LookupPrivilegeValueW.argtypes = [
+    ctypes.wintypes.LPCWSTR,
+    ctypes.wintypes.LPCWSTR,
+    ctypes.c_void_p,
+]
+
+ntdll.NtSetSystemInformation.restype  = ctypes.c_long   # NTSTATUS
+ntdll.NtSetSystemInformation.argtypes = [
+    ctypes.c_int, ctypes.c_void_p, ctypes.c_ulong
+]
+
+# ── 상수 ──────────────────────────────────────────────────────────────────
+_SystemMemoryListInformation   = 80
+_MemoryEmptyWorkingSets        = 0   # SYSTEM_MEMORY_LIST_COMMAND
+_MemoryFlushModifiedList       = 1
+
+SE_PRIVILEGE_ENABLED      = 0x00000002
+TOKEN_ADJUST_PRIVILEGES   = 0x0020
+TOKEN_QUERY               = 0x0008
+PROCESS_SET_QUOTA         = 0x0100
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 
@@ -37,6 +68,17 @@ class _TOKEN_PRIVILEGES(ctypes.Structure):
     ]
 
 
+advapi32.AdjustTokenPrivileges.restype  = ctypes.wintypes.BOOL
+advapi32.AdjustTokenPrivileges.argtypes = [
+    ctypes.wintypes.HANDLE,
+    ctypes.wintypes.BOOL,
+    ctypes.POINTER(_TOKEN_PRIVILEGES),
+    ctypes.wintypes.DWORD,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+]
+
+
 def _is_admin() -> bool:
     try:
         return bool(ctypes.windll.shell32.IsUserAnAdmin())
@@ -51,16 +93,25 @@ def _enable_privilege(name: str) -> bool:
         TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
         ctypes.byref(token),
     ):
+        logging.warning(f"OpenProcessToken 실패: {name}")
         return False
     try:
         luid = _LUID()
         if not advapi32.LookupPrivilegeValueW(None, name, ctypes.byref(luid)):
+            logging.warning(f"LookupPrivilegeValue 실패: {name}")
             return False
         tp = _TOKEN_PRIVILEGES()
         tp.PrivilegeCount = 1
         tp.Privileges[0].Luid = luid
         tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED
-        return bool(advapi32.AdjustTokenPrivileges(token, False, ctypes.byref(tp), 0, None, None))
+        result = advapi32.AdjustTokenPrivileges(
+            token, False, ctypes.byref(tp), 0, None, None
+        )
+        last_err = ctypes.get_last_error()
+        if not result or last_err == 1300:  # ERROR_NOT_ALL_ASSIGNED
+            logging.warning(f"AdjustTokenPrivileges 실패: {name}, err={last_err}")
+            return False
+        return True
     finally:
         kernel32.CloseHandle(token)
 
@@ -72,7 +123,6 @@ def _nt_memory_command(command: int) -> tuple[bool, int]:
         ctypes.byref(cmd),
         ctypes.sizeof(cmd),
     )
-    # NTSTATUS 0 = STATUS_SUCCESS
     return status == 0, status
 
 
@@ -82,7 +132,6 @@ def _empty_per_process() -> bool:
         import psutil
     except ImportError:
         return False
-
     emptied = 0
     for proc in psutil.process_iter(['pid']):
         try:
@@ -92,8 +141,7 @@ def _empty_per_process() -> bool:
                 proc.pid,
             )
             if handle:
-                # SIZE_MAX(-1), SIZE_MAX(-1), 0 → Working Set 비우기
-                kernel32.SetProcessWorkingSetSizeEx(handle, -1, -1, 0)
+                kernel32.SetProcessWorkingSetSizeEx(handle, ctypes.c_size_t(-1), ctypes.c_size_t(-1), 0)
                 kernel32.CloseHandle(handle)
                 emptied += 1
         except Exception:
@@ -102,33 +150,27 @@ def _empty_per_process() -> bool:
     return emptied > 0
 
 
-def empty_working_sets() -> tuple[bool, int]:
-    _enable_privilege("SeDebugPrivilege")
-    _enable_privilege("SeProfileSingleProcessPrivilege")
-    return _nt_memory_command(_MemoryEmptyWorkingSets)
-
-
-def flush_modified_page_list() -> tuple[bool, int]:
-    _enable_privilege("SeProfileSingleProcessPrivilege")
-    return _nt_memory_command(_MemoryFlushModifiedList)
-
-
 def optimize_memory() -> bool:
-    """
-    Working Sets + Modified Page List 최적화.
-    관리자 권한이 있으면 시스템 전체, 없으면 프로세스별 폴백.
-    """
     admin = _is_admin()
+    logging.info(f"optimize_memory 호출 — admin={admin}")
+
     if admin:
-        ok1, s1 = empty_working_sets()
-        ok2, s2 = flush_modified_page_list()
-        logging.info(f"메모리 최적화 — admin={admin}, ws_status=0x{s1 & 0xFFFFFFFF:08X}, mpl_status=0x{s2 & 0xFFFFFFFF:08X}")
+        _enable_privilege("SeDebugPrivilege")
+        _enable_privilege("SeProfileSingleProcessPrivilege")
+
+        ok1, s1 = _nt_memory_command(_MemoryEmptyWorkingSets)
+        ok2, s2 = _nt_memory_command(_MemoryFlushModifiedList)
+        logging.info(
+            f"NtSetSystemInformation — ws=0x{s1 & 0xFFFFFFFF:08X}, mpl=0x{s2 & 0xFFFFFFFF:08X}"
+        )
+
         if ok1 and ok2:
+            logging.info("메모리 최적화 완료 (시스템 전체)")
             return True
-        # 실패 시 로그에 상세 기록 후 상태코드를 예외로 전달
+
         raise RuntimeError(
-            f"관리자 권한 확인: {'예' if admin else '아니오'}\n"
-            f"WorkingSets NTSTATUS: 0x{s1 & 0xFFFFFFFF:08X}\n"
+            f"관리자 권한: {'예' if admin else '아니오'}\n"
+            f"WorkingSets    NTSTATUS: 0x{s1 & 0xFFFFFFFF:08X}\n"
             f"ModifiedPageList NTSTATUS: 0x{s2 & 0xFFFFFFFF:08X}"
         )
     else:

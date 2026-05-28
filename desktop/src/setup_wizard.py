@@ -8,21 +8,43 @@ from tkinter import ttk, messagebox
 
 
 def set_startup(enable: bool):
-    """Windows 시작 프로그램 등록/해제"""
-    key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
-    try:
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
-        if enable and getattr(sys, 'frozen', False):
-            exe_path = sys.executable
-            winreg.SetValueEx(key, "NodeGuardian", 0, winreg.REG_SZ, f'"{exe_path}"')
-        else:
+    """Windows 시작 프로그램 등록/해제 — 작업 스케줄러로 관리자 권한 실행"""
+    import subprocess
+    task_name = "NodeGuardian"
+
+    if enable and getattr(sys, 'frozen', False):
+        exe_path = sys.executable
+        # 기존 레지스트리 항목 제거 (이전 버전 호환)
+        try:
+            key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
             try:
-                winreg.DeleteValue(key, "NodeGuardian")
+                winreg.DeleteValue(key, task_name)
             except FileNotFoundError:
                 pass
-        winreg.CloseKey(key)
-    except Exception:
-        pass
+            winreg.CloseKey(key)
+        except Exception:
+            pass
+
+        # 작업 스케줄러 등록 (/rl HIGHEST = 관리자 권한, /f = 덮어쓰기)
+        subprocess.run(
+            [
+                'schtasks', '/create',
+                '/tn', task_name,
+                '/tr', f'"{exe_path}"',
+                '/sc', 'ONLOGON',
+                '/rl', 'HIGHEST',
+                '/f',
+            ],
+            capture_output=True,
+            creationflags=0x08000000,  # CREATE_NO_WINDOW
+        )
+    else:
+        subprocess.run(
+            ['schtasks', '/delete', '/tn', task_name, '/f'],
+            capture_output=True,
+            creationflags=0x08000000,
+        )
 
 
 def get_app_dir() -> str:

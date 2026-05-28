@@ -39,6 +39,7 @@ class TrayIcon:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("📱 앱 연동 코드", self._show_pair_code),
                 pystray.MenuItem("📖 사용법", self._show_guide),
+                pystray.MenuItem("⚙️ 설정 다시 열기", self._open_settings),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("🧹 메모리 최적화 지금 실행", self._run_memory_optimize),
                 pystray.MenuItem(
@@ -85,6 +86,13 @@ class TrayIcon:
         from src.setup_wizard import show_guide_dialog
         show_guide_dialog()
 
+    def _open_settings(self):
+        threading.Thread(target=self._open_settings_thread, daemon=True).start()
+
+    def _open_settings_thread(self):
+        from src.setup_wizard import run_setup_wizard
+        run_setup_wizard()
+
     def _show_pair_code_thread(self):
         import ctypes
         from src.notifier.pilink import generate_pair_code
@@ -124,6 +132,7 @@ class TrayIcon:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("📱 앱 연동 코드", self._show_pair_code),
             pystray.MenuItem("📖 사용법", self._show_guide),
+            pystray.MenuItem("⚙️ 설정 다시 열기", self._open_settings),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("🧹 메모리 최적화 지금 실행", self._run_memory_optimize),
             pystray.MenuItem(

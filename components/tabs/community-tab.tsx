@@ -711,17 +711,17 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
             <span className="text-xs font-bold text-violet-700">📢 Pi Core Team 공지 · 뉴스</span>
             <span className="text-xs text-violet-400 ml-auto">minepi.com/blog</span>
           </div>
-          <ul className="divide-y divide-violet-100 max-h-40 overflow-y-auto">
+          <ul className="divide-y divide-violet-100">
             {piNews.map((item, i) => (
               <li key={i}>
                 <a
                   href={item.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between px-3 py-2 hover:bg-violet-100 transition-colors gap-2"
+                  className="flex flex-col px-3 py-2 hover:bg-violet-100 transition-colors gap-0.5"
                 >
-                  <span className="text-xs text-violet-900 flex-1 truncate">{item.title}</span>
-                  <span className="text-xs text-violet-400 shrink-0">{item.date}</span>
+                  <span className="text-xs text-violet-900 line-clamp-3 leading-snug">{item.title}</span>
+                  <span className="text-xs text-violet-400">{item.date}</span>
                 </a>
               </li>
             ))}

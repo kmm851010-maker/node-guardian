@@ -15,6 +15,38 @@ async function translateToKo(text: string): Promise<string> {
   }
 }
 
+function extractTag(xml: string, tag: string): string {
+  const cdataMatch = new RegExp(`<${tag}><!\\[CDATA\\[(.*?)\\]\\]></${tag}>`, 's').exec(xml)
+  if (cdataMatch) return cdataMatch[1].trim()
+  const plainMatch = new RegExp(`<${tag}>(.*?)</${tag}>`, 's').exec(xml)
+  return plainMatch ? plainMatch[1].trim() : ''
+}
+
+async function fetchRssItems() {
+  const res = await fetch('https://minepi.com/blog/feed/', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; PiLinkBot/1.0)',
+      'Accept': 'application/rss+xml, application/xml, text/xml',
+    },
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(`RSS fetch failed: ${res.status}`)
+
+  const xml = await res.text()
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g
+  const items: { title: string; link: string; pubDate: string }[] = []
+  let match
+  while ((match = itemRegex.exec(xml)) !== null && items.length < 5) {
+    const block = match[1]
+    items.push({
+      title:   extractTag(block, 'title'),
+      link:    extractTag(block, 'link') || extractTag(block, 'guid'),
+      pubDate: extractTag(block, 'pubDate'),
+    })
+  }
+  return items
+}
+
 export async function GET() {
   // DB에서 읽기
   const { data } = await supabaseServer
@@ -24,24 +56,18 @@ export async function GET() {
     .limit(5)
 
   if (data && data.length > 0) {
-    const items = data.map(row => ({
-      title: row.title_ko,
-      link:  row.link,
-      date:  row.pub_date ? new Date(row.pub_date).toLocaleDateString('ko-KR') : '',
-    }))
-    return NextResponse.json({ items })
+    return NextResponse.json({
+      items: data.map(row => ({
+        title: row.title_ko,
+        link:  row.link,
+        date:  row.pub_date ? new Date(row.pub_date).toLocaleDateString('ko-KR') : '',
+      })),
+    })
   }
 
-  // DB 비어있으면 rss2json 폴백
+  // DB 비어있으면 직접 RSS 폴백
   try {
-    const res = await fetch(
-      'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fminepi.com%2Fblog%2Ffeed%2F',
-      { cache: 'no-store' }
-    )
-    const json = await res.json()
-    if (json.status !== 'ok') return NextResponse.json({ items: [] })
-
-    const raw = (json.items as { title: string; link: string; pubDate: string }[]).slice(0, 5)
+    const raw = await fetchRssItems()
     const items = await Promise.all(
       raw.map(async item => ({
         title: await translateToKo(item.title),

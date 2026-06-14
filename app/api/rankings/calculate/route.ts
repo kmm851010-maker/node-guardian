@@ -153,14 +153,21 @@ async function runCalculation(weekStart: string, startUTC: Date, endUTC: Date, f
   return { ok: true, count: rows.length, weekStart }
 }
 
-// 수동 호출 (POST) - { force: true } 로 재계산 가능
+// 수동 호출 (POST) - { force: true } 로 재계산, { week_start, start_utc, end_utc } 로 특정 주 백필 가능
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-pilink-secret')
   if (secret !== process.env.PILINK_API_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const body = await req.json().catch(() => ({}))
-  const { weekStart, startUTC, endUTC } = getWeekBounds()
+  let weekStart: string, startUTC: Date, endUTC: Date
+  if (body.week_start && body.start_utc && body.end_utc) {
+    weekStart = body.week_start
+    startUTC = new Date(body.start_utc)
+    endUTC = new Date(body.end_utc)
+  } else {
+    ;({ weekStart, startUTC, endUTC } = getWeekBounds())
+  }
   const result = await runCalculation(weekStart, startUTC, endUTC, body.force === true)
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: 500 })
   return NextResponse.json(result)
@@ -169,7 +176,8 @@ export async function POST(req: NextRequest) {
 // Vercel cron (GET)
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronOk = !process.env.CRON_SECRET || authHeader === `Bearer ${process.env.CRON_SECRET}`
+  if (!cronOk) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const { weekStart, startUTC, endUTC } = getWeekBounds()

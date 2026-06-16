@@ -38,11 +38,12 @@ interface AdoptionEntry {
 }
 
 interface UptimeEntry {
-  rank:       number
-  pi_uid:     string
-  nickname:   string
-  uptime_7d:  number | null
-  uptime_30d: number | null
+  rank:        number
+  pi_uid:      string
+  nickname:    string
+  uptime_7d:   number | null
+  uptime_30d:  number | null
+  streak_days: number
 }
 
 const RANK_EMOJI = ['🥇', '🥈', '🥉']
@@ -435,7 +436,8 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                 <Info size={14} className="text-green-600 mt-0.5 shrink-0" />
                 <div className="text-xs text-green-800 space-y-0.5">
                   <p className="font-semibold">노드 업타임 랭킹 🖥️</p>
-                  <p>최근 7일 기준 노드 가동률 순위입니다.</p>
+                  <p>최근 7일 가동률 → 30일 가동률 → 연속 가동일수 순으로 순위를 매깁니다.</p>
+                  <p>가동률이 같아도 중단 없이 더 오래 켜둔 노드가 높은 순위를 받습니다.</p>
                   <p>노드가디언 설치 후 신호가 수신된 노드만 집계됩니다.</p>
                   {uptimeTotal > 0 && uptimeAvg !== null && (
                     <p className="text-green-700">전체 {uptimeTotal}개 노드 평균: <span className="font-bold">{uptimeAvg.toFixed(1)}%</span></p>
@@ -493,8 +495,11 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                           <span className={`text-xs font-bold ${pct7 >= 99 ? 'text-green-600' : pct7 >= 95 ? 'text-yellow-600' : 'text-red-600'}`}>
                             {pct7.toFixed(1)}%
                           </span>
-                          {pct30 !== null && (
-                            <span className="text-xs text-muted-foreground">30일 {pct30.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                          {pct30 !== null && <span>30일 {pct30.toFixed(1)}%</span>}
+                          {entry.streak_days > 0 && (
+                            <span className="text-green-600 font-medium">· 연속 {entry.streak_days}일 가동중</span>
                           )}
                         </div>
                       </div>

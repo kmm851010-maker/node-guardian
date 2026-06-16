@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Cpu, BarChart2 } from 'lucide-react'
+import { Clock, Cpu, BarChart2, CalendarDays } from 'lucide-react'
 
 interface NodeEvent {
   id: string
@@ -21,11 +21,27 @@ interface NodeStatus {
   port_detail: Record<string, boolean> | null
 }
 
+interface DayData {
+  date: string
+  worst: string
+  uptime: number
+  hasData: boolean
+}
+
 interface NodeStats {
   uptime_7d:  number | null
   uptime_30d: number | null
-  daily: { date: string; worst: string; uptime: number; hasData: boolean }[]
+  daily:   DayData[]
+  monthly: DayData[]
   event_counts: Record<string, number>
+}
+
+interface UptimeComparison {
+  average_7d:  number | null
+  average_30d: number | null
+  my_rank:     number | null
+  my_top_pct:  number | null
+  total:       number
 }
 
 const severityColor: Record<string, string> = {
@@ -79,6 +95,8 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
   const [hasMore, setHasMore] = useState(true)
   const [offset, setOffset] = useState(0)
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
+  const [calendarMode, setCalendarMode] = useState(false)
+  const [uptimeCmp, setUptimeCmp] = useState<UptimeComparison | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -88,12 +106,14 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
       fetch(`/api/node-events?pi_uid=${encodeURIComponent(user.username)}&limit=20&offset=0`).then(r => r.json()),
       fetch(`/api/node-status?pi_uid=${encodeURIComponent(user.username)}`).then(r => r.json()),
       fetch(`/api/node-stats?pi_uid=${encodeURIComponent(user.username)}`).then(r => r.json()),
-    ]).then(([eventData, statusData, statsData]) => {
+      fetch(`/api/rankings/uptime?my_uid=${encodeURIComponent(user.uid)}`).then(r => r.json()),
+    ]).then(([eventData, statusData, statsData, cmpData]) => {
       setEvents(eventData.data ?? [])
       setHasMore((eventData.data ?? []).length === 20)
       setOffset(20)
       setStatus(statusData.data ?? null)
       setStats(statsData)
+      setUptimeCmp(cmpData)
       setLoading(false)
     })
   }, [user])
@@ -165,6 +185,17 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <BarChart2 size={14} className="text-violet-500" /> 가동률
+              <button
+                onClick={() => setCalendarMode(m => !m)}
+                className={`ml-auto flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                  calendarMode
+                    ? 'bg-violet-600 text-white border-violet-600'
+                    : 'text-muted-foreground border-muted hover:bg-muted/50'
+                }`}
+              >
+                <CalendarDays size={11} />
+                {calendarMode ? '바차트' : '캘린더'}
+              </button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -199,33 +230,124 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
               </div>
             ))}
 
-            {/* 7일 타임라인 */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">일별 상태</p>
-              <div className="grid grid-cols-7 gap-1">
-                {stats.daily.map(d => (
-                  <div key={d.date} className="flex flex-col items-center gap-1">
-                    <div className={`w-full h-8 rounded flex items-center justify-center ${d.hasData ? (dayColor[d.worst] ?? 'bg-gray-200') : 'bg-gray-100'}`}>
-                      <span className={`text-[9px] font-bold leading-none ${d.hasData ? 'text-white drop-shadow' : 'text-gray-400'}`}>
-                        {d.hasData ? `${d.uptime.toFixed(0)}%` : '—'}
-                      </span>
+            {/* 7일 바차트 / 월 캘린더 토글 */}
+            {!calendarMode ? (
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">최근 7일</p>
+                <div className="grid grid-cols-7 gap-1">
+                  {stats.daily.map(d => (
+                    <div key={d.date} className="flex flex-col items-center gap-1">
+                      <div className={`w-full h-8 rounded flex items-center justify-center ${d.hasData ? (dayColor[d.worst] ?? 'bg-gray-200') : 'bg-gray-100'}`}>
+                        <span className={`text-[9px] font-bold leading-none ${d.hasData ? 'text-white drop-shadow' : 'text-gray-400'}`}>
+                          {d.hasData ? `${d.uptime.toFixed(0)}%` : '—'}
+                        </span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{dayLabel(d.date)}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{dayLabel(d.date)}</span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" /> 정상
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-yellow-400 inline-block" /> 경고
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> 중단
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {(() => {
+                  const monthly = stats.monthly ?? []
+                  if (!monthly.length) return <p className="text-xs text-muted-foreground text-center py-2">데이터 없음</p>
+                  const firstDate = new Date(monthly[0].date)
+                  const year  = firstDate.getFullYear()
+                  const month = firstDate.getMonth()
+                  const firstDow = new Date(year, month, 1).getDay()
+                  const daysInMonth = new Date(year, month + 1, 0).getDate()
+                  const dayMap: Record<string, DayData> = {}
+                  for (const d of monthly) dayMap[parseInt(d.date.slice(8), 10)] = d
+
+                  return (
+                    <>
+                      <p className="text-xs text-muted-foreground mb-2">{year}년 {month + 1}월</p>
+                      <div className="grid grid-cols-7 gap-0.5 text-center">
+                        {['일','월','화','수','목','금','토'].map(d => (
+                          <div key={d} className="text-[10px] text-muted-foreground py-0.5">{d}</div>
+                        ))}
+                        {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
+                        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
+                          const data = dayMap[d]
+                          const bg = !data
+                            ? 'bg-gray-100 text-gray-300'
+                            : data.worst === 'critical' ? 'bg-red-400 text-white'
+                            : data.worst === 'warning'  ? 'bg-yellow-400 text-white'
+                            : data.hasData ? 'bg-green-400 text-white'
+                            : 'bg-gray-100 text-gray-400'
+                          return (
+                            <div key={d} className={`rounded text-[9px] font-bold py-1 ${bg}`}>
+                              <div>{d}</div>
+                              {data?.hasData && <div>{data.uptime.toFixed(0)}%</div>}
+                              {!data?.hasData && data && <div>-</div>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" /> 정상
+                        </span>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-yellow-400 inline-block" /> 경고
+                        </span>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> 중단
+                        </span>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            )}
+
+            {/* 전체 노드 대비 비교 */}
+            {uptimeCmp && stats.uptime_7d !== null && (
+              <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-2 space-y-1.5">
+                <p className="text-xs font-semibold text-violet-700">전체 노드 대비 (7일 기준)</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className="text-violet-600 font-medium">내 노드</span>
+                      <span className="font-bold text-violet-700">{stats.uptime_7d.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-violet-100 rounded-full h-1.5">
+                      <div className="h-1.5 rounded-full bg-violet-500" style={{ width: `${stats.uptime_7d}%` }} />
+                    </div>
                   </div>
-                ))}
+                </div>
+                {uptimeCmp.average_7d !== null && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span className="text-muted-foreground">전체 평균</span>
+                        <span className="text-muted-foreground">{uptimeCmp.average_7d.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div className="h-1.5 rounded-full bg-gray-400" style={{ width: `${uptimeCmp.average_7d}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {uptimeCmp.my_rank !== null && (
+                  <p className="text-xs text-center text-violet-600 font-medium pt-0.5">
+                    {uptimeCmp.total}개 노드 중 {uptimeCmp.my_rank}위 · 상위 {uptimeCmp.my_top_pct}%
+                  </p>
+                )}
               </div>
-              <div className="flex items-center gap-3 mt-2">
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" /> 정상
-                </span>
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-yellow-400 inline-block" /> 경고
-                </span>
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> 중단
-                </span>
-              </div>
-            </div>
+            )}
 
             {/* 계산 방식 안내 */}
             <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 space-y-0.5">

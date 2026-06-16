@@ -17,6 +17,10 @@
       "schedule": "0 0 */3 * *"
     },
     {
+      "path": "/api/cron/uptime-sync",
+      "schedule": "0 */6 * * *"
+    },
+    {
       "path": "/api/cron/node-cleanup",
       "schedule": "0 3 * * *"
     }

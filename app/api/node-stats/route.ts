@@ -115,5 +115,35 @@ export async function GET(req: NextRequest) {
     return acc
   }, {} as Record<string, number>)
 
-  return NextResponse.json({ uptime_7d, uptime_30d, daily, event_counts })
+  // 이번 달 일별 데이터 (캘린더 뷰용)
+  const nowDate = new Date()
+  const year    = nowDate.getFullYear()
+  const month   = nowDate.getMonth()
+  const today   = nowDate.getDate()
+
+  const monthly: { date: string; worst: string; uptime: number; hasData: boolean }[] = []
+  for (let d = 1; d <= today; d++) {
+    const dayDate  = new Date(year, month, d)
+    const dayStart = dayDate.getTime()
+    const dayEnd   = d === today ? Date.now() : dayStart + 86400000
+    const daySec   = (dayEnd - dayStart) / 1000
+
+    const dayISO    = dayDate.toISOString().slice(0, 10)
+    const dayEvents = rows.filter(e => e.created_at >= new Date(dayStart).toISOString() && e.created_at < new Date(dayEnd).toISOString())
+    const hasCritical = dayEvents.some(e => e.severity === 'critical')
+    const hasWarning  = dayEvents.some(e => e.severity === 'warning')
+
+    const dayDown   = calcDowntime(dayStart, dayEnd)
+    const dayUptime = Math.max(0, Math.min(100, ((daySec - dayDown) / daySec) * 100))
+    const nodeWasActive = nodeStartTime !== null && nodeStartTime < dayEnd
+
+    monthly.push({
+      date:    dayISO,
+      worst:   hasCritical ? 'critical' : hasWarning ? 'warning' : 'healthy',
+      uptime:  Math.round(dayUptime * 10) / 10,
+      hasData: nodeWasActive || dayEvents.length > 0,
+    })
+  }
+
+  return NextResponse.json({ uptime_7d, uptime_30d, daily, monthly, event_counts })
 }

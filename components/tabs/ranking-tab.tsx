@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Trophy, Heart, Crown, Info, Flame, Zap } from 'lucide-react'
+import { Trophy, Heart, Crown, Info, Flame, Zap, Server } from 'lucide-react'
 import UserProfileModal from '@/components/user-profile-modal'
 import { RoleName } from '@/components/role-name'
 
@@ -37,6 +37,14 @@ interface AdoptionEntry {
   count: number
 }
 
+interface UptimeEntry {
+  rank:       number
+  pi_uid:     string
+  nickname:   string
+  uptime_7d:  number | null
+  uptime_30d: number | null
+}
+
 const RANK_EMOJI = ['🥇', '🥈', '🥉']
 const RANK_BG = [
   'bg-yellow-50 border-yellow-200',
@@ -56,7 +64,7 @@ interface Props {
   roleMap?: Record<string, 'master' | 'staff'>
 }
 
-type SubTab = 'weekly' | 'current' | 'alltime' | 'adoption'
+type SubTab = 'weekly' | 'current' | 'alltime' | 'adoption' | 'uptime'
 
 export default function RankingTab({ user, roleMap = {} }: Props) {
   const [subTab, setSubTab] = useState<SubTab>('weekly')
@@ -72,6 +80,12 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
   const [adoptionRanking, setAdoptionRanking] = useState<AdoptionEntry[]>([])
   const [adoptionLoading, setAdoptionLoading] = useState(false)
   const [adoptionLoaded, setAdoptionLoaded] = useState(false)
+
+  const [uptimeRanking, setUptimeRanking] = useState<UptimeEntry[]>([])
+  const [uptimeTotal, setUptimeTotal] = useState(0)
+  const [uptimeAvg, setUptimeAvg] = useState<number | null>(null)
+  const [uptimeLoading, setUptimeLoading] = useState(false)
+  const [uptimeLoaded, setUptimeLoaded] = useState(false)
 
   const [profileUid, setProfileUid] = useState<string | null>(null)
 
@@ -112,6 +126,21 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
     }
   }, [subTab, adoptionLoaded])
 
+  useEffect(() => {
+    if (subTab === 'uptime' && !uptimeLoaded) {
+      setUptimeLoading(true)
+      fetch('/api/rankings/uptime')
+        .then(r => r.json())
+        .then(d => {
+          setUptimeRanking(d.rankings ?? [])
+          setUptimeTotal(d.total ?? 0)
+          setUptimeAvg(d.average_7d ?? null)
+          setUptimeLoading(false)
+          setUptimeLoaded(true)
+        })
+    }
+  }, [subTab, uptimeLoaded])
+
   const nextSunday = (() => {
     if (!weekStart) return ''
     const d = new Date(weekStart)
@@ -120,10 +149,11 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
   })()
 
   const SUB_TABS: { key: SubTab; label: string }[] = [
-    { key: 'weekly', label: '주간 인기멤버' },
-    { key: 'current', label: '현재 연속출석' },
-    { key: 'alltime', label: '역대 최장출석' },
+    { key: 'weekly',  label: '주간 인기멤버' },
+    { key: 'current', label: '연속출석' },
+    { key: 'alltime', label: '역대최장' },
     { key: 'adoption', label: '지식In' },
+    { key: 'uptime',  label: '노드 업타임' },
   ]
 
   const activeEntries = subTab === 'current' ? currentRanking : maxRanking
@@ -393,6 +423,87 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
               </CardContent>
             </Card>
           )}
+        </>
+      )}
+
+      {/* 노드 업타임 */}
+      {subTab === 'uptime' && (
+        <>
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="p-3">
+              <div className="flex items-start gap-2">
+                <Info size={14} className="text-green-600 mt-0.5 shrink-0" />
+                <div className="text-xs text-green-800 space-y-0.5">
+                  <p className="font-semibold">노드 업타임 랭킹 🖥️</p>
+                  <p>최근 7일 기준 노드 가동률 순위입니다.</p>
+                  <p>노드가디언 설치 후 신호가 수신된 노드만 집계됩니다.</p>
+                  {uptimeTotal > 0 && uptimeAvg !== null && (
+                    <p className="text-green-700">전체 {uptimeTotal}개 노드 평균: <span className="font-bold">{uptimeAvg.toFixed(1)}%</span></p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Server size={14} className="text-green-600" />
+                노드 가동률 TOP 30
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {uptimeLoading ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">불러오는 중...</div>
+              ) : uptimeRanking.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm space-y-2">
+                  <Server size={28} className="mx-auto opacity-30" />
+                  <p>아직 데이터가 없습니다.</p>
+                  <p className="text-xs">노드가디언을 설치하면 내 노드가 집계됩니다.</p>
+                </div>
+              ) : (
+                uptimeRanking.map(entry => {
+                  const isMe = user?.uid === entry.pi_uid
+                  const pct7  = entry.uptime_7d  ?? 0
+                  const pct30 = entry.uptime_30d ?? null
+                  const barColor = pct7 >= 99 ? 'bg-green-500' : pct7 >= 95 ? 'bg-yellow-500' : 'bg-red-500'
+                  return (
+                    <div
+                      key={entry.pi_uid}
+                      className={`flex items-center gap-3 p-3 rounded-xl border ${
+                        RANK_BG[entry.rank - 1] ?? (isMe ? 'bg-violet-50 border-violet-200' : 'bg-muted/30 border-muted')
+                      }`}
+                    >
+                      <span className="text-xl w-8 text-center shrink-0">
+                        {RANK_EMOJI[entry.rank - 1] ?? <span className="text-sm text-muted-foreground font-bold">{entry.rank}</span>}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <button
+                          onClick={() => setProfileUid(entry.pi_uid)}
+                          className="text-sm font-semibold hover:text-violet-600 hover:underline transition-colors truncate block text-left"
+                        >
+                          {entry.rank === 1 && <Crown size={12} className="inline text-yellow-500 mr-1" />}
+                          <RoleName name={`@${entry.nickname}`} role={roleMap[entry.pi_uid]} />
+                          {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">(나)</span>}
+                        </button>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                            <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${pct7}%` }} />
+                          </div>
+                          <span className={`text-xs font-bold ${pct7 >= 99 ? 'text-green-600' : pct7 >= 95 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {pct7.toFixed(1)}%
+                          </span>
+                          {pct30 !== null && (
+                            <span className="text-xs text-muted-foreground">30일 {pct30.toFixed(1)}%</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

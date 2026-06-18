@@ -451,7 +451,7 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Server size={14} className="text-green-600" />
-                노드 가동률 TOP 30
+                노드 가동률 TOP 50
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">

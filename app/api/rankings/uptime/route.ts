@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   const avg7d  = total > 0 ? Math.round(rows.reduce((s, r) => s + (r.uptime_7d  ?? 0), 0) / total * 10) / 10 : null
   const avg30d = total > 0 ? Math.round(rows.reduce((s, r) => s + (r.uptime_30d ?? 0), 0) / total * 10) / 10 : null
 
-  const rankings = rows.slice(0, 30).map((r, i) => ({
+  const rankings = rows.slice(0, 50).map((r, i) => ({
     rank:        i + 1,
     pi_uid:      r.pi_uid,
     nickname:    r.nickname,

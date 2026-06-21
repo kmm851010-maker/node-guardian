@@ -20,11 +20,12 @@ export async function GET(req: NextRequest) {
     .lt('created_at', cutoff)
   if (eventDeleteError) console.error('node_events cleanup error:', eventDeleteError.message)
 
-  // 14일 이상 비활성 node_status 조회
+  // 30일 이상 비활성 node_status 조회 (last_seen AND last_web_login 둘 다 오래된 경우만)
   const { data: staleNodes, error: fetchError } = await supabaseServer
     .from('node_status')
     .select('pi_uid')
     .lt('last_seen', cutoff)
+    .or(`last_web_login.is.null,last_web_login.lt.${cutoff}`)
 
   if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
   if (!staleNodes || staleNodes.length === 0)

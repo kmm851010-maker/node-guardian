@@ -13,10 +13,10 @@ export function getLevel(xp: number): number {
 export function getNextLevelThreshold(level: number): number | null {
   if (level >= 100) return null
   if (level < 10)  return level * 50
-  if (level < 20)  return 450  + (level - 10) * 70
-  if (level < 30)  return 1150 + (level - 20) * 100
-  if (level < 40)  return 2150 + (level - 30) * 150
-  return 3650 + (level - 40) * 200
+  if (level < 20)  return 450  + (level - 9)  * 70
+  if (level < 30)  return 1150 + (level - 19) * 100
+  if (level < 40)  return 2150 + (level - 29) * 150
+  return 3650 + (level - 39) * 200
 }
 
 function getTodayKST(): string {

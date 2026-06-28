@@ -147,6 +147,11 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
   const [submittingComment, setSubmittingComment] = useState(false)
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editCommentContent, setEditCommentContent] = useState('')
+  const [savingCommentEdit, setSavingCommentEdit] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<{ id: string; postId: string } | null>(null)
+  const [isDeletingComment, setIsDeletingComment] = useState(false)
   const [piNews, setPiNews] = useState<{ title: string; link: string; date: string }[]>([])
   const [top3, setTop3] = useState<Post[]>([])
   const [notices, setNotices] = useState<Post[]>([])
@@ -266,6 +271,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
     setModalPost(null)
     setExpandedPost(null)
     setEditingPost(null)
+    setEditingCommentId(null)
   }
 
   useEffect(() => {
@@ -327,6 +333,44 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
       [postId]: (prev[postId] ?? []).map(c => c.id === commentId ? { ...c, likes: c.likes + (data.liked ? 1 : -1) } : c),
     }))
     setLikingCommentId(null)
+  }
+
+  const handleCommentEdit = async (commentId: string, postId: string) => {
+    if (!user || !editCommentContent.trim()) return
+    setSavingCommentEdit(true)
+    const res = await fetch(`/api/comments/${commentId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author_uid: user.uid, content: editCommentContent.trim() }),
+    })
+    if (res.ok) {
+      const { data } = await res.json()
+      setComments(prev => ({
+        ...prev,
+        [postId]: (prev[postId] ?? []).map(c => c.id === commentId ? { ...c, content: data.content } : c),
+      }))
+      setEditingCommentId(null)
+      toast.success('댓글이 수정됐습니다.')
+    } else { toast.error('수정 실패') }
+    setSavingCommentEdit(false)
+  }
+
+  const handleCommentDelete = async () => {
+    if (!user || !deletingCommentId) return
+    const { id: commentId, postId } = deletingCommentId
+    setIsDeletingComment(true)
+    const res = await fetch(`/api/comments/${commentId}?author_uid=${user.uid}`, { method: 'DELETE' })
+    if (res.ok) {
+      const { deletedReplies } = await res.json()
+      setComments(prev => ({
+        ...prev,
+        [postId]: (prev[postId] ?? []).filter(c => c.id !== commentId && c.parent_id !== commentId),
+      }))
+      const removed = 1 + (deletedReplies ?? 0)
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count - removed) } : p))
+      toast.success('댓글이 삭제됐습니다.')
+    } else { toast.error('삭제 실패') }
+    setIsDeletingComment(false)
+    setDeletingCommentId(null)
   }
 
   const handleComment = async (postId: string, inputKey: string) => {
@@ -540,8 +584,30 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                                   {likingCommentId === comment.id ? <Spinner /> : <Heart size={11} fill={likedComments.has(comment.id) ? 'currentColor' : 'none'} />}
                                   <span>{comment.likes ?? 0}</span>
                                 </button>
+                                {user?.uid === comment.author_uid && editingCommentId !== comment.id && (
+                                  <>
+                                    <button onClick={() => { setEditingCommentId(comment.id); setEditCommentContent(comment.content) }}
+                                      className="p-0.5 text-muted-foreground hover:text-violet-600"><Pencil size={10} /></button>
+                                    <button onClick={() => setDeletingCommentId({ id: comment.id, postId: post.id })}
+                                      className="p-0.5 text-muted-foreground hover:text-red-500"><Trash2 size={10} /></button>
+                                  </>
+                                )}
                               </div>
-                              <p className="text-xs whitespace-pre-wrap leading-relaxed">{comment.content}</p>
+                              {editingCommentId === comment.id ? (
+                                <div className="space-y-1.5 pt-0.5">
+                                  <textarea value={editCommentContent} onChange={e => setEditCommentContent(e.target.value)}
+                                    maxLength={2000} rows={3} className="w-full border rounded-lg px-2 py-1 text-xs resize-none" />
+                                  <div className="flex justify-end gap-1.5">
+                                    <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">취소</button>
+                                    <button onClick={() => handleCommentEdit(comment.id, post.id)} disabled={savingCommentEdit}
+                                      className="px-2 py-1 bg-violet-600 text-white rounded text-xs disabled:opacity-50">
+                                      {savingCommentEdit ? '저장 중...' : '저장'}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-xs whitespace-pre-wrap leading-relaxed">{comment.content}</p>
+                              )}
                             </div>
                             {isPremium && (
                               <button onClick={() => setReplyTo(replyTo?.commentId === comment.id ? null : { postId: post.id, commentId: comment.id, nickname: comment.nickname })}
@@ -567,8 +633,30 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                                     <Heart size={11} fill={likedComments.has(reply.id) ? 'currentColor' : 'none'} />
                                     <span>{reply.likes ?? 0}</span>
                                   </button>
+                                  {user?.uid === reply.author_uid && editingCommentId !== reply.id && (
+                                    <>
+                                      <button onClick={() => { setEditingCommentId(reply.id); setEditCommentContent(reply.content) }}
+                                        className="p-0.5 text-muted-foreground hover:text-violet-600"><Pencil size={10} /></button>
+                                      <button onClick={() => setDeletingCommentId({ id: reply.id, postId: post.id })}
+                                        className="p-0.5 text-muted-foreground hover:text-red-500"><Trash2 size={10} /></button>
+                                    </>
+                                  )}
                                 </div>
-                                <p className="text-xs whitespace-pre-wrap leading-relaxed">{reply.content}</p>
+                                {editingCommentId === reply.id ? (
+                                  <div className="space-y-1.5 pt-0.5">
+                                    <textarea value={editCommentContent} onChange={e => setEditCommentContent(e.target.value)}
+                                      maxLength={2000} rows={3} className="w-full border rounded-lg px-2 py-1 text-xs resize-none" />
+                                    <div className="flex justify-end gap-1.5">
+                                      <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">취소</button>
+                                      <button onClick={() => handleCommentEdit(reply.id, post.id)} disabled={savingCommentEdit}
+                                        className="px-2 py-1 bg-violet-600 text-white rounded text-xs disabled:opacity-50">
+                                        {savingCommentEdit ? '저장 중...' : '저장'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs whitespace-pre-wrap leading-relaxed">{reply.content}</p>
+                                )}
                               </div>
                               {isPremium && (
                                 <button
@@ -742,6 +830,30 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
               <button onClick={() => handleDelete(deletingPost)} disabled={isDeleting}
                 className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-70 flex items-center justify-center gap-2">
                 {isDeleting ? (
+                  <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>삭제 중...</>
+                ) : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 댓글 삭제 확인 팝업 */}
+      {deletingCommentId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => !isDeletingComment && setDeletingCommentId(null)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="relative bg-white rounded-2xl p-6 w-72 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
+            <p className="font-semibold text-sm text-center">이 댓글을 삭제하시겠습니까?</p>
+            <p className="text-xs text-muted-foreground text-center">삭제 후 복구할 수 없습니다.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeletingCommentId(null)} disabled={isDeletingComment}
+                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">취소</button>
+              <button onClick={handleCommentDelete} disabled={isDeletingComment}
+                className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-70 flex items-center justify-center gap-2">
+                {isDeletingComment ? (
                   <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>

@@ -731,6 +731,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                   </div>
                 )}
               </div>
+              <p className="text-xs text-muted-foreground truncate mb-1">{post.content}</p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <LevelBadge level={post.level} />

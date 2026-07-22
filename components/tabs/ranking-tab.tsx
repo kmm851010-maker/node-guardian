@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Trophy, Heart, Crown, Info, Flame, Zap, Server } from 'lucide-react'
 import UserProfileModal from '@/components/user-profile-modal'
 import { RoleName } from '@/components/role-name'
+import { useI18n } from '@/contexts/i18n-context'
 
 interface RankEntry {
   id: string
@@ -57,7 +58,7 @@ function getWeekLabel(weekStart: string): string {
   const d = new Date(weekStart)
   const end = new Date(d.getTime() + 6 * 86400000)
   const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`
-  return `${weekStart.slice(0, 4)}년 ${fmt(d)} ~ ${fmt(end)}`
+  return `${fmt(d)} ~ ${fmt(end)}`
 }
 
 interface Props {
@@ -68,6 +69,7 @@ interface Props {
 type SubTab = 'weekly' | 'current' | 'alltime' | 'adoption' | 'uptime'
 
 export default function RankingTab({ user, roleMap = {} }: Props) {
+  const { t } = useI18n()
   const [subTab, setSubTab] = useState<SubTab>('weekly')
   const [rankings, setRankings] = useState<RankEntry[]>([])
   const [weekStart, setWeekStart] = useState<string>('')
@@ -89,6 +91,14 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
   const [uptimeLoaded, setUptimeLoaded] = useState(false)
 
   const [profileUid, setProfileUid] = useState<string | null>(null)
+
+  const SUB_TABS: { key: SubTab; label: string }[] = [
+    { key: 'weekly',   label: t('ranking.weeklyPopular') },
+    { key: 'current',  label: t('ranking.currentStreak') },
+    { key: 'alltime',  label: t('ranking.maxStreak') },
+    { key: 'adoption', label: t('ranking.adoptionRanking') },
+    { key: 'uptime',   label: t('ranking.uptimeRanking') },
+  ]
 
   useEffect(() => {
     fetch('/api/rankings')
@@ -142,20 +152,12 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
     }
   }, [subTab, uptimeLoaded])
 
-  const nextSunday = (() => {
+  const nextSundayLabel = (() => {
     if (!weekStart) return ''
     const d = new Date(weekStart)
     const next = new Date(d.getTime() + 7 * 86400000)
-    return `${next.getMonth() + 1}월 ${next.getDate()}일 일요일`
+    return `${next.getMonth() + 1}/${next.getDate()} (${t('dashboard.sun')}) 00:00 KST`
   })()
-
-  const SUB_TABS: { key: SubTab; label: string }[] = [
-    { key: 'weekly',  label: '주간 인기멤버' },
-    { key: 'current', label: '연속출석' },
-    { key: 'alltime', label: '역대최장' },
-    { key: 'adoption', label: '지식In' },
-    { key: 'uptime',  label: '노드 업타임' },
-  ]
 
   const activeEntries = subTab === 'current' ? currentRanking : maxRanking
 
@@ -165,24 +167,24 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
         <UserProfileModal uid={profileUid} onClose={() => setProfileUid(null)} />
       )}
 
-      {/* 서브탭 */}
+      {/* Sub tabs */}
       <div className="flex gap-2">
-        {SUB_TABS.map(t => (
+        {SUB_TABS.map(tab => (
           <button
-            key={t.key}
-            onClick={() => setSubTab(t.key)}
+            key={tab.key}
+            onClick={() => setSubTab(tab.key)}
             className={`flex-1 py-2 text-xs font-medium rounded-xl border transition-colors ${
-              subTab === t.key
+              subTab === tab.key
                 ? 'bg-violet-600 text-white border-violet-600'
                 : 'text-muted-foreground border-muted hover:bg-muted/50'
             }`}
           >
-            {t.label}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* 주간 인기 */}
+      {/* Weekly */}
       {subTab === 'weekly' && (
         <>
           <Card className="bg-violet-50 border-violet-200">
@@ -190,11 +192,11 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
               <div className="flex items-start gap-2">
                 <Info size={14} className="text-violet-500 mt-0.5 shrink-0" />
                 <div className="text-xs text-violet-700 space-y-0.5">
-                  <p className="font-semibold">주간 인기 랭킹 🏆</p>
-                  <p>게시글·QnA 활동 점수로 매주 1~10위를 선정합니다.</p>
-                  <p className="text-violet-600">❤️ 좋아요 &nbsp;·&nbsp; 🎓 답변 채택 &nbsp;·&nbsp; 💬 받은 댓글 &nbsp;·&nbsp; 👁 조회수</p>
-                  <p>선정된 분께는 <span className="font-bold">프리미엄 1주일</span>이 즉시 지급됩니다.</p>
-                  {nextSunday && <p className="text-violet-500">다음 갱신: {nextSunday} 00:00 (KST)</p>}
+                  <p className="font-semibold">{t('ranking.weeklyPopular')} 🏆</p>
+                  <p>{t('ranking.weeklyInfo')}</p>
+                  <p className="text-violet-600">❤️ {t('ranking.weeklyScoring')}</p>
+                  <p>{t('ranking.weeklyReward')}</p>
+                  {nextSundayLabel && <p className="text-violet-500">{t('ranking.nextUpdate', { date: nextSundayLabel })}</p>}
                 </div>
               </div>
             </CardContent>
@@ -204,17 +206,16 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Trophy size={14} className="text-yellow-500" />
-                {weekStart ? `이번 주 랭킹 (${getWeekLabel(weekStart)})` : '이번 주 랭킹'}
+                {weekStart ? `${t('ranking.thisWeek')} (${getWeekLabel(weekStart)})` : t('ranking.thisWeek')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {weeklyLoading ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">불러오는 중...</div>
+                <div className="text-center py-8 text-muted-foreground text-sm">{t('profile.loading')}</div>
               ) : rankings.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm space-y-2">
                   <Heart size={28} className="mx-auto opacity-30" />
-                  <p>아직 이번 주 랭킹이 없습니다.</p>
-                  <p className="text-xs">커뮤니티와 QnA에서 좋아요를 받아보세요!</p>
+                  <p>{t('ranking.noData')}</p>
                 </div>
               ) : (
                 rankings.map(entry => (
@@ -241,7 +242,7 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                       </div>
                     </div>
                     {entry.claimed && (
-                      <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full shrink-0">수령완료</span>
+                      <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full shrink-0">{t('ranking.claimed')}</span>
                     )}
                   </div>
                 ))
@@ -252,14 +253,14 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
           {user && rankings.length > 0 && !rankings.find(r => r.pi_uid === user.uid) && (
             <Card className="border-dashed">
               <CardContent className="p-3 text-center text-xs text-muted-foreground">
-                이번 주 아직 랭킹에 없습니다. 게시글과 댓글에 좋아요를 모아보세요!
+                {t('ranking.notRankedWeekly')}
               </CardContent>
             </Card>
           )}
         </>
       )}
 
-      {/* 현재 연속 / 역대 최장 공통 */}
+      {/* Current / All-time streak */}
       {(subTab === 'current' || subTab === 'alltime') && (
         <>
           <Card className="bg-orange-50 border-orange-200">
@@ -269,15 +270,15 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                 <div className="text-xs text-orange-700 space-y-0.5">
                   {subTab === 'current' ? (
                     <>
-                      <p className="font-semibold">현재 연속 출석 랭킹 🔥</p>
-                      <p>오늘(또는 어제)부터 하루도 빠짐없이 연속 출석한 일수 기준입니다.</p>
-                      <p>하루라도 빠지면 카운트가 초기화됩니다.</p>
+                      <p className="font-semibold">{t('ranking.currentStreak')} 🔥</p>
+                      <p>{t('ranking.currentStreakInfo')}</p>
+                      <p>{t('ranking.currentStreakReset')}</p>
                     </>
                   ) : (
                     <>
-                      <p className="font-semibold">역대 최장 연속 출석 랭킹 ⚡</p>
-                      <p>지금까지 기록한 가장 긴 연속 출석 일수 기준입니다.</p>
-                      <p>한 번 세운 기록은 영구적으로 보존됩니다.</p>
+                      <p className="font-semibold">{t('ranking.maxStreak')} ⚡</p>
+                      <p>{t('ranking.maxStreakInfo')}</p>
+                      <p>{t('ranking.maxStreakKeep')}</p>
                     </>
                   )}
                 </div>
@@ -291,17 +292,17 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                 {subTab === 'current'
                   ? <Flame size={14} className="text-orange-500" />
                   : <Zap size={14} className="text-yellow-500" />}
-                {subTab === 'current' ? '현재 연속 출석 TOP 10' : '역대 최장 기록 TOP 10'}
+                {subTab === 'current' ? t('ranking.currentTop10') : t('ranking.maxTop10')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {streakLoading ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">불러오는 중...</div>
+                <div className="text-center py-8 text-muted-foreground text-sm">{t('profile.loading')}</div>
               ) : activeEntries.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm space-y-2">
                   <Flame size={28} className="mx-auto opacity-30" />
-                  <p>아직 데이터가 없습니다.</p>
-                  <p className="text-xs">매일 출석체크를 해보세요!</p>
+                  <p>{t('ranking.noStreakData')}</p>
+                  <p className="text-xs">{t('ranking.noStreakTip')}</p>
                 </div>
               ) : (
                 activeEntries.map(entry => {
@@ -324,14 +325,13 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                         >
                           {entry.rank === 1 && <Crown size={12} className="inline text-yellow-500 mr-1" />}
                           <RoleName name={entry.display_name ?? `@${entry.nickname}`} role={roleMap[entry.pi_uid]} />
-                          {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">(나)</span>}
+                          {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">{t('ranking.me')}</span>}
                         </button>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                           {subTab === 'current'
                             ? <Flame size={11} className="text-orange-400" />
                             : <Zap size={11} className="text-yellow-500" />}
-                          <span className="font-medium text-orange-500">{days}일</span>
-                          <span>연속</span>
+                          <span className="font-medium text-orange-500">{t('ranking.daysConsecutive', { days })}</span>
                         </div>
                       </div>
                     </div>
@@ -344,13 +344,14 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
           {user && !streakLoading && activeEntries.length > 0 && !activeEntries.find(e => e.pi_uid === user.uid) && (
             <Card className="border-dashed">
               <CardContent className="p-3 text-center text-xs text-muted-foreground">
-                아직 랭킹에 없습니다. 매일 출석체크로 기록을 쌓아보세요!
+                {t('ranking.notRankedStreak')}
               </CardContent>
             </Card>
           )}
         </>
       )}
-      {/* 지식In */}
+
+      {/* Adoption */}
       {subTab === 'adoption' && (
         <>
           <Card className="bg-amber-50 border-amber-200">
@@ -358,9 +359,9 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
               <div className="flex items-start gap-2">
                 <Info size={14} className="text-amber-500 mt-0.5 shrink-0" />
                 <div className="text-xs text-amber-700 space-y-0.5">
-                  <p className="font-semibold">지식In 랭킹 🎓</p>
-                  <p>QnA에서 채택된 답변 수 기준입니다.</p>
-                  <p>채택될수록 지식인으로 인정받습니다!</p>
+                  <p className="font-semibold">{t('ranking.adoptionRanking')} 🎓</p>
+                  <p>{t('ranking.adoptionInfo')}</p>
+                  <p>{t('ranking.adoptionRecognize')}</p>
                 </div>
               </div>
             </CardContent>
@@ -370,17 +371,17 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Trophy size={14} className="text-amber-500" />
-                채택 왕 TOP 10
+                {t('ranking.adoptionTop10')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {adoptionLoading ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">불러오는 중...</div>
+                <div className="text-center py-8 text-muted-foreground text-sm">{t('profile.loading')}</div>
               ) : adoptionRanking.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm space-y-2">
                   <Trophy size={28} className="mx-auto opacity-30" />
-                  <p>아직 채택된 답변이 없습니다.</p>
-                  <p className="text-xs">QnA에서 좋은 답변을 달아보세요!</p>
+                  <p>{t('ranking.noAdoption')}</p>
+                  <p className="text-xs">{t('ranking.noAdoptionTip')}</p>
                 </div>
               ) : (
                 adoptionRanking.map(entry => {
@@ -402,12 +403,11 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                         >
                           {entry.rank === 1 && <Crown size={12} className="inline text-yellow-500 mr-1" />}
                           <RoleName name={entry.display_name ?? `@${entry.nickname}`} role={roleMap[entry.pi_uid]} />
-                          {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">(나)</span>}
+                          {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">{t('ranking.me')}</span>}
                         </button>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                           <span className="text-amber-500">🎓</span>
-                          <span className="font-medium text-amber-600">{entry.count}회</span>
-                          <span>채택</span>
+                          <span className="font-medium text-amber-600">{t('ranking.adoptionCount', { count: entry.count })}</span>
                         </div>
                       </div>
                     </div>
@@ -420,14 +420,14 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
           {user && !adoptionLoading && adoptionRanking.length > 0 && !adoptionRanking.find(e => e.pi_uid === user.uid) && (
             <Card className="border-dashed">
               <CardContent className="p-3 text-center text-xs text-muted-foreground">
-                아직 랭킹에 없습니다. QnA에서 좋은 답변으로 채택을 받아보세요!
+                {t('ranking.notRankedAdoption')}
               </CardContent>
             </Card>
           )}
         </>
       )}
 
-      {/* 노드 업타임 */}
+      {/* Uptime */}
       {subTab === 'uptime' && (
         <>
           <Card className="bg-green-50 border-green-200">
@@ -435,12 +435,12 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
               <div className="flex items-start gap-2">
                 <Info size={14} className="text-green-600 mt-0.5 shrink-0" />
                 <div className="text-xs text-green-800 space-y-0.5">
-                  <p className="font-semibold">노드 업타임 랭킹 🖥️</p>
-                  <p>최근 7일 가동률 → 30일 가동률 → 연속 가동일수 순으로 순위를 매깁니다.</p>
-                  <p>가동률이 같아도 중단 없이 더 오래 켜둔 노드가 높은 순위를 받습니다.</p>
-                  <p>노드가디언 설치 후 신호가 수신된 노드만 집계됩니다.</p>
+                  <p className="font-semibold">{t('ranking.uptimeRanking')} 🖥️</p>
+                  <p>{t('ranking.uptimeInfo')}</p>
+                  <p>{t('ranking.uptimeDetail')}</p>
+                  <p>{t('ranking.uptimeNote')}</p>
                   {uptimeTotal > 0 && uptimeAvg !== null && (
-                    <p className="text-green-700">전체 {uptimeTotal}개 노드 평균: <span className="font-bold">{uptimeAvg.toFixed(1)}%</span></p>
+                    <p className="text-green-700">{t('ranking.uptimeAvg', { total: uptimeTotal, avg: uptimeAvg.toFixed(1) })}</p>
                   )}
                 </div>
               </div>
@@ -451,17 +451,17 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Server size={14} className="text-green-600" />
-                노드 가동률 TOP 50
+                {t('ranking.uptimeTop50')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {uptimeLoading ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">불러오는 중...</div>
+                <div className="text-center py-8 text-muted-foreground text-sm">{t('profile.loading')}</div>
               ) : uptimeRanking.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm space-y-2">
                   <Server size={28} className="mx-auto opacity-30" />
-                  <p>아직 데이터가 없습니다.</p>
-                  <p className="text-xs">노드가디언을 설치하면 내 노드가 집계됩니다.</p>
+                  <p>{t('ranking.noUptimeData')}</p>
+                  <p className="text-xs">{t('ranking.noUptimeTip')}</p>
                 </div>
               ) : (
                 uptimeRanking.map(entry => {
@@ -486,7 +486,7 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                         >
                           {entry.rank === 1 && <Crown size={12} className="inline text-yellow-500 mr-1" />}
                           <RoleName name={`@${entry.nickname}`} role={roleMap[entry.pi_uid]} />
-                          {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">(나)</span>}
+                          {isMe && <span className="ml-1 text-xs text-violet-500 font-normal">{t('ranking.me')}</span>}
                         </button>
                         <div className="flex items-center gap-2 mt-1">
                           <div className="flex-1 bg-gray-100 rounded-full h-1.5">
@@ -497,9 +497,9 @@ export default function RankingTab({ user, roleMap = {} }: Props) {
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-                          {pct30 !== null && <span>30일 {pct30.toFixed(1)}%</span>}
+                          {pct30 !== null && <span>{t('ranking.days30', { pct: pct30.toFixed(1) })}</span>}
                           {entry.streak_days > 0 && (
-                            <span className="text-green-600 font-medium">· 연속 {entry.streak_days}일 가동중</span>
+                            <span className="text-green-600 font-medium">· {t('ranking.streakRunning', { days: entry.streak_days })}</span>
                           )}
                         </div>
                       </div>

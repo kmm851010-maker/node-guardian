@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Cpu, BarChart2, CalendarDays } from 'lucide-react'
+import { useI18n } from '@/contexts/i18n-context'
 
 interface NodeEvent {
   id: string
@@ -51,42 +52,26 @@ const severityColor: Record<string, string> = {
   recovery: 'bg-green-100 text-green-700',
 }
 
-const severityLabel: Record<string, string> = {
-  info: '정보', warning: '경고', critical: '위험', recovery: '복구',
-}
-
-function timeAgo(iso: string) {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (diff < 60) return `${diff}초 전`
-  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`
-  return `${Math.floor(diff / 86400)}일 전`
-}
-
-function dayLabel(isoDate: string) {
-  const d = new Date(isoDate)
-  const days = ['일', '월', '화', '수', '목', '금', '토']
-  return days[d.getDay()]
-}
-
-function isStale(lastSeen: string) {
-  return (Date.now() - new Date(lastSeen).getTime()) > 10 * 60 * 1000 // 10분
-}
-
-const statusBadge = (status: string) => {
-  if (status === 'healthy') return <Badge className="bg-green-500 text-white">정상</Badge>
-  if (status === 'warning') return <Badge className="bg-yellow-500 text-white">경고</Badge>
-  if (status === 'critical') return <Badge variant="destructive">중단</Badge>
-  return <Badge variant="secondary">알 수 없음</Badge>
-}
-
 const dayColor: Record<string, string> = {
   healthy:  'bg-green-400',
   warning:  'bg-yellow-400',
   critical: 'bg-red-500',
 }
 
+function timeAgo(iso: string, t: (key: string) => string) {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (diff < 60) return `${diff}${t('dashboard.sec')}`
+  if (diff < 3600) return `${Math.floor(diff / 60)}${t('dashboard.min')}`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}${t('dashboard.hour')}`
+  return `${Math.floor(diff / 86400)}${t('dashboard.day')}`
+}
+
+function isStale(lastSeen: string) {
+  return (Date.now() - new Date(lastSeen).getTime()) > 10 * 60 * 1000
+}
+
 export default function DashboardTab({ user }: { user: { uid: string; username: string } | null }) {
+  const { t } = useI18n()
   const [events, setEvents] = useState<NodeEvent[]>([])
   const [status, setStatus] = useState<NodeStatus | null>(null)
   const [stats, setStats] = useState<NodeStats | null>(null)
@@ -98,6 +83,21 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
   const [calendarMode, setCalendarMode] = useState(false)
   const [uptimeCmp, setUptimeCmp] = useState<UptimeComparison | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
+
+  const severityLabel: Record<string, string> = {
+    info: t('dashboard.info'), warning: t('dashboard.warning'),
+    critical: t('dashboard.critical'), recovery: t('dashboard.recovery'),
+  }
+
+  const statusBadge = (s: string) => {
+    if (s === 'healthy') return <Badge className="bg-green-500 text-white">{t('dashboard.normal')}</Badge>
+    if (s === 'warning') return <Badge className="bg-yellow-500 text-white">{t('dashboard.warning')}</Badge>
+    if (s === 'critical') return <Badge variant="destructive">{t('dashboard.critical')}</Badge>
+    return <Badge variant="secondary">{t('dashboard.unknown')}</Badge>
+  }
+
+  const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
+  const dayLabel = (isoDate: string) => t(`dashboard.${dayKeys[new Date(isoDate).getDay()]}`)
 
   useEffect(() => {
     if (!user) { setLoading(false); return }
@@ -141,20 +141,20 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
   if (!user) {
     return (
       <div className="p-8 text-center text-muted-foreground text-sm">
-        Pi 로그인 후 이용 가능합니다.
+        {t('profile.loginRequired')}
       </div>
     )
   }
 
-  if (loading) return <div className="p-4 text-center text-muted-foreground">불러오는 중...</div>
+  if (loading) return <div className="p-4 text-center text-muted-foreground">{t('profile.loading')}</div>
 
   return (
     <div className="p-4 space-y-4">
-      {/* 내 노드 현재 상태 */}
+      {/* Node status */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Cpu size={14} className="text-violet-500" /> 내 노드 상태
+            <Cpu size={14} className="text-violet-500" /> {t('dashboard.myNode')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -162,29 +162,29 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
             <>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">노드 프로세스</span>
+                  <span className="text-xs text-muted-foreground">{t('dashboard.process')}</span>
                   {statusBadge(status.process_status)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  마지막 신호: {timeAgo(status.last_seen)}
+                  {t('dashboard.lastSeen')}: {timeAgo(status.last_seen, t)}
                 </p>
 
               </div>
             </>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">
-              Node Guardian 앱을 설치하면 상태가 표시됩니다.
+              {t('dashboard.noNodeGuide')}
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* 주간 통계 */}
+      {/* Uptime stats */}
       {stats && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <BarChart2 size={14} className="text-violet-500" /> 가동률
+              <BarChart2 size={14} className="text-violet-500" /> {t('dashboard.uptimeRate')}
               <button
                 onClick={() => setCalendarMode(m => !m)}
                 className={`ml-auto flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors ${
@@ -194,15 +194,14 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
                 }`}
               >
                 <CalendarDays size={11} />
-                {calendarMode ? '바차트' : '캘린더'}
+                {calendarMode ? t('dashboard.barChart') : t('dashboard.calendar')}
               </button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* 7일 가동률 바 */}
             {[
-              { label: '최근 7일', value: stats.uptime_7d },
-              { label: '최근 30일', value: stats.uptime_30d },
+              { label: t('dashboard.last7d'), value: stats.uptime_7d },
+              { label: t('dashboard.last30d'), value: stats.uptime_30d },
             ].map(({ label, value }) => (
               <div key={label}>
                 <div className="flex items-center justify-between mb-1">
@@ -230,10 +229,9 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
               </div>
             ))}
 
-            {/* 7일 바차트 / 월 캘린더 토글 */}
             {!calendarMode ? (
               <div>
-                <p className="text-xs text-muted-foreground mb-2">최근 7일</p>
+                <p className="text-xs text-muted-foreground mb-2">{t('dashboard.last7d')}</p>
                 <div className="grid grid-cols-7 gap-1">
                   {stats.daily.map(d => (
                     <div key={d.date} className="flex flex-col items-center gap-1">
@@ -248,13 +246,13 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
                 </div>
                 <div className="flex items-center gap-3 mt-2">
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" /> 정상
+                    <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" /> {t('dashboard.normal')}
                   </span>
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-yellow-400 inline-block" /> 경고
+                    <span className="w-2.5 h-2.5 rounded-sm bg-yellow-400 inline-block" /> {t('dashboard.warning')}
                   </span>
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> 중단
+                    <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> {t('dashboard.critical')}
                   </span>
                 </div>
               </div>
@@ -262,7 +260,7 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
               <div>
                 {(() => {
                   const monthly = stats.monthly ?? []
-                  if (!monthly.length) return <p className="text-xs text-muted-foreground text-center py-2">데이터 없음</p>
+                  if (!monthly.length) return <p className="text-xs text-muted-foreground text-center py-2">{t('dashboard.noData')}</p>
                   const firstDate = new Date(monthly[0].date)
                   const year  = firstDate.getFullYear()
                   const month = firstDate.getMonth()
@@ -273,10 +271,10 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
 
                   return (
                     <>
-                      <p className="text-xs text-muted-foreground mb-2">{year}년 {month + 1}월</p>
+                      <p className="text-xs text-muted-foreground mb-2">{year}/{month + 1}</p>
                       <div className="grid grid-cols-7 gap-0.5 text-center">
-                        {['일','월','화','수','목','금','토'].map(d => (
-                          <div key={d} className="text-[10px] text-muted-foreground py-0.5">{d}</div>
+                        {dayKeys.map(d => (
+                          <div key={d} className="text-[10px] text-muted-foreground py-0.5">{t(`dashboard.${d}`)}</div>
                         ))}
                         {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
                         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
@@ -298,13 +296,13 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
                       </div>
                       <div className="flex items-center gap-3 mt-2">
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" /> 정상
+                          <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" /> {t('dashboard.normal')}
                         </span>
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span className="w-2.5 h-2.5 rounded-sm bg-yellow-400 inline-block" /> 경고
+                          <span className="w-2.5 h-2.5 rounded-sm bg-yellow-400 inline-block" /> {t('dashboard.warning')}
                         </span>
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> 중단
+                          <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> {t('dashboard.critical')}
                         </span>
                       </div>
                     </>
@@ -313,14 +311,14 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
               </div>
             )}
 
-            {/* 전체 노드 대비 비교 */}
+            {/* Node comparison */}
             {uptimeCmp && stats.uptime_7d !== null && (
               <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-2 space-y-1.5">
-                <p className="text-xs font-semibold text-violet-700">전체 노드 대비 (7일 기준)</p>
+                <p className="text-xs font-semibold text-violet-700">{t('dashboard.vsAll')}</p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <div className="flex justify-between text-xs mb-0.5">
-                      <span className="text-violet-600 font-medium">내 노드</span>
+                      <span className="text-violet-600 font-medium">{t('dashboard.myNodeLabel')}</span>
                       <span className="font-bold text-violet-700">{stats.uptime_7d.toFixed(1)}%</span>
                     </div>
                     <div className="w-full bg-violet-100 rounded-full h-1.5">
@@ -332,7 +330,7 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
                       <div className="flex justify-between text-xs mb-0.5">
-                        <span className="text-muted-foreground">전체 평균</span>
+                        <span className="text-muted-foreground">{t('dashboard.allAverage')}</span>
                         <span className="text-muted-foreground">{uptimeCmp.average_7d.toFixed(1)}%</span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -343,36 +341,36 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
                 )}
                 {uptimeCmp.my_rank !== null && (
                   <p className="text-xs text-center text-violet-600 font-medium pt-0.5">
-                    {uptimeCmp.total}개 노드 중 {uptimeCmp.my_rank}위 · 상위 {uptimeCmp.my_top_pct}%
+                    {t('dashboard.nodeRank', { total: uptimeCmp.total, rank: uptimeCmp.my_rank, pct: uptimeCmp.my_top_pct ?? 0 })}
                   </p>
                 )}
               </div>
             )}
 
-            {/* 계산 방식 안내 */}
+            {/* Uptime calculation info */}
             <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 space-y-0.5">
-              <p className="font-medium text-foreground/70">📌 가동률 계산 방식</p>
-              <p>· 프로세스/포트 중단 → 복구 이벤트 구간을 다운타임으로 집계</p>
-              <p>· PC 종료 감지 시 다운타임에 포함 (최대 15분 오차)</p>
-              <p>· 90초 미만 단기 중단은 미반영될 수 있음</p>
+              <p className="font-medium text-foreground/70">📌 {t('dashboard.uptimeCalc')}</p>
+              <p>· {t('dashboard.uptimeCalc1')}</p>
+              <p>· {t('dashboard.uptimeCalc2')}</p>
+              <p>· {t('dashboard.uptimeCalc3')}</p>
             </div>
 
-            {/* 이벤트 건수 요약 */}
+            {/* Event count summary */}
             {Object.keys(stats.event_counts).length > 0 && (
               <div className="flex gap-2 flex-wrap">
                 {stats.event_counts.critical > 0 && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                    위험 {stats.event_counts.critical}건
+                    {t('dashboard.criticalCount', { n: stats.event_counts.critical })}
                   </span>
                 )}
                 {stats.event_counts.warning > 0 && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
-                    경고 {stats.event_counts.warning}건
+                    {t('dashboard.warningCount', { n: stats.event_counts.warning })}
                   </span>
                 )}
                 {stats.event_counts.recovery > 0 && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                    복구 {stats.event_counts.recovery}건
+                    {t('dashboard.recoveryCount', { n: stats.event_counts.recovery })}
                   </span>
                 )}
               </div>
@@ -381,16 +379,16 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
         </Card>
       )}
 
-      {/* 이벤트 기록 */}
+      {/* Event log */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Clock size={14} /> 이벤트 기록
+            <Clock size={14} /> {t('dashboard.recentEvents')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {events.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">이벤트 없음</p>
+            <p className="text-sm text-muted-foreground text-center py-4">{t('dashboard.noEvents')}</p>
           ) : (
             events.map(e => {
               const expanded = expandedEventId === e.id
@@ -408,7 +406,7 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
                       <p className={`text-xs ${expanded ? 'whitespace-pre-wrap break-words' : 'truncate'}`}>
                         {e.message}
                       </p>
-                      <p className="text-xs text-muted-foreground">{timeAgo(e.created_at)}</p>
+                      <p className="text-xs text-muted-foreground">{timeAgo(e.created_at, t)}</p>
                     </div>
                   </div>
                 </div>
@@ -419,7 +417,7 @@ export default function DashboardTab({ user }: { user: { uid: string; username: 
       </Card>
 
       <div ref={sentinelRef} className="h-4" />
-      {loadingMore && <div className="text-center text-xs text-muted-foreground py-2">불러오는 중...</div>}
+      {loadingMore && <div className="text-center text-xs text-muted-foreground py-2">{t('profile.loading')}</div>}
     </div>
   )
 }

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Zap, ExternalLink, Gift, Send, Star, Pencil, Camera, Check, X, Bell, MessageSquare, CornerDownRight } from 'lucide-react'
+import { Crown, Zap, ExternalLink, Gift, Send, Star, Pencil, Camera, Check, X, Bell, MessageSquare, CornerDownRight, Dice5 } from 'lucide-react'
+import DiceGame from '@/components/dice-game'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
@@ -79,6 +80,9 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
   const [checkingIn, setCheckingIn] = useState(false)
   const [showAdModal, setShowAdModal] = useState(false)
   const [adXpEarned, setAdXpEarned] = useState(0)
+  const [showDice, setShowDice] = useState(false)
+  const [diceAvailable, setDiceAvailable] = useState(0)
+  const [streak, setStreak] = useState(0)
   const [myBadges, setMyBadges] = useState<string[]>([])
   const [notifications, setNotifications] = useState<NotifItem[]>([])
   const [notifOffset, setNotifOffset] = useState(0)
@@ -126,7 +130,11 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
 
     fetch(`/api/attendance?pi_uid=${user.uid}`)
       .then(r => r.json())
-      .then(setAttendance)
+      .then(d => { setAttendance(d); if (d.streak) setStreak(d.streak) })
+
+    fetch(`/api/attendance/dice?pi_uid=${user.uid}`)
+      .then(r => r.json())
+      .then(d => { setDiceAvailable(d.diceAvailable ?? 0); if (d.streak) setStreak(d.streak) })
 
     fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=1970-01-01T00%3A00%3A00.000Z&limit=10&offset=0`)
       .then(r => r.json())
@@ -322,7 +330,12 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
         week_xp: prev.week_xp + data.xp_earned,
         total_xp: prev.total_xp + data.xp_earned,
       } : null)
+      if (data.streak) setStreak(data.streak)
       setAdXpEarned(data.xp_earned)
+      // Refresh dice availability (new streak may unlock dice)
+      fetch(`/api/attendance/dice?pi_uid=${user.uid}`)
+        .then(r => r.json())
+        .then(d => setDiceAvailable(d.diceAvailable ?? 0))
       setShowAdModal(true)
     } else {
       toast.error(data.error === 'already_checked' ? '오늘은 이미 출석했습니다.' : '출석 체크 실패')
@@ -581,9 +594,22 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
         </CardHeader>
         <CardContent className="space-y-3">
           {attendance && (
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">이번 주 XP</span>
-              <span className="font-semibold text-violet-600">+{attendance.week_xp} XP</span>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">이번 주 XP</span>
+                <span className="font-semibold text-violet-600">+{attendance.week_xp} XP</span>
+              </div>
+              {streak > 0 && (
+                <div className="flex items-center gap-2 bg-orange-50 rounded-lg px-3 py-2">
+                  <span className="text-lg">🔥</span>
+                  <div className="flex-1">
+                    <span className="text-sm font-bold text-orange-600">{streak}일 연속 출석 중!</span>
+                    {streak % 7 !== 0 && (
+                      <p className="text-xs text-orange-400">다음 주사위까지 {7 - (streak % 7)}일</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <button
@@ -593,7 +619,15 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
           >
             {attendance?.checked_today ? '✅ 오늘 출석 완료' : checkingIn ? '처리 중...' : '📅 출석 체크 (+10 XP)'}
           </button>
-          <p className="text-xs text-muted-foreground text-center">이번 주 XP는 주간 랭킹 활동점수에 반영됩니다</p>
+          {diceAvailable > 0 && (
+            <button
+              onClick={() => setShowDice(true)}
+              className="w-full py-2.5 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 text-sm animate-pulse"
+            >
+              <Dice5 size={16} /> 주사위 {diceAvailable}개 굴리기!
+            </button>
+          )}
+          <p className="text-xs text-muted-foreground text-center">7일 연속 출석마다 주사위 기회! (최대 +100 XP)</p>
         </CardContent>
       </Card>
 
@@ -812,6 +846,35 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
           )}
         </CardContent>
       </Card>
+      {showDice && (
+        <DiceGame
+          diceAvailable={diceAvailable}
+          onRoll={async () => {
+            const res = await fetch('/api/attendance/dice', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pi_uid: user.uid }),
+            })
+            if (!res.ok) return null
+            const data = await res.json()
+            return data
+          }}
+          onXpEarned={(xp) => {
+            setAttendance(prev => prev ? {
+              ...prev,
+              week_xp: prev.week_xp + xp,
+              total_xp: prev.total_xp + xp,
+            } : null)
+          }}
+          onClose={() => {
+            setShowDice(false)
+            // Refresh dice availability
+            fetch(`/api/attendance/dice?pi_uid=${user.uid}`)
+              .then(r => r.json())
+              .then(d => setDiceAvailable(d.diceAvailable ?? 0))
+          }}
+        />
+      )}
       {showAdModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">

@@ -6,17 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Crown, Zap, ExternalLink, Gift, Send, Star, Pencil, Camera, Check, X, Bell, MessageSquare, CornerDownRight, Dice5 } from 'lucide-react'
 import DiceGame from '@/components/dice-game'
 import { useAuth } from '@/contexts/auth-context'
+import { useI18n } from '@/contexts/i18n-context'
 import { toast } from 'sonner'
 
-const BADGE_LABELS: Record<string, { label: string; color: string }> = {
-  crown:    { label: '역대 최장출석 TOP5',  color: 'text-yellow-700' },
-  flame:    { label: '현재 연속출석 TOP3',  color: 'text-orange-600' },
-  diamond:  { label: '역대 지식In TOP5',    color: 'text-purple-700' },
-  scholar:  { label: '주간 지식In TOP3',    color: 'text-blue-600'   },
-  trophy:   { label: '주간 인기멤버 TOP3',  color: 'text-rose-600'   },
-  shield:   { label: '안정운영 30일',       color: 'text-emerald-600' },
-  zap_node: { label: '철벽노드 90일',       color: 'text-amber-600'   },
-  gem:      { label: '레전드노드 180일',    color: 'text-cyan-600'    },
+const BADGE_COLORS: Record<string, string> = {
+  crown: 'text-yellow-700', flame: 'text-orange-600', diamond: 'text-purple-700',
+  scholar: 'text-blue-600', trophy: 'text-rose-600', shield: 'text-emerald-600',
+  zap_node: 'text-amber-600', gem: 'text-cyan-600',
 }
 
 const SVG_BADGES = new Set(['shield', 'zap_node', 'gem'])
@@ -72,6 +68,7 @@ interface NotifItem {
 }
 
 export default function ProfileTab({ user, onPremiumChange, notifSince, onNavigateToPost }: { user: { uid: string; username: string } | null; onPremiumChange?: (v: boolean) => void; notifSince?: string; onNavigateToPost?: (postId: string, postType: string) => void }) {
+  const { t } = useI18n()
   const [premium, setPremium] = useState<PremiumStatus>({ isPremium: false })
   const [paying, setPaying] = useState(false)
   const didReauth = useRef(false)
@@ -118,35 +115,14 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
 
   useEffect(() => {
     if (!user) return
-    fetch(`/api/premium?pi_uid=${user.uid}`)
-      .then(r => r.json())
-      .then(setPremium)
-
-    fetch(`/api/node-status?pi_uid=${user.uid}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.data?.node_key) setNodeKey(d.data.node_key)
-      })
-
-    fetch(`/api/rankings/claim?pi_uid=${user.uid}`)
-      .then(r => r.json())
-      .then(d => setClaimStatus(d))
-
-    fetch(`/api/telegram-subscribe?pi_uid=${encodeURIComponent(user.username)}`)
-      .then(r => r.json())
-      .then(d => setTelegramSubscribed(d.subscribed ?? false))
-
-    fetch(`/api/attendance?pi_uid=${user.uid}`)
-      .then(r => r.json())
-      .then(d => { setAttendance(d); if (d.streak) setStreak(d.streak) })
-
-    fetch(`/api/attendance/dice?pi_uid=${user.uid}`)
-      .then(r => r.json())
-      .then(d => { setDiceAvailable(d.diceAvailable ?? 0); if (d.streak) setStreak(d.streak) })
-
+    fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json()).then(setPremium)
+    fetch(`/api/node-status?pi_uid=${user.uid}`).then(r => r.json()).then(d => { if (d.data?.node_key) setNodeKey(d.data.node_key) })
+    fetch(`/api/rankings/claim?pi_uid=${user.uid}`).then(r => r.json()).then(d => setClaimStatus(d))
+    fetch(`/api/telegram-subscribe?pi_uid=${encodeURIComponent(user.username)}`).then(r => r.json()).then(d => setTelegramSubscribed(d.subscribed ?? false))
+    fetch(`/api/attendance?pi_uid=${user.uid}`).then(r => r.json()).then(d => { setAttendance(d); if (d.streak) setStreak(d.streak) })
+    fetch(`/api/attendance/dice?pi_uid=${user.uid}`).then(r => r.json()).then(d => { setDiceAvailable(d.diceAvailable ?? 0); if (d.streak) setStreak(d.streak) })
     fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=1970-01-01T00%3A00%3A00.000Z&limit=10&offset=0`)
-      .then(r => r.json())
-      .then(d => { setNotifications(d.items ?? []); setNotifHasMore(d.hasMore ?? false); setNotifOffset(10) })
+      .then(r => r.json()).then(d => { setNotifications(d.items ?? []); setNotifHasMore(d.hasMore ?? false); setNotifOffset(10) })
   }, [user])
 
   useEffect(() => {
@@ -156,12 +132,7 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
         setNotifLoading(true)
         fetch(`/api/notifications?pi_uid=${encodeURIComponent(user.uid)}&username=${encodeURIComponent(user.username)}&since=1970-01-01T00%3A00%3A00.000Z&limit=10&offset=${notifOffset}`)
           .then(r => r.json())
-          .then(d => {
-            setNotifications(prev => [...prev, ...(d.items ?? [])])
-            setNotifHasMore(d.hasMore ?? false)
-            setNotifOffset(prev => prev + 10)
-            setNotifLoading(false)
-          })
+          .then(d => { setNotifications(prev => [...prev, ...(d.items ?? [])]); setNotifHasMore(d.hasMore ?? false); setNotifOffset(prev => prev + 10); setNotifLoading(false) })
       }
     }, { threshold: 0.1 })
     observer.observe(notifSentinelRef.current)
@@ -173,105 +144,54 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
     fetch(`/api/profile?pi_uid=${user.uid}&username=${encodeURIComponent(user.username)}`)
       .then(r => r.json())
       .then(data => {
-        if (data.display_name || data.avatar_url) {
-          localStorage.setItem(profileKey, JSON.stringify(data))
-          setProfileData(data)
-        } else {
-          localStorage.removeItem(profileKey)
-          setProfileData(null)
-        }
+        if (data.display_name || data.avatar_url) { localStorage.setItem(profileKey, JSON.stringify(data)); setProfileData(data) }
+        else { localStorage.removeItem(profileKey); setProfileData(null) }
       })
   }, [user])
 
   const handleCancelPremium = async () => {
     if (!user) return
-    if (!confirm('구독을 해지하시겠습니까? 남은 기간은 유지되며 자동 갱신이 취소됩니다.')) return
+    if (!confirm(t('profile.cancelConfirm'))) return
     setCanceling(true)
-    const res = await fetch('/api/premium', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pi_uid: user.uid }),
-    })
-    if (res.ok) {
-      setPremium(prev => ({ ...prev, canceled: true }))
-      toast.success('해지 신청됐습니다. 남은 기간 만료 후 자동 해지됩니다.')
-    } else {
-      toast.error('해지 실패. 다시 시도해주세요.')
-    }
+    const res = await fetch('/api/premium', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pi_uid: user.uid }) })
+    if (res.ok) { setPremium(prev => ({ ...prev, canceled: true })); toast.success(t('profile.cancelDone')) }
+    else { toast.error(t('profile.cancelFailed')) }
     setCanceling(false)
   }
 
   const handlePremium = async () => {
-    if (!user || !window.Pi) {
-      toast.error('Pi Browser에서 로그인 후 이용해주세요.')
-      return
-    }
-
+    if (!user || !window.Pi) { toast.error(t('profile.loginRequired')); return }
     setPaying(true)
-
-    // 첫 결제 시도에만 재인증으로 미완료 결제 정리
     if (!didReauth.current) {
       try {
         await window.Pi.authenticate(['username', 'payments'], async (payment: any) => {
           if (payment.transaction?.txid) {
-            await fetch('/api/payment/complete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: user.uid, nickname: user.username }),
-            }).catch(() => {})
+            await fetch('/api/payment/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, pi_uid: user.uid, nickname: user.username }) }).catch(() => {})
           }
         })
         didReauth.current = true
-      } catch {
-        setPaying(false)
-        return
-      }
+      } catch { setPaying(false); return }
     }
-
     await window.Pi.init({ version: '2.0', sandbox: true }).catch(() => {})
     window.Pi.createPayment(
-      { amount: 1, memo: 'LinkPi 프리미엄 구독 1개월', metadata: { pi_uid: user.uid } },
+      { amount: 1, memo: 'LinkPi Premium 1 month', metadata: { pi_uid: user.uid } },
       {
         onReadyForServerApproval: async (paymentId) => {
           try {
-            const res = await fetch('/api/payment/approve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId }),
-            })
-            if (!res.ok) {
-              const text = await res.text()
-              toast.error(`승인 오류 ${res.status}: ${text}`)
-              setPaying(false)
-            }
-          } catch (e) {
-            toast.error(`승인 오류: ${String(e)}`)
-            setPaying(false)
-          }
+            const res = await fetch('/api/payment/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId }) })
+            if (!res.ok) { const text = await res.text(); toast.error(`Error ${res.status}: ${text}`); setPaying(false) }
+          } catch (e) { toast.error(String(e)); setPaying(false) }
         },
         onReadyForServerCompletion: async (paymentId, txid) => {
           try {
-            const res = await fetch('/api/payment/complete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId, txid, pi_uid: user.uid, nickname: user.username }),
-            })
-            if (res.ok) {
-              const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json())
-              setPremium(updated)
-              onPremiumChange?.(updated.isPremium)
-              toast.success('프리미엄 구독 완료! 🎉')
-            } else {
-              const data = await res.json()
-              toast.error(`완료 오류: ${data.error}`)
-            }
-          } catch (e) {
-            toast.error(`완료 오류: ${String(e)}`)
-          }
+            const res = await fetch('/api/payment/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId, txid, pi_uid: user.uid, nickname: user.username }) })
+            if (res.ok) { const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json()); setPremium(updated); onPremiumChange?.(updated.isPremium); toast.success(t('profile.premiumComplete')) }
+            else { const data = await res.json(); toast.error(data.error) }
+          } catch (e) { toast.error(String(e)) }
           setPaying(false)
         },
-        onCancel: () => { setPaying(false); toast.error('결제가 취소됐습니다.') },
-        onError: (e) => { setPaying(false); toast.error(`결제 오류: ${JSON.stringify(e)}`) },
+        onCancel: () => { setPaying(false); toast.error(t('profile.paymentCanceled')) },
+        onError: (e) => { setPaying(false); toast.error(JSON.stringify(e)) },
       }
     )
   }
@@ -279,39 +199,19 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
   const handleClaim = async () => {
     if (!user) return
     setClaiming(true)
-    const res = await fetch('/api/rankings/claim', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pi_uid: user.uid }),
-    })
+    const res = await fetch('/api/rankings/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pi_uid: user.uid }) })
     const data = await res.json()
-    if (res.ok) {
-      setClaimStatus(prev => prev ? { ...prev, claimable: false, claimed: true } : prev)
-      const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json())
-      setPremium(updated)
-      onPremiumChange?.(updated.isPremium)
-      toast.success(`🎉 ${data.rank}위 달성! 프리미엄 1주일이 즉시 적용됐습니다.`)
-    } else {
-      toast.error(data.error ?? '수령 실패')
-    }
+    if (res.ok) { setClaimStatus(prev => prev ? { ...prev, claimable: false, claimed: true } : prev); const updated = await fetch(`/api/premium?pi_uid=${user.uid}`).then(r => r.json()); setPremium(updated); onPremiumChange?.(updated.isPremium); toast.success(t('profile.premiumComplete')) }
+    else { toast.error(data.error ?? t('profile.saveFailed')) }
     setClaiming(false)
   }
 
   const handleTelegramSave = async () => {
     if (!user || !telegramInput.trim()) return
     setSavingTelegram(true)
-    const res = await fetch('/api/telegram-subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pi_uid: user.username, chat_id: telegramInput.trim() }),
-    })
-    if (res.ok) {
-      setTelegramSubscribed(true)
-      setTelegramInput('')
-      toast.success('텔레그램 알림이 연결됐습니다. 텔레그램에서 확인 메시지를 받으셨나요?')
-    } else {
-      toast.error('연결 실패. Chat ID를 다시 확인해주세요.')
-    }
+    const res = await fetch('/api/telegram-subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pi_uid: user.username, chat_id: telegramInput.trim() }) })
+    if (res.ok) { setTelegramSubscribed(true); setTelegramInput(''); toast.success(t('profile.telegramConnected')) }
+    else { toast.error(t('profile.telegramFailed')) }
     setSavingTelegram(false)
   }
 
@@ -319,34 +219,22 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
     if (!user) return
     await fetch(`/api/telegram-subscribe?pi_uid=${encodeURIComponent(user.username)}`, { method: 'DELETE' })
     setTelegramSubscribed(false)
-    toast.success('텔레그램 알림이 해제됐습니다.')
+    toast.success(t('profile.telegramDisconnected'))
   }
 
   const handleAttendance = async () => {
     if (!user) return
     setCheckingIn(true)
-    const res = await fetch('/api/attendance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pi_uid: user.uid }),
-    })
+    const res = await fetch('/api/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pi_uid: user.uid }) })
     const data = await res.json()
     if (res.ok) {
-      setAttendance(prev => prev ? {
-        ...prev,
-        checked_today: true,
-        week_xp: prev.week_xp + data.xp_earned,
-        total_xp: prev.total_xp + data.xp_earned,
-      } : null)
+      setAttendance(prev => prev ? { ...prev, checked_today: true, week_xp: prev.week_xp + data.xp_earned, total_xp: prev.total_xp + data.xp_earned } : null)
       if (data.streak) setStreak(data.streak)
       setAdXpEarned(data.xp_earned)
-      // Refresh dice availability (new streak may unlock dice)
-      fetch(`/api/attendance/dice?pi_uid=${user.uid}`)
-        .then(r => r.json())
-        .then(d => setDiceAvailable(d.diceAvailable ?? 0))
+      fetch(`/api/attendance/dice?pi_uid=${user.uid}`).then(r => r.json()).then(d => setDiceAvailable(d.diceAvailable ?? 0))
       setShowAdModal(true)
     } else {
-      toast.error(data.error === 'already_checked' ? '오늘은 이미 출석했습니다.' : '출석 체크 실패')
+      toast.error(data.error === 'already_checked' ? t('profile.alreadyChecked') : t('profile.checkFailed'))
     }
     setCheckingIn(false)
   }
@@ -355,29 +243,15 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
     if (!user) return
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('2MB 이하 이미지만 업로드 가능합니다.')
-      return
-    }
+    if (file.size > 2 * 1024 * 1024) { toast.error(t('profile.avatarTooLarge')); return }
     setUploadingAvatar(true)
     try {
-      const fd = new FormData()
-      fd.append('pi_uid', user.uid)
-      fd.append('nickname', user.username)
-      fd.append('file', file)
+      const fd = new FormData(); fd.append('pi_uid', user.uid); fd.append('nickname', user.username); fd.append('file', file)
       const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd })
       const data = await res.json()
-      if (res.ok) {
-        const next = { ...(profileData ?? {}), avatar_url: data.avatar_url }
-        setProfileData(next)
-        localStorage.setItem('pilink_profile', JSON.stringify(next))
-        toast.success('프로필 사진이 업데이트됐습니다.')
-      } else {
-        alert(`사진 업로드 실패: ${data.error ?? '알 수 없는 오류'}`)
-      }
-    } catch (e) {
-      alert(`사진 업로드 오류: ${String(e)}`)
-    }
+      if (res.ok) { const next = { ...(profileData ?? {}), avatar_url: data.avatar_url }; setProfileData(next); localStorage.setItem('pilink_profile', JSON.stringify(next)); toast.success(t('profile.avatarUpdated')) }
+      else { alert(data.error) }
+    } catch (e) { alert(String(e)) }
     setUploadingAvatar(false)
     e.target.value = ''
   }
@@ -386,132 +260,57 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
     if (!user || !nameInput.trim()) return
     setSavingName(true)
     try {
-      const res = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pi_uid: user.uid, nickname: user.username, display_name: nameInput.trim() }),
-      })
+      const res = await fetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pi_uid: user.uid, nickname: user.username, display_name: nameInput.trim() }) })
       const data = await res.json()
-      if (res.ok) {
-        const next = { ...(profileData ?? {}), display_name: data.display_name }
-        setProfileData(next)
-        localStorage.setItem(profileKey, JSON.stringify(next))
-        setEditingName(false)
-        toast.success('닉네임이 저장됐습니다.')
-      } else if (res.status === 409) {
-        alert(data.error ?? '이미 사용 중인 닉네임입니다.')
-      } else {
-        alert(`닉네임 저장 실패: ${data.error ?? '알 수 없는 오류'}`)
-      }
-    } catch (e) {
-      alert(`닉네임 저장 오류: ${String(e)}`)
-    }
+      if (res.ok) { const next = { ...(profileData ?? {}), display_name: data.display_name }; setProfileData(next); localStorage.setItem(profileKey, JSON.stringify(next)); setEditingName(false); toast.success(t('profile.nicknameSaved')) }
+      else if (res.status === 409) { alert(data.error ?? t('profile.nicknameExists')) }
+      else { alert(data.error) }
+    } catch (e) { alert(String(e)) }
     setSavingName(false)
   }
 
   const handleSaveKey = async () => {
     if (!user || !nodeKeyInput) return
     setSavingKey(true)
-    const res = await fetch('/api/node-key', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pi_uid: user.uid, node_key: nodeKeyInput.trim() }),
-    })
-    if (res.ok) {
-      setNodeKey(nodeKeyInput.trim())
-      setNodeKeyInput('')
-      toast.success('노드 고유번호가 저장됐습니다.')
-    } else {
-      toast.error('저장 실패')
-    }
+    const res = await fetch('/api/node-key', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pi_uid: user.uid, node_key: nodeKeyInput.trim() }) })
+    if (res.ok) { setNodeKey(nodeKeyInput.trim()); setNodeKeyInput(''); toast.success(t('profile.keySaved')) }
+    else { toast.error(t('profile.saveFailed')) }
     setSavingKey(false)
   }
 
   if (!user) {
-    return (
-      <div className="p-8 text-center text-muted-foreground text-sm">
-        Pi 로그인 후 이용 가능합니다.
-      </div>
-    )
+    return <div className="p-8 text-center text-muted-foreground text-sm">{t('profile.loginRequired')}</div>
   }
 
   return (
     <div className="p-4 space-y-4">
-      {/* 프로필 카드 */}
+      {/* Profile card */}
       <Card>
         <CardContent className="p-4 flex items-center gap-3">
-          {/* 아바타 */}
           <div className="relative shrink-0">
-            <div
-              className="w-14 h-14 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-bold text-xl overflow-hidden cursor-pointer"
-              onClick={() => avatarInputRef.current?.click()}
-            >
-              {profileData?.avatar_url ? (
-                <img src={profileData.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                user.username[0].toUpperCase()
-              )}
+            <div className="w-14 h-14 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-bold text-xl overflow-hidden cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+              {profileData?.avatar_url ? <img src={profileData.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : user.username[0].toUpperCase()}
             </div>
-            <button
-              className="absolute bottom-0 right-0 bg-violet-600 text-white rounded-full p-1 shadow"
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={uploadingAvatar}
-            >
-              {uploadingAvatar ? (
-                <span className="w-3 h-3 block border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Camera size={10} />
-              )}
+            <button className="absolute bottom-0 right-0 bg-violet-600 text-white rounded-full p-1 shadow" onClick={() => avatarInputRef.current?.click()} disabled={uploadingAvatar}>
+              {uploadingAvatar ? <span className="w-3 h-3 block border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Camera size={10} />}
             </button>
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarUpload}
-            />
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           </div>
-
           <div className="flex-1 min-w-0">
-            {/* 닉네임 행 */}
             {editingName ? (
               <div className="flex items-center gap-1 mb-1">
-                <input
-                  autoFocus
-                  value={nameInput}
-                  onChange={e => setNameInput(e.target.value)}
-                  maxLength={20}
-                  className="border rounded px-2 py-0.5 text-sm flex-1 min-w-0"
-                  onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }}
-                />
-                <button onClick={handleSaveName} disabled={savingName} className="text-violet-600 disabled:opacity-50">
-                  <Check size={15} />
-                </button>
-                <button onClick={() => setEditingName(false)} className="text-muted-foreground">
-                  <X size={15} />
-                </button>
+                <input autoFocus value={nameInput} onChange={e => setNameInput(e.target.value)} maxLength={20} className="border rounded px-2 py-0.5 text-sm flex-1 min-w-0" onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }} />
+                <button onClick={handleSaveName} disabled={savingName} className="text-violet-600 disabled:opacity-50"><Check size={15} /></button>
+                <button onClick={() => setEditingName(false)} className="text-muted-foreground"><X size={15} /></button>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="font-semibold truncate">
-                  {profileData?.display_name ?? `@${user.username}`}
-                </span>
-                {premium.isPremium && (
-                  <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">
-                    <Crown size={10} className="mr-1" /> 프리미엄
-                  </Badge>
-                )}
-                <button
-                  onClick={() => { setNameInput(profileData?.display_name ?? user.username); setEditingName(true) }}
-                  className="text-muted-foreground hover:text-violet-600 shrink-0"
-                >
-                  <Pencil size={12} />
-                </button>
+                <span className="font-semibold truncate">{profileData?.display_name ?? `@${user.username}`}</span>
+                {premium.isPremium && <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0"><Crown size={10} className="mr-1" /> {t('profile.premium')}</Badge>}
+                <button onClick={() => { setNameInput(profileData?.display_name ?? user.username); setEditingName(true) }} className="text-muted-foreground hover:text-violet-600 shrink-0"><Pencil size={12} /></button>
               </div>
             )}
-            {profileData?.display_name && (
-              <p className="text-xs text-muted-foreground">@{user.username}</p>
-            )}
+            {profileData?.display_name && <p className="text-xs text-muted-foreground">@{user.username}</p>}
             {attendance ? (() => {
               const lv = getLevel(attendance.total_xp)
               const nextThreshold = getNextLevelThreshold(lv)
@@ -525,32 +324,28 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
                   {nextThreshold !== null ? (
                     <div className="relative w-full bg-gray-200 rounded-full h-4 overflow-hidden">
                       <div className="bg-violet-500 h-4 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-white drop-shadow">
-                        {xpInLevel} / {xpNeeded}
-                      </span>
+                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-white drop-shadow">{xpInLevel} / {xpNeeded}</span>
                     </div>
                   ) : (
-                    <p className="text-[10px] text-violet-600 font-medium">최고 레벨 달성!</p>
+                    <p className="text-[10px] text-violet-600 font-medium">{t('profile.maxLevel')}</p>
                   )}
                 </div>
               )
-            })() : <p className="text-xs text-muted-foreground">Pi Node 운영자</p>}
+            })() : <p className="text-xs text-muted-foreground">{t('profile.piNodeOperator')}</p>}
           </div>
         </CardContent>
       </Card>
 
-      {/* 보유 뱃지 */}
+      {/* Badges */}
       {myBadges.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-semibold text-muted-foreground mb-3">보유 뱃지</p>
+            <p className="text-xs font-semibold text-muted-foreground mb-3">{t('profile.badges')}</p>
             <div className="flex flex-wrap gap-4">
               {myBadges.map(b => (
                 <div key={b} className="flex flex-col items-center gap-1">
                   <img src={badgeSrc(b)} alt={b} className="w-12 h-12" />
-                  <span className={`text-xs font-medium text-center ${BADGE_LABELS[b]?.color ?? 'text-muted-foreground'}`}>
-                    {BADGE_LABELS[b]?.label ?? b}
-                  </span>
+                  <span className={`text-xs font-medium text-center ${BADGE_COLORS[b] ?? 'text-muted-foreground'}`}>{t(`badge.${b}`)}</span>
                 </div>
               ))}
             </div>
@@ -558,28 +353,24 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
         </Card>
       )}
 
-      {/* 댓글 알림 피드 */}
+      {/* Notifications */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Bell size={14} className="text-violet-500" /> 댓글 알림
-          </CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Bell size={14} className="text-violet-500" /> {t('profile.notifications')}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {notifications.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-4">내 글·댓글에 달린 댓글이 없습니다.</p>
+            <p className="text-xs text-muted-foreground text-center py-4">{t('profile.noNotifications')}</p>
           ) : (
             <div className="divide-y">
               {notifications.map(item => (
                 <div key={item.comment_id} className="flex gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-muted/40 active:bg-muted transition-colors" onClick={() => onNavigateToPost?.(item.post_id, item.post_type)}>
-                  <span className="shrink-0 mt-0.5 text-violet-400">
-                    {item.type === 'new_reply' ? <CornerDownRight size={13} /> : <MessageSquare size={13} />}
-                  </span>
+                  <span className="shrink-0 mt-0.5 text-violet-400">{item.type === 'new_reply' ? <CornerDownRight size={13} /> : <MessageSquare size={13} />}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <span className="text-xs font-medium">{item.display_name ?? item.nickname}</span>
-                      <span className="text-xs text-muted-foreground">{item.type === 'new_reply' ? '대댓글' : '댓글'}</span>
-                      <span className="text-xs text-muted-foreground/60 ml-auto shrink-0">{item.post_type === 'qna' ? 'QnA' : '커뮤니티'}</span>
+                      <span className="text-xs text-muted-foreground">{item.type === 'new_reply' ? t('profile.reply') : t('profile.comment')}</span>
+                      <span className="text-xs text-muted-foreground/60 ml-auto shrink-0">{item.post_type === 'qna' ? 'Q&A' : t('app.tabs.community')}</span>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">📄 {item.post_title}</p>
                     <p className="text-xs text-foreground/80 truncate mt-0.5">💬 {item.content}</p>
@@ -589,155 +380,92 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
             </div>
           )}
           <div ref={notifSentinelRef} className="h-2" />
-          {notifLoading && <p className="text-xs text-muted-foreground text-center py-2">불러오는 중...</p>}
+          {notifLoading && <p className="text-xs text-muted-foreground text-center py-2">{t('profile.loading')}</p>}
         </CardContent>
       </Card>
 
-      {/* 출석 체크 */}
+      {/* Attendance */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Star size={14} className="text-yellow-500" /> 출석 체크
-          </CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Star size={14} className="text-yellow-500" /> {t('profile.attendance')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {attendance && (
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">이번 주 XP</span>
+                <span className="text-muted-foreground">{t('profile.weekXp')}</span>
                 <span className="font-semibold text-violet-600">+{attendance.week_xp} XP</span>
               </div>
               {streak > 0 && (
                 <div className="flex items-center gap-2 bg-orange-50 rounded-lg px-3 py-2">
                   <span className="text-lg">🔥</span>
                   <div className="flex-1">
-                    <span className="text-sm font-bold text-orange-600">{streak}일 연속 출석 중!</span>
-                    {streak % 7 !== 0 && (
-                      <p className="text-xs text-orange-400">다음 주사위까지 {7 - (streak % 7)}일</p>
-                    )}
+                    <span className="text-sm font-bold text-orange-600">{t('profile.streakDays', { days: streak })}</span>
+                    {streak % 7 !== 0 && <p className="text-xs text-orange-400">{t('profile.nextDice', { days: 7 - (streak % 7) })}</p>}
                   </div>
                 </div>
               )}
             </div>
           )}
-          <button
-            onClick={handleAttendance}
-            disabled={checkingIn || !!attendance?.checked_today}
-            className="w-full py-2.5 bg-violet-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
-          >
-            {attendance?.checked_today ? '✅ 오늘 출석 완료' : checkingIn ? '처리 중...' : '📅 출석 체크 (+10 XP)'}
+          <button onClick={handleAttendance} disabled={checkingIn || !!attendance?.checked_today} className="w-full py-2.5 bg-violet-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 text-sm">
+            {attendance?.checked_today ? `✅ ${t('profile.checkedToday')}` : checkingIn ? t('profile.checking') : `📅 ${t('profile.checkIn')}`}
           </button>
           {diceAvailable > 0 && (
-            <button
-              onClick={() => setShowDice(true)}
-              className="w-full py-2.5 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 text-sm animate-pulse"
-            >
-              <Dice5 size={16} /> 주사위 {diceAvailable}개 굴리기!
+            <button onClick={() => setShowDice(true)} className="w-full py-2.5 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 text-sm animate-pulse">
+              <Dice5 size={16} /> {t('profile.rollDice', { count: diceAvailable })}
             </button>
           )}
-          <p className="text-xs text-muted-foreground text-center">7일 연속 출석마다 주사위 기회! (최대 +100 XP)</p>
+          <p className="text-xs text-muted-foreground text-center">{t('profile.streakDiceInfo')}</p>
         </CardContent>
       </Card>
 
-      {/* 노드 고유번호 */}
+      {/* Node Key */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <ExternalLink size={14} className="text-violet-500" /> 노드 고유번호 (블록체인 랭킹)
-          </CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><ExternalLink size={14} className="text-violet-500" /> {t('profile.nodeKey')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {nodeKey && (
             <div className="flex items-center justify-between bg-muted rounded-lg px-3 py-2">
               <span className="text-xs font-mono text-muted-foreground truncate flex-1">{nodeKey}</span>
-              <a
-                href="https://blockexplorer.minepi.com/mainnet/nodes"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => {
-                  try {
-                    navigator.clipboard.writeText(nodeKey)
-                  } catch {
-                    const el = document.createElement('textarea')
-                    el.value = nodeKey
-                    document.body.appendChild(el)
-                    el.select()
-                    document.execCommand('copy')
-                    document.body.removeChild(el)
-                  }
-                  toast.success('고유번호가 복사됐습니다. 검색창에 붙여넣기 하세요.')
-                }}
+              <a href="https://blockexplorer.minepi.com/mainnet/nodes" target="_blank" rel="noopener noreferrer"
+                onClick={() => { try { navigator.clipboard.writeText(nodeKey) } catch { const el = document.createElement('textarea'); el.value = nodeKey; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el) }; toast.success(t('profile.keySaved')) }}
                 className="ml-2 flex items-center gap-1 text-xs text-violet-600 font-medium whitespace-nowrap"
-              >
-                랭킹 확인 <ExternalLink size={11} />
-              </a>
+              >{t('profile.checkRanking')} <ExternalLink size={11} /></a>
             </div>
           )}
-          <p className="text-xs text-muted-foreground">Pi 앱 → 노드 → 고유번호 확인 후 입력</p>
+          <p className="text-xs text-muted-foreground">{t('profile.nodeKeyGuide')}</p>
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={nodeKeyInput}
-              onChange={e => setNodeKeyInput(e.target.value)}
-              placeholder="노드 고유번호 입력"
-              className="flex-1 border rounded-lg px-3 py-2 text-sm font-mono"
-            />
-            <button
-              onClick={handleSaveKey}
-              disabled={savingKey || !nodeKeyInput}
-              className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50"
-            >
-              저장
-            </button>
+            <input type="text" value={nodeKeyInput} onChange={e => setNodeKeyInput(e.target.value)} placeholder={t('profile.nodeKeyPlaceholder')} className="flex-1 border rounded-lg px-3 py-2 text-sm font-mono" />
+            <button onClick={handleSaveKey} disabled={savingKey || !nodeKeyInput} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50">{t('profile.save')}</button>
           </div>
         </CardContent>
       </Card>
 
-{/* 텔레그램 알림 */}
+      {/* Telegram */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Send size={14} className="text-violet-500" /> 텔레그램 알림
-          </CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Send size={14} className="text-violet-500" /> {t('profile.telegram')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {telegramSubscribed ? (
             <div className="space-y-2">
-              <p className="text-xs text-green-600 flex items-center gap-1">
-                <Send size={12} /> 텔레그램 알림 활성화됨
-              </p>
-              <button
-                onClick={handleTelegramDisconnect}
-                className="text-xs text-red-500 underline"
-              >
-                연결 해제
-              </button>
+              <p className="text-xs text-green-600 flex items-center gap-1"><Send size={12} /> {t('profile.telegramActive')}</p>
+              <button onClick={handleTelegramDisconnect} className="text-xs text-red-500 underline">{t('profile.telegramDisconnect')}</button>
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Pi Browser에서는 웹 푸시가 지원되지 않습니다. 텔레그램으로 노드 이상 알림을 받으세요.
-              </p>
+              <p className="text-xs text-muted-foreground">{t('profile.telegramGuide')}</p>
               <div className="bg-blue-50 rounded-lg px-3 py-2 text-xs text-blue-700 space-y-1">
-                <p className="font-semibold">채팅 ID 확인 방법</p>
-                <p>① 텔레그램에서 <span className="font-mono">@serge_node_guardian_bot</span> 검색</p>
-                <p>② 채팅창에서 <span className="font-mono">/start</span> 입력</p>
-                <p>③ 봇이 답장한 숫자(Chat ID)를 아래에 입력</p>
+                <p className="font-semibold">{t('profile.telegramHow')}</p>
+                <p>① {t('profile.telegramStep1')}</p>
+                <p>② {t('profile.telegramStep2')}</p>
+                <p>③ {t('profile.telegramStep3')}</p>
               </div>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={telegramInput}
-                  onChange={e => setTelegramInput(e.target.value)}
-                  placeholder="예: 123456789"
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm font-mono"
-                />
-                <button
-                  onClick={handleTelegramSave}
-                  disabled={savingTelegram || !telegramInput.trim()}
-                  className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50"
-                >
-                  {savingTelegram ? '저장 중...' : '연결'}
+                <input type="text" value={telegramInput} onChange={e => setTelegramInput(e.target.value)} placeholder={t('profile.telegramPlaceholder')} className="flex-1 border rounded-lg px-3 py-2 text-sm font-mono" />
+                <button onClick={handleTelegramSave} disabled={savingTelegram || !telegramInput.trim()} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50">
+                  {savingTelegram ? t('profile.telegramSaving') : t('profile.telegramConnect')}
                 </button>
               </div>
             </div>
@@ -745,9 +473,8 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
         </CardContent>
       </Card>
 
-      {/* 주간 랭킹 보상 수령 */}
+      {/* Weekly reward claim */}
       {claimStatus && (claimStatus.claimable || claimStatus.claimed) && (() => {
-        // 이번 주 일요일 00:00 KST = 클레임 마감
         const nowKST = new Date(Date.now() + 9 * 3600000)
         const day = nowKST.getUTCDay()
         const nextSun = new Date(nowKST.getTime() + (7 - day) * 86400000)
@@ -755,17 +482,13 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
         return (
         <Card className={claimStatus.claimable ? 'border-yellow-300 bg-yellow-50' : ''}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Gift size={14} className="text-yellow-500" /> 주간 랭킹 보상
-            </CardTitle>
+            <CardTitle className="text-sm flex items-center gap-2"><Gift size={14} className="text-yellow-500" /> {t('profile.weeklyReward')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-sm">
-              <p className="font-semibold">
-                {claimStatus.rank}위 선정 🎉
-              </p>
+              <p className="font-semibold">{t('profile.weeklyRankAchieved', { rank: claimStatus.rank ?? 0 })} 🎉</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {claimStatus.week_start} 주
+                {claimStatus.week_start}
                 {claimStatus.total_likes ? ` · ❤️ ${claimStatus.total_likes}` : ''}
                 {claimStatus.best_answer_count ? ` · 🎓 ${claimStatus.best_answer_count}` : ''}
                 {claimStatus.comment_count ? ` · 💬 ${claimStatus.comment_count}` : ''}
@@ -774,144 +497,92 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
             </div>
             {claimStatus.claimable ? (
               <>
-                <button
-                  onClick={handleClaim}
-                  disabled={claiming}
-                  className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Gift size={16} />
-                  {claiming ? '처리 중...' : '프리미엄 1주일 즉시 수령'}
+                <button onClick={handleClaim} disabled={claiming} className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
+                  <Gift size={16} /> {claiming ? t('profile.checking') : t('profile.claimPremium')}
                 </button>
-                <p className="text-xs text-orange-500 text-center">⏰ 수령 마감: {deadline}</p>
+                <p className="text-xs text-orange-500 text-center">⏰ {t('profile.claimDeadline', { deadline })}</p>
               </>
             ) : (
-              <p className="text-sm text-green-600 font-medium">✅ 프리미엄 1주일 적용 완료</p>
+              <p className="text-sm text-green-600 font-medium">✅ {t('profile.claimDone')}</p>
             )}
           </CardContent>
         </Card>
         )
       })()}
 
-      {/* 프리미엄 구독 */}
+      {/* Premium */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Crown size={14} className="text-yellow-500" /> 프리미엄 구독
-          </CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Crown size={14} className="text-yellow-500" /> {t('profile.premiumSubscription')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {premium.isPremium ? (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-green-600">✅ 프리미엄 활성화됨</p>
+              <p className="text-sm font-medium text-green-600">✅ {t('profile.premiumActive')}</p>
               {premium.expires_at && (() => {
                 const days = Math.ceil((new Date(premium.expires_at).getTime() - Date.now()) / 86400000)
                 return (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      만료: {new Date(premium.expires_at).toLocaleDateString('ko-KR')}
-                      {days > 0 && <span className="ml-1 text-green-600 font-medium">({days}일 남음)</span>}
+                      {t('profile.premiumExpires', { date: new Date(premium.expires_at).toLocaleDateString() })}
+                      {days > 0 && <span className="ml-1 text-green-600 font-medium">({t('profile.premiumDaysLeft', { days })})</span>}
                     </p>
                     {days <= 7 && (
-                      <button
-                        onClick={handlePremium}
-                        disabled={paying}
-                        className="w-full py-2.5 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
-                      >
-                        {paying ? '처리 중...' : '🔁 구독 연장 (1 Pi / 30일)'}
+                      <button onClick={handlePremium} disabled={paying} className="w-full py-2.5 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 text-sm">
+                        {paying ? t('profile.checking') : `🔁 ${t('profile.premiumExtend')}`}
                       </button>
                     )}
                   </>
                 )
               })()}
               {premium.canceled ? (
-                <p className="text-xs text-orange-500">⏳ 기간 만료 후 자동 해지 예정</p>
+                <p className="text-xs text-orange-500">⏳ {t('profile.premiumCancelPending')}</p>
               ) : (
-                <button
-                  onClick={handleCancelPremium}
-                  disabled={canceling}
-                  className="text-xs text-red-500 underline disabled:opacity-50"
-                >
-                  {canceling ? '처리 중...' : '구독 해지'}
+                <button onClick={handleCancelPremium} disabled={canceling} className="text-xs text-red-500 underline disabled:opacity-50">
+                  {canceling ? t('profile.checking') : t('profile.premiumCancel')}
                 </button>
               )}
             </div>
           ) : (
             <div className="space-y-3">
               <ul className="text-xs text-muted-foreground space-y-1">
-                <li>✅ 프리미엄 뱃지</li>
-                <li>✅ 노드 운영자 커뮤니티 참여 (노하우 공유 · 질문 해결)</li>
-                <li>🔜 Pi 스마트컨트랙트 자동 구독 (예정)</li>
+                <li>✅ {t('profile.premiumBadge')}</li>
+                <li>✅ {t('profile.premiumCommunity')}</li>
+                <li>🔜 {t('profile.premiumSmart')}</li>
               </ul>
-              <button
-                onClick={handlePremium}
-                disabled={paying}
-                className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Zap size={16} />
-                {paying ? '처리 중...' : '1 Pi / 월 구독하기'}
+              <button onClick={handlePremium} disabled={paying} className="w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
+                <Zap size={16} /> {paying ? t('profile.checking') : t('profile.premiumSubscribe')}
               </button>
             </div>
           )}
         </CardContent>
       </Card>
+
       {showDice && (
         <DiceGame
           diceAvailable={diceAvailable}
           onRoll={async () => {
-            const res = await fetch('/api/attendance/dice', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ pi_uid: user.uid }),
-            })
+            const res = await fetch('/api/attendance/dice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pi_uid: user.uid }) })
             if (!res.ok) return null
-            const data = await res.json()
-            return data
+            return await res.json()
           }}
-          onXpEarned={(xp) => {
-            setAttendance(prev => prev ? {
-              ...prev,
-              week_xp: prev.week_xp + xp,
-              total_xp: prev.total_xp + xp,
-            } : null)
-          }}
-          onClose={() => {
-            setShowDice(false)
-            // Refresh dice availability
-            fetch(`/api/attendance/dice?pi_uid=${user.uid}`)
-              .then(r => r.json())
-              .then(d => setDiceAvailable(d.diceAvailable ?? 0))
-          }}
+          onXpEarned={(xp) => { setAttendance(prev => prev ? { ...prev, week_xp: prev.week_xp + xp, total_xp: prev.total_xp + xp } : null) }}
+          onClose={() => { setShowDice(false); fetch(`/api/attendance/dice?pi_uid=${user.uid}`).then(r => r.json()).then(d => setDiceAvailable(d.diceAvailable ?? 0)) }}
         />
       )}
       {showAdModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
             <div className="p-4 text-center border-b">
-              <p className="font-bold text-lg">🎉 출석 체크 완료!</p>
-              <p className="text-violet-600 font-semibold mt-1">+{adXpEarned} XP 획득</p>
+              <p className="font-bold text-lg">{t('profile.attendanceComplete')}</p>
+              <p className="text-violet-600 font-semibold mt-1">{t('profile.xpEarned', { xp: adXpEarned })}</p>
             </div>
             <div className="p-3">
-              <ins
-                className="adsbygoogle"
-                style={{ display: 'block' }}
-                data-ad-client="ca-pub-1253412588313642"
-                data-ad-slot="8355356529"
-                data-ad-format="auto"
-                data-full-width-responsive="true"
-                ref={(el) => {
-                  if (el) {
-                    try { ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({}) } catch {}
-                  }
-                }}
-              />
+              <ins className="adsbygoogle" style={{ display: 'block' }} data-ad-client="ca-pub-1253412588313642" data-ad-slot="8355356529" data-ad-format="auto" data-full-width-responsive="true"
+                ref={(el) => { if (el) { try { ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({}) } catch {} } }} />
             </div>
             <div className="p-4 pt-2">
-              <button
-                onClick={() => setShowAdModal(false)}
-                className="w-full py-2.5 bg-violet-600 text-white font-bold rounded-xl text-sm"
-              >
-                확인
-              </button>
+              <button onClick={() => setShowAdModal(false)} className="w-full py-2.5 bg-violet-600 text-white font-bold rounded-xl text-sm">{t('profile.confirm')}</button>
             </div>
           </div>
         </div>

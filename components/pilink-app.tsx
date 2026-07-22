@@ -105,6 +105,11 @@ export default function PiLinkApp() {
     fetch(`/api/premium?pi_uid=${user.uid}`)
       .then(r => r.json())
       .then(d => setIsPremium(d.isPremium ?? false))
+    // Sync locale to DB on login
+    const savedLocale = localStorage.getItem('pilink_locale')
+    if (savedLocale) {
+      fetch('/api/locale', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pi_uid: user.uid, locale: savedLocale }) }).catch(() => {})
+    }
   }, [user])
 
   useEffect(() => {

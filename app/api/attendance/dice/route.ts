@@ -53,6 +53,20 @@ function calcStreakAndDice(dates: { checked_date: string; dice_result: number | 
 
 const DICE_XP = [0, 10, 20, 30, 40, 50, 100]
 
+// Weighted dice: lower faces more likely, 6 is rare
+// Weights: 1=30%, 2=25%, 3=20%, 4=13%, 5=8%, 6=4%
+const DICE_WEIGHTS = [30, 25, 20, 13, 8, 4]
+
+function rollWeightedDice(): number {
+  const total = DICE_WEIGHTS.reduce((a, b) => a + b, 0)
+  let rand = Math.random() * total
+  for (let i = 0; i < DICE_WEIGHTS.length; i++) {
+    rand -= DICE_WEIGHTS[i]
+    if (rand <= 0) return i + 1
+  }
+  return 1
+}
+
 // GET: check how many dice rolls are available
 export async function GET(req: NextRequest) {
   const pi_uid = req.nextUrl.searchParams.get('pi_uid')
@@ -127,7 +141,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'no_dice_available' }, { status: 400 })
   }
 
-  const diceResult = Math.floor(Math.random() * 6) + 1
+  const diceResult = rollWeightedDice()
   const diceXp = DICE_XP[diceResult]
 
   const { error } = await supabaseServer

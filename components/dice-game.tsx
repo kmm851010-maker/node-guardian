@@ -2,40 +2,47 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-const DICE_FACES: Record<number, number[][]> = {
-  1: [[1, 1]],
-  2: [[0, 0], [2, 2]],
-  3: [[0, 0], [1, 1], [2, 2]],
-  4: [[0, 0], [0, 2], [2, 0], [2, 2]],
-  5: [[0, 0], [0, 2], [1, 1], [2, 0], [2, 2]],
-  6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]],
+const DICE_PIPS: Record<number, [number, number][]> = {
+  1: [[50, 50]],
+  2: [[26, 26], [74, 74]],
+  3: [[26, 26], [50, 50], [74, 74]],
+  4: [[26, 26], [26, 74], [74, 26], [74, 74]],
+  5: [[26, 26], [26, 74], [50, 50], [74, 26], [74, 74]],
+  6: [[26, 26], [26, 74], [50, 26], [50, 74], [74, 26], [74, 74]],
 }
 
 const DICE_XP = [0, 10, 20, 30, 40, 50, 100]
 
 function DiceFace({ value, size = 80 }: { value: number; size?: number }) {
-  const dots = DICE_FACES[value] || []
-  const cellSize = size / 3
-  const dotSize = cellSize * 0.45
+  const pips = DICE_PIPS[value] || []
+  const r = size * 0.08
 
   return (
-    <div
-      className="bg-white rounded-xl border-2 border-gray-300 shadow-lg relative"
-      style={{ width: size, height: size }}
-    >
-      {dots.map(([row, col], i) => (
-        <div
-          key={i}
-          className="absolute bg-gray-800 rounded-full"
-          style={{
-            width: dotSize,
-            height: dotSize,
-            top: row * cellSize + (cellSize - dotSize) / 2,
-            left: col * cellSize + (cellSize - dotSize) / 2,
-          }}
-        />
+    <svg width={size} height={size} viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id={`dg-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#e8e8e8" />
+        </linearGradient>
+        <filter id={`ds-${size}`}>
+          <feDropShadow dx="1" dy="2" stdDeviation="2" floodOpacity="0.25" />
+        </filter>
+        <radialGradient id={`pip-${size}`} cx="40%" cy="35%">
+          <stop offset="0%" stopColor="#555" />
+          <stop offset="100%" stopColor="#1a1a1a" />
+        </radialGradient>
+      </defs>
+      <rect
+        x="4" y="4" width="92" height="92" rx="18" ry="18"
+        fill={`url(#dg-${size})`}
+        stroke="#c0c0c0"
+        strokeWidth="2"
+        filter={`url(#ds-${size})`}
+      />
+      {pips.map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r={r} fill={`url(#pip-${size})`} />
       ))}
-    </div>
+    </svg>
   )
 }
 

@@ -173,21 +173,22 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
   }, [user])
 
   useEffect(() => {
-    fetch('/api/pi-news').then(r => r.json()).then(async (d) => {
+    fetch('/api/pi-news').then(r => r.json()).then(d => {
       const items = d.items ?? []
+      setPiNews(items)
+      // Translate news titles for non-Korean users (fire and forget)
       if (locale !== 'ko' && items.length > 0) {
         const titles = items.map((n: any) => n.title).join('\n---\n')
-        try {
-          const res = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: titles, target: locale }) })
-          if (res.ok) {
-            const { translated } = await res.json()
-            const parts = translated.split(/\n---\n|\n-{3}\n/)
-            items.forEach((item: any, i: number) => { if (parts[i]) item.title = parts[i] })
-          }
-        } catch {}
+        fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: titles, target: locale }) })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (!data?.translated) return
+            const parts = data.translated.split(/\n---\n|\n-{3}\n/)
+            setPiNews(prev => prev.map((item, i) => parts[i] ? { ...item, title: parts[i] } : item))
+          })
+          .catch(() => {})
       }
-      setPiNews(items)
-    })
+    }).catch(() => {})
     const nowKST = new Date(Date.now() + 9 * 3600000)
     const day = nowKST.getUTCDay()
     const sun = new Date(nowKST.getTime() - day * 86400000)

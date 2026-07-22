@@ -191,6 +191,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
   }
 
   // 채택 팝업
+  const [translations, setTranslations] = useState<Record<string, { text: string; comments: Record<string, string> }>>({})
   const [bestAnswerPending, setBestAnswerPending] = useState<{
     postId: string
     commentId: string
@@ -789,8 +790,18 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                   </div>
                 ) : (
                   <div className="px-3 py-2 bg-muted/20 space-y-2">
-                    <TranslateButton text={`${post.title}\n\n${post.content}`} className="mb-1" />
-                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
+                    <TranslateButton
+                      text={`${post.title}\n\n${post.content}`}
+                      comments={(comments[post.id] ?? []).map(c => ({ id: c.id, content: c.content }))}
+                      onTranslated={(result) => setTranslations(prev => ({ ...prev, [post.id]: result }))}
+                      onShowOriginal={() => setTranslations(prev => { const next = { ...prev }; delete next[post.id]; return next })}
+                      className="mb-1"
+                    />
+                    {translations[post.id] ? (
+                      <p className="text-sm text-blue-900 bg-blue-50 border border-blue-100 rounded-lg p-2.5 whitespace-pre-wrap leading-relaxed break-words">{translations[post.id].text}</p>
+                    ) : (
+                      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
+                    )}
                     {post.image_url && (
                       <img src={post.image_url} alt="post" className="w-full h-auto rounded-xl border cursor-zoom-in" onClick={() => setLightboxSrc(post.image_url!)} />
                     )}
@@ -857,7 +868,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                               </div>
                             ) : (
                               <div className="max-h-48 overflow-y-auto">
-                                <p className="text-xs whitespace-pre-wrap leading-relaxed break-words">{comment.content}</p>
+                                <p className="text-xs whitespace-pre-wrap leading-relaxed break-words">{translations[post.id]?.comments[comment.id] ?? comment.content}</p>
                               </div>
                             )}
                           </div>
@@ -930,7 +941,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                                 </div>
                               ) : (
                                 <div className="max-h-36 overflow-y-auto">
-                                  <p className="text-xs whitespace-pre-wrap leading-relaxed break-words">{reply.content}</p>
+                                  <p className="text-xs whitespace-pre-wrap leading-relaxed break-words">{translations[post.id]?.comments[reply.id] ?? reply.content}</p>
                                 </div>
                               )}
                             </div>

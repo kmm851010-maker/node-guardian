@@ -107,7 +107,7 @@ interface Props {
 }
 
 export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap = {}, openPostId, onPostOpened }: Props) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const typeLabel = (type: string) => t(`community.${type}`) || type
   const POST_TYPES = [
     { value: 'general', label: typeLabel('general'), color: POST_TYPE_COLORS.general },
@@ -160,6 +160,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
   const [piNews, setPiNews] = useState<{ title: string; link: string; date: string }[]>([])
   const [top3, setTop3] = useState<Post[]>([])
   const [notices, setNotices] = useState<Post[]>([])
+  const [translations, setTranslations] = useState<Record<string, { text: string; comments: Record<string, string> }>>({})
 
   useEffect(() => {
     if (user) {
@@ -197,7 +198,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
       .then(r => r.json()).then(d => setTop3(d.data ?? []))
     fetch('/api/posts?type=notice&limit=5')
       .then(r => r.json()).then(d => setNotices(d.data ?? []))
-  }, [])
+  }, [locale])
   const [likingPostId, setLikingPostId] = useState<string | null>(null)
   const [likingCommentId, setLikingCommentId] = useState<string | null>(null)
   const viewedPosts = useRef<Set<string>>(new Set())
@@ -574,8 +575,18 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                   </div>
                 ) : (
                   <div className="px-4 py-3 space-y-3">
-                    <TranslateButton text={`${post.title}\n\n${post.content}`} className="mb-1" />
-                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
+                    <TranslateButton
+                      text={`${post.title}\n\n${post.content}`}
+                      comments={(comments[post.id] ?? []).map(c => ({ id: c.id, content: c.content }))}
+                      onTranslated={(result) => setTranslations(prev => ({ ...prev, [post.id]: result }))}
+                      onShowOriginal={() => setTranslations(prev => { const next = { ...prev }; delete next[post.id]; return next })}
+                      className="mb-1"
+                    />
+                    {translations[post.id] ? (
+                      <p className="text-sm text-blue-900 bg-blue-50 border border-blue-100 rounded-lg p-2.5 whitespace-pre-wrap leading-relaxed break-words">{translations[post.id].text}</p>
+                    ) : (
+                      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
+                    )}
                     {post.image_url && (
                       <img src={post.image_url} alt="post" className="w-full h-auto rounded-xl border cursor-zoom-in" onClick={() => setLightboxSrc(post.image_url!)} />
                     )}
@@ -627,7 +638,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                                   </div>
                                 </div>
                               ) : (
-                                <p className="text-xs whitespace-pre-wrap leading-relaxed">{comment.content}</p>
+                                <p className="text-xs whitespace-pre-wrap leading-relaxed">{translations[post.id]?.comments[comment.id] ?? comment.content}</p>
                               )}
                             </div>
                             {isPremium && (
@@ -676,7 +687,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                                     </div>
                                   </div>
                                 ) : (
-                                  <p className="text-xs whitespace-pre-wrap leading-relaxed">{reply.content}</p>
+                                  <p className="text-xs whitespace-pre-wrap leading-relaxed">{translations[post.id]?.comments[reply.id] ?? reply.content}</p>
                                 )}
                               </div>
                               {isPremium && (

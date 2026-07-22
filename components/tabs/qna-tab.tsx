@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 import { RoleName } from '@/components/role-name'
 import ImageLightbox from '@/components/image-lightbox'
+import TranslateButton from '@/components/translate-button'
 import { useI18n } from '@/contexts/i18n-context'
 
 function LevelBadge({ level }: { level: number | null }) {
@@ -788,6 +789,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                   </div>
                 ) : (
                   <div className="px-3 py-2 bg-muted/20 space-y-2">
+                    <TranslateButton text={`${post.title}\n\n${post.content}`} className="mb-1" />
                     <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed break-words">{post.content}</p>
                     {post.image_url && (
                       <img src={post.image_url} alt="post" className="w-full h-auto rounded-xl border cursor-zoom-in" onClick={() => setLightboxSrc(post.image_url!)} />

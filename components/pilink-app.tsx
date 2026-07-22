@@ -209,10 +209,10 @@ export default function PiLinkApp() {
         <div className="relative">
           <button
             onClick={() => setShowLangMenu(v => !v)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1.5 py-1 rounded-lg hover:bg-muted transition-colors"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg border hover:bg-muted transition-colors"
           >
-            <Globe size={14} />
-            <span className="hidden sm:inline">{LOCALES.find(l => l.code === locale)?.label}</span>
+            <Globe size={13} />
+            <span className="font-medium">{locale === 'zh-TW' ? '繁中' : LOCALES.find(l => l.code === locale)?.label ?? locale}</span>
           </button>
           {showLangMenu && (
             <>

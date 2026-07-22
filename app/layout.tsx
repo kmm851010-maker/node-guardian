@@ -5,6 +5,7 @@ import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import SwRegister from '@/components/sw-register'
 import { AuthProvider } from '@/contexts/auth-context'
+import { I18nProvider } from '@/contexts/i18n-context'
 
 const geist = Geist({ subsets: ['latin'] })
 
@@ -27,9 +28,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1253412588313642" crossOrigin="anonymous"></script>
       </head>
       <body className="min-h-screen bg-background text-foreground">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </I18nProvider>
         <Toaster />
         <SwRegister />
       </body>

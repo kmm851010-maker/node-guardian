@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle, Download, BookOpen, Smartphone, RefreshCw } from 'lucide-react'
+import { Monitor, Users, Trophy, MessageCircle, LogIn, LogOut, UserCircle, Download, BookOpen, Smartphone, RefreshCw, Globe } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
+import { useI18n } from '@/contexts/i18n-context'
+import { LOCALES, Locale } from '@/lib/i18n'
 import DashboardTab from './tabs/dashboard-tab'
 import CommunityTab from './tabs/community-tab'
 import RankingTab from './tabs/ranking-tab'
@@ -12,21 +14,20 @@ import GuideDrawer from './guide-banner'
 
 type Tab = 'dashboard' | 'community' | 'ranking' | 'qna' | 'profile'
 
-const PI_TABS = [
-  { id: 'dashboard' as Tab, label: '대시보드', icon: Monitor },
-  { id: 'community' as Tab, label: '커뮤니티', icon: Users },
-  { id: 'ranking' as Tab, label: '랭킹', icon: Trophy },
-  { id: 'qna' as Tab, label: 'QnA', icon: MessageCircle },
-  { id: 'profile' as Tab, label: '프로필', icon: UserCircle },
-]
+const TAB_ICONS: Record<Tab, typeof Monitor> = {
+  dashboard: Monitor,
+  community: Users,
+  ranking: Trophy,
+  qna: MessageCircle,
+  profile: UserCircle,
+}
 
-const WEB_TABS = [
-  { id: 'community' as Tab, label: '커뮤니티', icon: Users },
-  { id: 'ranking' as Tab, label: '랭킹', icon: Trophy },
-  { id: 'qna' as Tab, label: 'QnA', icon: MessageCircle },
-]
+const PI_TAB_IDS: Tab[] = ['dashboard', 'community', 'ranking', 'qna', 'profile']
+const WEB_TAB_IDS: Tab[] = ['community', 'ranking', 'qna']
 
 export default function PiLinkApp() {
+  const { t, locale, setLocale } = useI18n()
+  const [showLangMenu, setShowLangMenu] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('community')
   const { user, isLoading, login, logout } = useAuth()
   const [isPremium, setIsPremium] = useState(false)
@@ -179,14 +180,14 @@ export default function PiLinkApp() {
     setOpenPostRequest({ postId, postType })
   }
 
-  const tabs = isPiBrowser ? PI_TABS : WEB_TABS
+  const tabIds = isPiBrowser ? PI_TAB_IDS : WEB_TAB_IDS
 
   return (
     <div className="max-w-2xl mx-auto">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center gap-2">
         <span className="text-xl font-bold text-violet-600">LinkPi</span>
-        <span className="text-xs text-muted-foreground flex-1">실시간 노드 모니터링 & 커뮤니티</span>
+        <span className="text-xs text-muted-foreground flex-1">{t('app.title')}</span>
         {/* PC 전용: 다운로드 & 가이드 버튼 */}
         <div className="hidden md:flex items-center gap-2">
           <a
@@ -194,15 +195,41 @@ export default function PiLinkApp() {
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 rounded-lg hover:bg-muted transition-colors"
           >
             <BookOpen size={14} />
-            사용법
+            {t('app.guide')}
           </a>
           <a
             href="https://github.com/kmm851010-maker/node-guardian/releases/download/v1.3.1/NodeGuardian.exe"
             className="flex items-center gap-1 text-xs bg-violet-600 text-white px-3 py-1.5 rounded-full hover:bg-violet-700 transition-colors"
           >
             <Download size={14} />
-            프로그램 다운로드
+            {t('app.download')}
           </a>
+        </div>
+        {/* 언어 선택 */}
+        <div className="relative">
+          <button
+            onClick={() => setShowLangMenu(v => !v)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1.5 py-1 rounded-lg hover:bg-muted transition-colors"
+          >
+            <Globe size={14} />
+            <span className="hidden sm:inline">{LOCALES.find(l => l.code === locale)?.label}</span>
+          </button>
+          {showLangMenu && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setShowLangMenu(false)} />
+              <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg z-30 py-1 min-w-[120px]">
+                {LOCALES.map(l => (
+                  <button
+                    key={l.code}
+                    onClick={() => { setLocale(l.code); setShowLangMenu(false) }}
+                    className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors ${locale === l.code ? 'text-violet-600 font-semibold' : ''}`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         {isPiBrowser === true && !isLoading && (
           user ? (
@@ -218,7 +245,7 @@ export default function PiLinkApp() {
               className="flex items-center gap-1 text-xs bg-violet-600 text-white px-3 py-1.5 rounded-full hover:bg-violet-700 transition-colors"
             >
               <LogIn size={14} />
-              Pi 로그인
+              {t('app.login')}
             </button>
           )
         )}
@@ -229,8 +256,8 @@ export default function PiLinkApp() {
         <div className="mx-4 mt-3 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
           <Smartphone size={16} className="text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-800 leading-relaxed">
-            <span className="font-semibold">로그인 및 커뮤니티 참여는 Pi Browser에서만 가능합니다.</span>
-            <br />게시글·댓글 조회는 이 브라우저에서도 가능합니다.
+            <span className="font-semibold">{t('app.notPiBrowser')}</span>
+            <br />{t('app.notPiBrowserSub')}
           </p>
         </div>
       )}
@@ -240,14 +267,14 @@ export default function PiLinkApp() {
         <div className="mx-4 mt-2 flex items-center gap-3 bg-violet-50 border border-violet-200 rounded-xl px-4 py-3">
           <Download size={16} className="text-violet-600 shrink-0" />
           <div className="flex-1">
-            <p className="text-xs font-semibold text-violet-800">LinkPiMonitor 앱으로 노드 알림 받기</p>
-            <p className="text-xs text-violet-600 mt-0.5">PC 꺼짐·포트 이상 즉시 알림 · 무료</p>
+            <p className="text-xs font-semibold text-violet-800">{t('app.androidBanner')}</p>
+            <p className="text-xs text-violet-600 mt-0.5">{t('app.androidBannerSub')}</p>
           </div>
           <a
             href={apkUrl}
             className="shrink-0 bg-violet-600 text-white text-xs font-bold px-3 py-2 rounded-lg"
           >
-            앱 설치
+            {t('app.installApp')}
           </a>
         </div>
       )}
@@ -265,7 +292,7 @@ export default function PiLinkApp() {
       {/* 오버스크롤 준비 인디케이터 */}
       {pullReady && !refreshing && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-violet-600 text-white text-xs px-4 py-1.5 rounded-full shadow-lg pointer-events-none flex items-center gap-1.5">
-          <RefreshCw size={12} /> 손 떼면 새로고침
+          <RefreshCw size={12} /> {t('app.pullToRefresh')}
         </div>
       )}
 
@@ -273,31 +300,34 @@ export default function PiLinkApp() {
       {refreshing && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm pointer-events-none">
           <RefreshCw size={36} className="text-violet-600 animate-spin" />
-          <p className="mt-3 text-sm font-medium text-violet-700">새로고침 중...</p>
+          <p className="mt-3 text-sm font-medium text-violet-700">{t('app.refreshing')}</p>
         </div>
       )}
 
       {/* 하단 탭 바 */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-background border-t flex">
-        {tabs.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => handleTabChange(id)}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs transition-colors ${
-              activeTab === id
-                ? 'text-violet-600'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span className="relative">
-              <Icon size={20} />
-              {badges[id] && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-              )}
-            </span>
-            {label}
-          </button>
-        ))}
+        {tabIds.map(id => {
+          const Icon = TAB_ICONS[id]
+          return (
+            <button
+              key={id}
+              onClick={() => handleTabChange(id)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2 text-xs transition-colors ${
+                activeTab === id
+                  ? 'text-violet-600'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span className="relative">
+                <Icon size={20} />
+                {badges[id] && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </span>
+              {t(`app.tabs.${id}`)}
+            </button>
+          )
+        })}
       </nav>
     </div>
   )

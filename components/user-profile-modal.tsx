@@ -14,10 +14,15 @@ interface UserProfile {
   rankHistory: { week_start: string; rank: number; total_likes: number }[]
 }
 
+const SVG_BADGES = new Set(['shield', 'zap_node', 'gem'])
+
 const BADGE_LABELS: Record<string, { label: string; color: string }> = {
-  crown:   { label: '역대 최장출석 TOP5',  color: 'text-yellow-700' },
-  flame:   { label: '현재 연속출석 TOP3',  color: 'text-orange-600' },
-  diamond: { label: '역대 지식In TOP5',    color: 'text-purple-700' },
+  crown:    { label: '역대 최장출석 TOP5',  color: 'text-yellow-700' },
+  flame:    { label: '현재 연속출석 TOP3',  color: 'text-orange-600' },
+  diamond:  { label: '역대 지식In TOP5',    color: 'text-purple-700' },
+  shield:   { label: '안정운영 30일',       color: 'text-emerald-600' },
+  zap_node: { label: '철벽노드 90일',       color: 'text-amber-600'   },
+  gem:      { label: '레전드노드 180일',    color: 'text-cyan-600'    },
   scholar: { label: '주간 지식In TOP3',    color: 'text-blue-600'   },
   trophy:  { label: '주간 인기멤버 TOP3',  color: 'text-rose-600'   },
 }
@@ -143,7 +148,7 @@ export default function UserProfileModal({ uid, nickname, viewerUsername, onClos
                 <div className="flex flex-wrap gap-3">
                   {userBadges.map(b => (
                     <div key={b} className="flex flex-col items-center gap-1">
-                      <img src={`/badges/badge-${b}.png`} alt={b} className="w-10 h-10" />
+                      <img src={`/badges/badge-${b}.${SVG_BADGES.has(b) ? 'svg' : 'png'}`} alt={b} className="w-10 h-10" />
                       <span className={`text-xs font-medium ${BADGE_LABELS[b]?.color ?? 'text-muted-foreground'}`}>
                         {BADGE_LABELS[b]?.label ?? b}
                       </span>

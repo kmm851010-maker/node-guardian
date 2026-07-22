@@ -9,11 +9,19 @@ import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
 const BADGE_LABELS: Record<string, { label: string; color: string }> = {
-  crown:   { label: '역대 최장출석 TOP5',  color: 'text-yellow-700' },
-  flame:   { label: '현재 연속출석 TOP3',  color: 'text-orange-600' },
-  diamond: { label: '역대 지식In TOP5',    color: 'text-purple-700' },
-  scholar: { label: '주간 지식In TOP3',    color: 'text-blue-600'   },
-  trophy:  { label: '주간 인기멤버 TOP3',  color: 'text-rose-600'   },
+  crown:    { label: '역대 최장출석 TOP5',  color: 'text-yellow-700' },
+  flame:    { label: '현재 연속출석 TOP3',  color: 'text-orange-600' },
+  diamond:  { label: '역대 지식In TOP5',    color: 'text-purple-700' },
+  scholar:  { label: '주간 지식In TOP3',    color: 'text-blue-600'   },
+  trophy:   { label: '주간 인기멤버 TOP3',  color: 'text-rose-600'   },
+  shield:   { label: '안정운영 30일',       color: 'text-emerald-600' },
+  zap_node: { label: '철벽노드 90일',       color: 'text-amber-600'   },
+  gem:      { label: '레전드노드 180일',    color: 'text-cyan-600'    },
+}
+
+const SVG_BADGES = new Set(['shield', 'zap_node', 'gem'])
+function badgeSrc(b: string) {
+  return `/badges/badge-${b}.${SVG_BADGES.has(b) ? 'svg' : 'png'}`
 }
 
 interface PremiumStatus {
@@ -539,7 +547,7 @@ export default function ProfileTab({ user, onPremiumChange, notifSince, onNaviga
             <div className="flex flex-wrap gap-4">
               {myBadges.map(b => (
                 <div key={b} className="flex flex-col items-center gap-1">
-                  <img src={`/badges/badge-${b}.png`} alt={b} className="w-12 h-12" />
+                  <img src={badgeSrc(b)} alt={b} className="w-12 h-12" />
                   <span className={`text-xs font-medium text-center ${BADGE_LABELS[b]?.color ?? 'text-muted-foreground'}`}>
                     {BADGE_LABELS[b]?.label ?? b}
                   </span>

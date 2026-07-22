@@ -62,6 +62,7 @@ export async function GET() {
     { data: adoptedPosts },
     { data: staffMembers },
     { data: masterProfile },
+    { data: uptimeNodes },
   ] = await Promise.all([
     // 주간 인기멤버 TOP3
     supabaseServer.from('weekly_rankings').select('pi_uid, rank').eq('week_start', weekStart).lte('rank', 3),
@@ -73,6 +74,8 @@ export async function GET() {
     supabaseServer.from('staff_members').select('pi_uid'),
     // 마스터 프로필
     supabaseServer.from('node_profiles').select('pi_uid').eq('nickname', 'doosanprince').maybeSingle(),
+    // 노드 업타임 (uptime_start 존재하는 노드)
+    supabaseServer.from('node_status').select('pi_uid, uptime_start').not('uptime_start', 'is', null),
   ])
 
   // 주간 인기멤버 TOP3 → badge-trophy
@@ -133,6 +136,16 @@ export async function GET() {
       if (scholarRank > 3) break
       addBadge(scholarSorted[i][0], 'scholar')
     }
+  }
+
+  // 업타임 마일스톤 뱃지: 30일=shield, 90일=zap_node, 180일=gem
+  const now = Date.now()
+  for (const node of uptimeNodes ?? []) {
+    if (!node.uptime_start) continue
+    const days = Math.floor((now - new Date(node.uptime_start).getTime()) / 86400000)
+    if (days >= 180) addBadge(node.pi_uid, 'gem')
+    if (days >= 90)  addBadge(node.pi_uid, 'zap_node')
+    if (days >= 30)  addBadge(node.pi_uid, 'shield')
   }
 
   const roleMap: Record<string, 'master' | 'staff'> = {}

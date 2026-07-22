@@ -95,9 +95,11 @@ function PremiumRequired({ onGoProfile }: { onGoProfile?: () => void }) {
   )
 }
 
+const SVG_BADGES = new Set(['shield', 'zap_node', 'gem'])
+
 function BadgeIcons({ badges }: { badges?: string[] }) {
   if (!badges?.length) return null
-  return <>{badges.map(b => <img key={b} src={`/badges/badge-${b}.png`} alt={b} className="w-4 h-4 shrink-0 inline" />)}</>
+  return <>{badges.map(b => <img key={b} src={`/badges/badge-${b}.${SVG_BADGES.has(b) ? 'svg' : 'png'}`} alt={b} className="w-4 h-4 shrink-0 inline" />)}</>
 }
 
 interface Props {

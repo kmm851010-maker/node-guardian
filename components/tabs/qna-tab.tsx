@@ -75,9 +75,11 @@ function formatTime(iso: string) {
   return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
+const SVG_BADGES = new Set(['shield', 'zap_node', 'gem'])
+
 function BadgeIcons({ badges }: { badges?: string[] }) {
   if (!badges?.length) return null
-  return <>{badges.map(b => <img key={b} src={`/badges/badge-${b}.png`} alt={b} className="w-4 h-4 shrink-0 inline" />)}</>
+  return <>{badges.map(b => <img key={b} src={`/badges/badge-${b}.${SVG_BADGES.has(b) ? 'svg' : 'png'}`} alt={b} className="w-4 h-4 shrink-0 inline" />)}</>
 }
 
 interface Props {

@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 import { RoleName } from '@/components/role-name'
 import ImageLightbox from '@/components/image-lightbox'
+import { useI18n } from '@/contexts/i18n-context'
 
 function LevelBadge({ level }: { level: number | null }) {
   if (!level) return null
@@ -91,15 +92,13 @@ interface Props {
   onPostOpened?: () => void
 }
 
-// 채택 확인 팝업
 function BestAnswerPopup({
-  nickname,
-  onConfirm,
-  onClose,
+  nickname, onConfirm, onClose, labels,
 }: {
   nickname: string
   onConfirm: (isResolved: boolean) => void
   onClose: () => void
+  labels: { confirm: string; bonus: string; resolved: string; yes: string; no: string }
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
@@ -107,23 +106,19 @@ function BestAnswerPopup({
       <div className="relative bg-white rounded-2xl shadow-xl p-6 w-72 space-y-4" onClick={e => e.stopPropagation()}>
         <div className="text-center space-y-2">
           <Award size={32} className="text-yellow-500 mx-auto" />
-          <p className="font-semibold text-sm">@{nickname}님을 채택하시겠습니까?</p>
-          <p className="text-xs text-muted-foreground">채택된 답변자는 랭킹 +5점 보너스를 받습니다.</p>
+          <p className="font-semibold text-sm">{labels.confirm}</p>
+          <p className="text-xs text-muted-foreground">{labels.bonus}</p>
         </div>
         <div className="border-t pt-4">
-          <p className="text-sm font-medium text-center mb-3">질문이 해결되었습니까?</p>
+          <p className="text-sm font-medium text-center mb-3">{labels.resolved}</p>
           <div className="flex gap-2">
-            <button
-              onClick={() => onConfirm(true)}
-              className="flex-1 py-2.5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition-colors"
-            >
-              ✅ 네
+            <button onClick={() => onConfirm(true)}
+              className="flex-1 py-2.5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition-colors">
+              {labels.yes}
             </button>
-            <button
-              onClick={() => onConfirm(false)}
-              className="flex-1 py-2.5 bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-300 transition-colors"
-            >
-              ❌ 아니오
+            <button onClick={() => onConfirm(false)}
+              className="flex-1 py-2.5 bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-300 transition-colors">
+              {labels.no}
             </button>
           </div>
         </div>
@@ -136,6 +131,7 @@ function BestAnswerPopup({
 }
 
 export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, openPostId, onPostOpened }: Props) {
+  const { t } = useI18n()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -306,8 +302,8 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
       const { data } = await res.json()
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, title: data.title, content: data.content } : p))
       setEditingPost(null)
-      toast.success('수정됐습니다.')
-    } else { toast.error('수정 실패') }
+      toast.success(t('community.edited'))
+    } else { toast.error(t('community.editFailed')) }
     setSavingEdit(false)
   }
 
@@ -318,16 +314,16 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
     if (res.ok) {
       setPosts(prev => prev.filter(p => p.id !== postId))
       if (expandedPost === postId) setExpandedPost(null)
-      toast.success('삭제됐습니다.')
-    } else { toast.error('삭제 실패') }
+      toast.success(t('community.deleted'))
+    } else { toast.error(t('community.deleteFailed')) }
     setIsDeleting(false)
     setDeletingPost(null)
   }
 
   const handleLike = async (e: React.MouseEvent, postId: string) => {
     e.stopPropagation()
-    if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
-    if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (!user) { toast.error(t('profile.loginRequired')); return }
+    if (!isPremium) { toast.error(t('community.premiumOnly')); return }
     if (likingPostId) return
     setLikingPostId(postId)
     const res = await fetch(`/api/posts/${postId}/like`, {
@@ -349,8 +345,8 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
 
   const handleCommentLike = async (e: React.MouseEvent, commentId: string, postId: string) => {
     e.stopPropagation()
-    if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
-    if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (!user) { toast.error(t('profile.loginRequired')); return }
+    if (!isPremium) { toast.error(t('community.premiumOnly')); return }
     if (likingCommentId) return
     setLikingCommentId(commentId)
     const res = await fetch(`/api/comments/${commentId}/like`, {
@@ -387,8 +383,8 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
         [postId]: (prev[postId] ?? []).map(c => c.id === commentId ? { ...c, content: data.content } : c),
       }))
       setEditingCommentId(null)
-      toast.success('댓글이 수정됐습니다.')
-    } else { toast.error('수정 실패') }
+      toast.success(t('community.commentEdited'))
+    } else { toast.error(t('community.editFailed')) }
     setSavingCommentEdit(false)
   }
 
@@ -405,8 +401,8 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
       }))
       const removed = 1 + (deletedReplies ?? 0)
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count - removed) } : p))
-      toast.success('댓글이 삭제됐습니다.')
-    } else { toast.error('삭제 실패') }
+      toast.success(t('community.commentDeleted'))
+    } else { toast.error(t('community.deleteFailed')) }
     setIsDeletingComment(false)
     setDeletingCommentId(null)
   }
@@ -429,17 +425,17 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
           ? { ...p, best_answer_comment_id: commentId, is_resolved: isResolved }
           : p
       ))
-      toast.success(isResolved ? '채택 완료! 질문이 해결됨으로 표시됩니다.' : '채택 완료!')
+      toast.success(isResolved ? t('qna.acceptedResolved') : t('qna.accepted'))
     } else {
       const d = await res.json()
-      toast.error(d.error ?? '채택 실패')
+      toast.error(d.error ?? t('qna.acceptFailed'))
     }
     setBestAnswerPending(null)
   }
 
   const handleComment = async (postId: string, inputKey: string) => {
-    if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
-    if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (!user) { toast.error(t('profile.loginRequired')); return }
+    if (!isPremium) { toast.error(t('community.premiumOnly')); return }
     const content = commentInput[inputKey]?.trim()
     if (!content) return
     setSubmittingComment(true)
@@ -462,9 +458,9 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
   }
 
   const handleSubmit = async () => {
-    if (!user) { toast.error('로그인 후 작성 가능합니다.'); return }
-    if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
-    if (!formTitle.trim() || !formContent.trim()) { toast.error('제목과 내용을 입력해주세요.'); return }
+    if (!user) { toast.error(t('community.loginToWrite')); return }
+    if (!isPremium) { toast.error(t('community.premiumOnly')); return }
+    if (!formTitle.trim() || !formContent.trim()) { toast.error(t('community.titleContentRequired')); return }
     setSubmitting(true)
     let image_url: string | null = null
     if (imageFile) {
@@ -474,7 +470,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
       const uploadRes = await fetch('/api/posts/image', { method: 'POST', body: fd })
       if (!uploadRes.ok) {
         const errData = await uploadRes.json().catch(() => ({}))
-        alert(`이미지 업로드 실패: ${errData.error ?? uploadRes.status}`)
+        alert(errData.error ?? uploadRes.status)
         setSubmitting(false)
         return
       }
@@ -494,9 +490,9 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
       setPosts(prev => [data, ...prev])
       setFormTitle(''); setFormContent(''); setShowForm(false)
       setImageFile(null); setImagePreview(null)
-      toast.success('질문이 등록됐습니다.')
+      toast.success(t('qna.questionPosted'))
     } else {
-      toast.error('등록 실패. 다시 시도해주세요.')
+      toast.error(t('qna.postFailed'))
     }
     setSubmitting(false)
   }
@@ -507,7 +503,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
     return true
   })
 
-  if (loading) return <div className="p-4 text-center text-muted-foreground">불러오는 중...</div>
+  if (loading) return <div className="p-4 text-center text-muted-foreground">{t('profile.loading')}</div>
 
   return (
     <div className="p-4 space-y-2">
@@ -520,6 +516,13 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
           nickname={bestAnswerPending.nickname}
           onConfirm={confirmBestAnswer}
           onClose={() => setBestAnswerPending(null)}
+          labels={{
+            confirm: t('qna.acceptConfirm', { name: bestAnswerPending.nickname }),
+            bonus: t('qna.acceptBonus'),
+            resolved: t('qna.resolvedQuestion'),
+            yes: t('qna.yes'),
+            no: t('qna.no'),
+          }}
         />
       )}
 
@@ -528,19 +531,19 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
         <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => !isDeletingComment && setDeletingCommentId(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative bg-white rounded-2xl p-6 w-72 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
-            <p className="font-semibold text-sm text-center">이 댓글을 삭제하시겠습니까?</p>
-            <p className="text-xs text-muted-foreground text-center">삭제 후 복구할 수 없습니다.</p>
+            <p className="font-semibold text-sm text-center">{t('community.deleteCommentConfirmMsg')}</p>
+            <p className="text-xs text-muted-foreground text-center">{t('community.deleteIrreversible')}</p>
             <div className="flex gap-2">
               <button onClick={() => setDeletingCommentId(null)} disabled={isDeletingComment}
-                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">취소</button>
+                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">{t('community.cancel')}</button>
               <button onClick={handleCommentDelete} disabled={isDeletingComment}
                 className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-70 flex items-center justify-center gap-2">
                 {isDeletingComment ? (
                   <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>삭제 중...</>
-                ) : '삭제'}
+                  </svg>{t('community.deleting')}</>
+                ) : t('community.delete')}
               </button>
             </div>
           </div>
@@ -552,19 +555,19 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => !isDeleting && setDeletingPost(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative bg-white rounded-2xl p-6 w-72 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
-            <p className="font-semibold text-sm text-center">이 질문을 삭제하시겠습니까?</p>
-            <p className="text-xs text-muted-foreground text-center">삭제 후 복구할 수 없습니다.</p>
+            <p className="font-semibold text-sm text-center">{t('qna.deleteQuestionConfirm')}</p>
+            <p className="text-xs text-muted-foreground text-center">{t('community.deleteIrreversible')}</p>
             <div className="flex gap-2">
               <button onClick={() => setDeletingPost(null)} disabled={isDeleting}
-                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">취소</button>
+                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">{t('community.cancel')}</button>
               <button onClick={() => handleDelete(deletingPost)} disabled={isDeleting}
                 className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-70 flex items-center justify-center gap-2">
                 {isDeleting ? (
                   <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>삭제 중...</>
-                ) : '삭제'}
+                  </svg>{t('community.deleting')}</>
+                ) : t('community.delete')}
               </button>
             </div>
           </div>
@@ -579,7 +582,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            placeholder="질문 검색..."
+            placeholder={t('qna.searchPlaceholder')}
             className="flex-1 text-sm outline-none bg-transparent"
           />
           {searchInput && (
@@ -588,7 +591,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
         </div>
         <button onClick={handleSearch}
           className="px-3 py-2 bg-violet-600 text-white rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors">
-          검색
+          {t('community.search')}
         </button>
       </div>
 
@@ -597,21 +600,21 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground flex-1">
-              <span className="font-semibold text-foreground">"{searchQuery}"</span> 검색 결과 {searchResults.length}건
+              {t('community.searchResults', { query: searchQuery, count: searchResults.length })}
             </span>
           </div>
           <div className="flex gap-1.5">
             {(['title', 'content', 'author'] as const).map(by => (
               <button key={by} onClick={() => handleSearchByChange(by)}
                 className={`text-xs px-3 py-1 rounded-full border transition-colors ${searchBy === by ? 'bg-violet-600 text-white border-violet-600' : 'text-muted-foreground hover:bg-muted'}`}>
-                {by === 'title' ? '제목' : by === 'content' ? '내용' : '작성자'}
+                {by === 'title' ? t('community.searchByTitle') : by === 'content' ? t('community.searchByContent') : t('community.searchByAuthor')}
               </button>
             ))}
           </div>
           {searchLoading ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">검색 중...</div>
+            <div className="text-center py-8 text-muted-foreground text-sm">{t('community.searching')}</div>
           ) : searchResults.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">검색 결과가 없습니다.</div>
+            <div className="text-center py-8 text-muted-foreground text-sm">{t('community.noSearchResults')}</div>
           ) : (
             searchResults.map(post => (
               <Card key={post.id} className="overflow-hidden cursor-pointer hover:bg-muted/30 transition-colors"
@@ -622,7 +625,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                       ? <CheckCircle size={13} className="text-green-500 shrink-0" />
                       : <Circle size={13} className="text-muted-foreground shrink-0" />}
                     <span className="text-sm font-semibold flex-1 line-clamp-2">{post.title}</span>
-                    {post.is_resolved && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full shrink-0">해결됨</span>}
+                    {post.is_resolved && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full shrink-0">{t('qna.resolved')}</span>}
                   </div>
                   <p className="text-xs text-muted-foreground truncate mb-1">{post.content}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -644,12 +647,12 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
       {!searchQuery && user && isPremium && !showForm && (
         <button onClick={() => setShowForm(true)}
           className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-blue-300 rounded-xl text-blue-600 text-sm font-medium hover:bg-blue-50 transition-colors">
-          <PenSquare size={16} /> 질문 작성
+          <PenSquare size={16} /> {t('qna.writeQuestion')}
         </button>
       )}
       {!searchQuery && user && !isPremium && (
         <div className="flex items-center justify-center gap-1.5 py-2 text-xs text-amber-600">
-          <Crown size={12} className="text-amber-500" /> 질문 작성은 프리미엄 전용입니다.
+          <Crown size={12} className="text-amber-500" /> {t('qna.premiumOnlyQuestion')}
         </div>
       )}
 
@@ -657,14 +660,14 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">새 질문</span>
+              <span className="text-sm font-semibold">{t('qna.newQuestion')}</span>
               <button onClick={() => { setShowForm(false); setImageFile(null); setImagePreview(null) }}><X size={16} className="text-muted-foreground" /></button>
             </div>
             <input type="text" value={formTitle} onChange={e => setFormTitle(e.target.value)}
-              placeholder="질문 제목" maxLength={150} className="w-full border rounded-lg px-3 py-2 text-sm" />
+              placeholder={t('qna.questionTitle')} maxLength={150} className="w-full border rounded-lg px-3 py-2 text-sm" />
             <div className="relative">
               <textarea value={formContent} onChange={e => setFormContent(e.target.value)}
-                placeholder="질문 내용을 자세히 입력해주세요..." rows={8} maxLength={10000}
+                placeholder={t('qna.questionContent')} rows={8} maxLength={10000}
                 className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
               <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">{formContent.length}/10,000</span>
             </div>
@@ -672,7 +675,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
                 onChange={e => {
                   const file = e.target.files?.[0]; if (!file) return
-                  if (file.size > 5 * 1024 * 1024) { alert('5MB 이하 이미지만 첨부 가능합니다.'); return }
+                  if (file.size > 5 * 1024 * 1024) { alert(t('community.imageTooLarge')); return }
                   setImageFile(file); setImagePreview(URL.createObjectURL(file))
                 }} />
               {imagePreview ? (
@@ -682,15 +685,15 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                 </div>
               ) : (
                 <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 text-xs text-muted-foreground border rounded-lg px-3 py-2 hover:bg-muted transition-colors">
-                  <ImagePlus size={14} /> 사진 첨부 (최대 5MB)
+                  <ImagePlus size={14} /> {t('community.imageAttach')}
                 </button>
               )}
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => { setShowForm(false); setImageFile(null); setImagePreview(null) }} className="px-4 py-2 text-sm text-muted-foreground">취소</button>
+              <button onClick={() => { setShowForm(false); setImageFile(null); setImagePreview(null) }} className="px-4 py-2 text-sm text-muted-foreground">{t('community.cancel')}</button>
               <button onClick={handleSubmit} disabled={submitting}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50 flex items-center gap-1.5">
-                {submitting ? <><Spinner />등록 중...</> : '등록'}
+                {submitting ? <><Spinner />{t('community.submitting')}</> : t('community.submit')}
               </button>
             </div>
           </CardContent>
@@ -701,7 +704,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
         {(['all', 'open', 'resolved'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`text-xs px-3 py-1 rounded-full border transition-colors ${filter === f ? 'bg-violet-600 text-white border-violet-600' : 'text-muted-foreground'}`}>
-            {f === 'all' ? '전체' : f === 'open' ? '미해결' : '해결됨'}
+            {f === 'all' ? t('qna.all') : f === 'open' ? t('qna.open') : t('qna.resolved')}
           </button>
         ))}
       </div>}
@@ -709,7 +712,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
       {!searchQuery && filtered.length === 0 && (
         <div className="text-center py-12 text-muted-foreground text-sm">
           <MessageCircle className="mx-auto mb-2 opacity-30" size={32} />
-          <p>질문이 없습니다.</p>
+          <p>{t('qna.noQuestions')}</p>
         </div>
       )}
 
@@ -725,7 +728,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                   ? <CheckCircle size={13} className="text-green-500 shrink-0" />
                   : <Circle size={13} className="text-muted-foreground shrink-0" />}
                 <span className="text-sm font-semibold flex-1 truncate">{post.title}</span>
-                {post.is_resolved && <Badge className="ml-auto bg-green-100 text-green-700 text-xs shrink-0">해결됨</Badge>}
+                {post.is_resolved && <Badge className="ml-auto bg-green-100 text-green-700 text-xs shrink-0">{t('qna.resolved')}</Badge>}
                 {isMyPost && !post.best_answer_comment_id && !isEditing && (
                   <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                     <button onClick={() => startEdit(post)} className="p-1 text-muted-foreground hover:text-violet-600"><Pencil size={12} /></button>
@@ -776,10 +779,10 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                       <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">{editContent.length}/10,000</span>
                     </div>
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => setEditingPost(null)} className="px-3 py-1.5 text-sm text-muted-foreground">취소</button>
+                      <button onClick={() => setEditingPost(null)} className="px-3 py-1.5 text-sm text-muted-foreground">{t('community.cancel')}</button>
                       <button onClick={() => handleEdit(post.id)} disabled={savingEdit}
                         className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50">
-                        {savingEdit ? '저장 중...' : '저장'}
+                        {savingEdit ? t('community.saving') : t('profile.save')}
                       </button>
                     </div>
                   </div>
@@ -815,7 +818,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                               </span>
                               {isBestAnswer && (
                                 <span className="flex items-center gap-0.5 text-xs bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
-                                  <Award size={10} /> 채택
+                                  <Award size={10} /> {t('qna.accept')}
                                 </span>
                               )}
                               <span className="text-xs text-muted-foreground">{formatTime(comment.created_at)}</span>
@@ -843,10 +846,10 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                                 <textarea value={editCommentContent} onChange={e => setEditCommentContent(e.target.value)}
                                   maxLength={2000} rows={3} className="w-full border rounded-lg px-2 py-1 text-xs resize-none" />
                                 <div className="flex justify-end gap-1.5">
-                                  <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">취소</button>
+                                  <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">{t('community.cancel')}</button>
                                   <button onClick={() => handleCommentEdit(comment.id, post.id)} disabled={savingCommentEdit}
                                     className="px-2 py-1 bg-violet-600 text-white rounded text-xs disabled:opacity-50">
-                                    {savingCommentEdit ? '저장 중...' : '저장'}
+                                    {savingCommentEdit ? t('community.saving') : t('profile.save')}
                                   </button>
                                 </div>
                               </div>
@@ -863,14 +866,14 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                                 onClick={() => handleBestAnswer(post.id, comment.id, comment.nickname)}
                                 className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-300 px-2 py-0.5 rounded-full whitespace-nowrap hover:bg-yellow-100 transition-colors"
                               >
-                                채택
+                                {t('qna.accept')}
                               </button>
                             )}
                             <button
                               onClick={() => setReplyTo(replyTo?.commentId === comment.id ? null : { postId: post.id, commentId: comment.id, nickname: comment.nickname })}
                               className="text-xs text-violet-500 whitespace-nowrap"
                             >
-                              답글
+                              {t('community.reply')}
                             </button>
                           </div>
                         </div>
@@ -916,10 +919,10 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                                   <textarea value={editCommentContent} onChange={e => setEditCommentContent(e.target.value)}
                                     maxLength={2000} rows={3} className="w-full border rounded-lg px-2 py-1 text-xs resize-none" />
                                   <div className="flex justify-end gap-1.5">
-                                    <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">취소</button>
+                                    <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">{t('community.cancel')}</button>
                                     <button onClick={() => handleCommentEdit(reply.id, post.id)} disabled={savingCommentEdit}
                                       className="px-2 py-1 bg-violet-600 text-white rounded text-xs disabled:opacity-50">
-                                      {savingCommentEdit ? '저장 중...' : '저장'}
+                                      {savingCommentEdit ? t('community.saving') : t('profile.save')}
                                     </button>
                                   </div>
                                 </div>
@@ -934,7 +937,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                                 onClick={() => handleBestAnswer(post.id, reply.id, reply.nickname)}
                                 className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-300 px-2 py-0.5 rounded-full whitespace-nowrap hover:bg-yellow-100 transition-colors mt-1"
                               >
-                                채택
+                                {t('qna.accept')}
                               </button>
                             )}
                           </div>
@@ -945,7 +948,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                             <textarea
                               value={commentInput[`r-${post.id}`] ?? ''}
                               onChange={e => setCommentInput(prev => ({ ...prev, [`r-${post.id}`]: e.target.value }))}
-                              placeholder={`@${replyTo.nickname}에게 답글...`}
+                              placeholder={t('community.replyTo', { name: replyTo.nickname })}
                               maxLength={2000}
                               rows={2}
                               className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
@@ -953,7 +956,7 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                             />
                             <button onClick={() => handleComment(post.id, `r-${post.id}`)}
                               disabled={submittingComment} className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
-                              {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                              {submittingComment ? <><Spinner />{t('community.submitting')}</> : t('community.submit')}
                             </button>
                           </div>
                         )}
@@ -967,20 +970,20 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
                         <textarea
                           value={commentInput[post.id] ?? ''}
                           onChange={e => setCommentInput(prev => ({ ...prev, [post.id]: e.target.value }))}
-                          placeholder="답변 입력..."
+                          placeholder={t('qna.answerPlaceholder')}
                           maxLength={2000} rows={2}
                           className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, post.id) } }}
                         />
                         <button onClick={() => handleComment(post.id, post.id)} disabled={submittingComment}
                           className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
-                          {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                          {submittingComment ? <><Spinner />{t('community.submitting')}</> : t('community.submit')}
                         </button>
                       </div>
                     ) : user ? (
                       <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
                         <Crown size={12} className="text-amber-500" />
-                        <span>답변 작성은 프리미엄 전용입니다.</span>
+                        <span>{t('qna.premiumOnlyAnswer')}</span>
                       </div>
                     ) : null
                   )}
@@ -992,8 +995,8 @@ export default function QnaTab({ user, isPremium, badgeMap = {}, roleMap = {}, o
       })}
 
       {!searchQuery && <div ref={sentinelRef} className="h-4" />}
-      {!searchQuery && loadingMore && <div className="text-center text-xs text-muted-foreground py-2">불러오는 중...</div>}
-      {!searchQuery && !hasMore && posts.length > 0 && <div className="text-center text-xs text-muted-foreground py-2">모든 게시글을 불러왔습니다.</div>}
+      {!searchQuery && loadingMore && <div className="text-center text-xs text-muted-foreground py-2">{t('profile.loading')}</div>}
+      {!searchQuery && !hasMore && posts.length > 0 && <div className="text-center text-xs text-muted-foreground py-2">{t('community.allLoaded')}</div>}
     </div>
   )
 }

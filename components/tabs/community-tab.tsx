@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import UserProfileModal from '@/components/user-profile-modal'
 import { RoleName } from '@/components/role-name'
 import ImageLightbox from '@/components/image-lightbox'
+import { useI18n } from '@/contexts/i18n-context'
 
 function LevelBadge({ level }: { level: number | null }) {
   if (!level) return null
@@ -55,26 +56,19 @@ interface Comment {
   created_at: string
 }
 
-const POST_TYPES = [
-  { value: 'general', label: '일반',  color: 'bg-gray-100 text-gray-700' },
-  { value: 'brag',    label: '자랑',  color: 'bg-yellow-100 text-yellow-700' },
-  { value: 'issue',   label: '이슈',  color: 'bg-red-100 text-red-700' },
-  { value: 'notice',  label: '📢 공지', color: 'bg-blue-100 text-blue-700' },
-]
-function typeColor(type: string) {
-  return POST_TYPES.find(t => t.value === type)?.color ?? 'bg-gray-100 text-gray-700'
+const POST_TYPE_COLORS: Record<string, string> = {
+  general: 'bg-gray-100 text-gray-700',
+  brag: 'bg-yellow-100 text-yellow-700',
+  issue: 'bg-red-100 text-red-700',
+  notice: 'bg-blue-100 text-blue-700',
 }
-function typeLabel(type: string) {
-  return POST_TYPES.find(t => t.value === type)?.label ?? type
+function typeColor(type: string) {
+  return POST_TYPE_COLORS[type] ?? 'bg-gray-100 text-gray-700'
 }
 function formatTime(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (diff < 3600) {
-    if (diff < 60) return `${diff}초 전`
-    const min = Math.floor(diff / 60)
-    const sec = diff % 60
-    return sec > 0 ? `${min}분 ${sec}초 전` : `${min}분 전`
-  }
+  if (diff < 60) return `${diff}s`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`
   const d = new Date(iso)
   return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
@@ -90,7 +84,7 @@ function PremiumRequired({ onGoProfile }: { onGoProfile?: () => void }) {
   return (
     <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
       <Crown size={13} className="text-amber-500" />
-      <span>프리미엄 전용 기능입니다.</span>
+      <span>{t('community.premiumOnly')}</span>
     </div>
   )
 }
@@ -112,6 +106,14 @@ interface Props {
 }
 
 export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap = {}, openPostId, onPostOpened }: Props) {
+  const { t } = useI18n()
+  const typeLabel = (type: string) => t(`community.${type}`) || type
+  const POST_TYPES = [
+    { value: 'general', label: typeLabel('general'), color: POST_TYPE_COLORS.general },
+    { value: 'brag',    label: typeLabel('brag'),    color: POST_TYPE_COLORS.brag },
+    { value: 'issue',   label: typeLabel('issue'),   color: POST_TYPE_COLORS.issue },
+    { value: 'notice',  label: typeLabel('notice'),  color: POST_TYPE_COLORS.notice },
+  ]
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [isStaff, setIsStaff] = useState(false)
@@ -304,8 +306,8 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
 
   const handleLike = async (e: React.MouseEvent, postId: string) => {
     e.stopPropagation()
-    if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
-    if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (!user) { toast.error(t('profile.loginRequired')); return }
+    if (!isPremium) { toast.error(t('community.premiumOnly')); return }
     if (likingPostId) return
     setLikingPostId(postId)
     const res = await fetch(`/api/posts/${postId}/like`, {
@@ -320,8 +322,8 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
 
   const handleCommentLike = async (e: React.MouseEvent, commentId: string, postId: string) => {
     e.stopPropagation()
-    if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
-    if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (!user) { toast.error(t('profile.loginRequired')); return }
+    if (!isPremium) { toast.error(t('community.premiumOnly')); return }
     if (likingCommentId) return
     setLikingCommentId(commentId)
     const res = await fetch(`/api/comments/${commentId}/like`, {
@@ -351,8 +353,8 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
         [postId]: (prev[postId] ?? []).map(c => c.id === commentId ? { ...c, content: data.content } : c),
       }))
       setEditingCommentId(null)
-      toast.success('댓글이 수정됐습니다.')
-    } else { toast.error('수정 실패') }
+      toast.success(t('community.commentEdited'))
+    } else { toast.error(t('community.editFailed')) }
     setSavingCommentEdit(false)
   }
 
@@ -369,15 +371,15 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
       }))
       const removed = 1 + (deletedReplies ?? 0)
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count - removed) } : p))
-      toast.success('댓글이 삭제됐습니다.')
-    } else { toast.error('삭제 실패') }
+      toast.success(t('community.commentDeleted'))
+    } else { toast.error(t('community.deleteFailed')) }
     setIsDeletingComment(false)
     setDeletingCommentId(null)
   }
 
   const handleComment = async (postId: string, inputKey: string) => {
-    if (!user) { toast.error('로그인 후 이용 가능합니다.'); return }
-    if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
+    if (!user) { toast.error(t('profile.loginRequired')); return }
+    if (!isPremium) { toast.error(t('community.premiumOnly')); return }
     const content = commentInput[inputKey]?.trim()
     if (!content) return
     setSubmittingComment(true)
@@ -399,9 +401,9 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
   }
 
   const handleSubmit = async () => {
-    if (!user) { toast.error('로그인 후 작성 가능합니다.'); return }
-    if (!isPremium) { toast.error('프리미엄 전용 기능입니다.'); return }
-    if (!title.trim() || !content.trim()) { toast.error('제목과 내용을 입력해주세요.'); return }
+    if (!user) { toast.error(t('community.loginToWrite')); return }
+    if (!isPremium) { toast.error(t('community.premiumOnly')); return }
+    if (!title.trim() || !content.trim()) { toast.error(t('community.titleContentRequired')); return }
     setSubmitting(true)
     let image_url: string | null = null
     if (imageFile) {
@@ -411,7 +413,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
       const uploadRes = await fetch('/api/posts/image', { method: 'POST', body: fd })
       if (!uploadRes.ok) {
         const errData = await uploadRes.json().catch(() => ({}))
-        alert(`이미지 업로드 실패: ${errData.error ?? uploadRes.status}`)
+        alert(errData.error ?? uploadRes.status)
         setSubmitting(false)
         return
       }
@@ -429,7 +431,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
       setImageFile(null); setImagePreview(null)
     } else {
       const errData = await res.json().catch(() => ({}))
-      alert(`등록 실패: ${errData.error ?? '다시 시도해주세요.'}`)
+      alert(errData.error ?? 'Error')
     }
     setSubmitting(false)
   }
@@ -453,8 +455,8 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
       const { data } = await res.json()
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, title: data.title, content: data.content } : p))
       setEditingPost(null)
-      toast.success('수정됐습니다.')
-    } else { toast.error('수정 실패') }
+      toast.success(t('community.edited'))
+    } else { toast.error(t('community.editFailed')) }
     setSavingEdit(false)
   }
 
@@ -465,13 +467,13 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
     if (res.ok) {
       setPosts(prev => prev.filter(p => p.id !== postId))
       if (expandedPost === postId) setExpandedPost(null)
-      toast.success('삭제됐습니다.')
-    } else { toast.error('삭제 실패') }
+      toast.success(t('community.deleted'))
+    } else { toast.error(t('community.deleteFailed')) }
     setIsDeleting(false)
     setDeletingPost(null)
   }
 
-  if (loading) return <div className="p-4 text-center text-muted-foreground">불러오는 중...</div>
+  if (loading) return <div className="p-4 text-center text-muted-foreground">{t('profile.loading')}</div>
 
   return (
     <div className="p-4 space-y-2">
@@ -522,7 +524,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                       }}
                       className={`text-xs px-2 py-1 rounded-full border transition-colors ${post.post_type === 'notice' ? 'border-blue-300 text-blue-600 bg-blue-50' : 'border-gray-300 text-gray-500 hover:border-blue-300 hover:text-blue-600'}`}
                     >
-                      {post.post_type === 'notice' ? '공지 해제' : '📢 공지'}
+                      {post.post_type === 'notice' ? t('community.unnotice') : t('community.notice')}
                     </button>
                   )}
                   {isMyPost && !isEditing && (
@@ -547,10 +549,10 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                       <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">{editContent.length}/10,000</span>
                     </div>
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => setEditingPost(null)} className="px-3 py-1.5 text-sm text-muted-foreground">취소</button>
+                      <button onClick={() => setEditingPost(null)} className="px-3 py-1.5 text-sm text-muted-foreground">{t('community.cancel')}</button>
                       <button onClick={() => handleEdit(post.id)} disabled={savingEdit}
                         className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50">
-                        {savingEdit ? '저장 중...' : '저장'}
+                        {savingEdit ? t('community.saving') : t('profile.save')}
                       </button>
                     </div>
                   </div>
@@ -600,10 +602,10 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                                   <textarea value={editCommentContent} onChange={e => setEditCommentContent(e.target.value)}
                                     maxLength={2000} rows={3} className="w-full border rounded-lg px-2 py-1 text-xs resize-none" />
                                   <div className="flex justify-end gap-1.5">
-                                    <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">취소</button>
+                                    <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">{t('community.cancel')}</button>
                                     <button onClick={() => handleCommentEdit(comment.id, post.id)} disabled={savingCommentEdit}
                                       className="px-2 py-1 bg-violet-600 text-white rounded text-xs disabled:opacity-50">
-                                      {savingCommentEdit ? '저장 중...' : '저장'}
+                                      {savingCommentEdit ? t('community.saving') : t('profile.save')}
                                     </button>
                                   </div>
                                 </div>
@@ -613,7 +615,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                             </div>
                             {isPremium && (
                               <button onClick={() => setReplyTo(replyTo?.commentId === comment.id ? null : { postId: post.id, commentId: comment.id, nickname: comment.nickname })}
-                                className="text-xs text-violet-500 mt-1 whitespace-nowrap">답글</button>
+                                className="text-xs text-violet-500 mt-1 whitespace-nowrap">{t('community.reply')}</button>
                             )}
                           </div>
                           {(comments[post.id] ?? []).filter(c => c.parent_id === comment.id).map(reply => (
@@ -649,10 +651,10 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                                     <textarea value={editCommentContent} onChange={e => setEditCommentContent(e.target.value)}
                                       maxLength={2000} rows={3} className="w-full border rounded-lg px-2 py-1 text-xs resize-none" />
                                     <div className="flex justify-end gap-1.5">
-                                      <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">취소</button>
+                                      <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-xs text-muted-foreground">{t('community.cancel')}</button>
                                       <button onClick={() => handleCommentEdit(reply.id, post.id)} disabled={savingCommentEdit}
                                         className="px-2 py-1 bg-violet-600 text-white rounded text-xs disabled:opacity-50">
-                                        {savingCommentEdit ? '저장 중...' : '저장'}
+                                        {savingCommentEdit ? t('community.saving') : t('profile.save')}
                                       </button>
                                     </div>
                                   </div>
@@ -667,7 +669,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                                       ? null
                                       : { postId: post.id, commentId: comment.id, nickname: reply.display_name ?? reply.nickname }
                                   )}
-                                  className="text-xs text-violet-500 mt-1 whitespace-nowrap">답글</button>
+                                  className="text-xs text-violet-500 mt-1 whitespace-nowrap">{t('community.reply')}</button>
                               )}
                             </div>
                           ))}
@@ -675,12 +677,12 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                             <div className="ml-4 flex gap-1.5">
                               <textarea value={commentInput[`r-${post.id}`] ?? ''}
                                 onChange={e => setCommentInput(prev => ({ ...prev, [`r-${post.id}`]: e.target.value }))}
-                                placeholder={`@${replyTo.nickname}에게 답글...`} maxLength={2000} rows={2}
+                                placeholder={t('community.replyTo', { name: replyTo.nickname })} maxLength={2000} rows={2}
                                 className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
                                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, `r-${post.id}`) } }} />
                               <button onClick={() => handleComment(post.id, `r-${post.id}`)} disabled={submittingComment}
                                 className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
-                                {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                                {submittingComment ? <><Spinner />{t('community.submitting')}</> : t('community.submit')}
                               </button>
                             </div>
                           )}
@@ -692,12 +694,12 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                         <div className="flex gap-1.5">
                           <textarea value={commentInput[post.id] ?? ''}
                             onChange={e => setCommentInput(prev => ({ ...prev, [post.id]: e.target.value }))}
-                            placeholder="댓글 입력..." maxLength={2000} rows={2}
+                            placeholder={t('community.commentPlaceholder')} maxLength={2000} rows={2}
                             className="flex-1 border rounded-lg px-2.5 py-1 text-xs resize-none"
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleComment(post.id, post.id) } }} />
                           <button onClick={() => handleComment(post.id, post.id)} disabled={submittingComment}
                             className="px-2.5 py-1 bg-violet-600 text-white rounded-lg text-xs disabled:opacity-50 self-end flex items-center gap-1">
-                            {submittingComment ? <><Spinner />등록 중</> : '등록'}
+                            {submittingComment ? <><Spinner />{t('community.submitting')}</> : t('community.submit')}
                           </button>
                         </div>
                       ) : (
@@ -718,7 +720,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                   <span className="text-sm font-medium">{post.likes}</span>
                 </button>
                 {!isPremium && user && (
-                  <span className="ml-2 text-xs text-amber-500 flex items-center gap-0.5"><Crown size={10} /> 프리미엄</span>
+                  <span className="ml-2 text-xs text-amber-500 flex items-center gap-0.5"><Crown size={10} /> {t('profile.premium')}</span>
                 )}
               </div>
             </div>
@@ -734,7 +736,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            placeholder="게시글 검색..."
+            placeholder={t('community.searchPlaceholder')}
             className="flex-1 text-sm outline-none bg-transparent"
           />
           {searchInput && (
@@ -743,7 +745,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
         </div>
         <button onClick={handleSearch}
           className="px-3 py-2 bg-violet-600 text-white rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors">
-          검색
+          {t('community.search')}
         </button>
       </div>
 
@@ -752,7 +754,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground flex-1">
-              <span className="font-semibold text-foreground">"{searchQuery}"</span> 검색 결과 {searchResults.length}건
+              {t('community.searchResults', { query: searchQuery, count: searchResults.length })}
             </span>
           </div>
           {/* 서브탭 */}
@@ -760,14 +762,14 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
             {(['title', 'content', 'author'] as const).map(by => (
               <button key={by} onClick={() => handleSearchByChange(by)}
                 className={`text-xs px-3 py-1 rounded-full border transition-colors ${searchBy === by ? 'bg-violet-600 text-white border-violet-600' : 'text-muted-foreground hover:bg-muted'}`}>
-                {by === 'title' ? '제목' : by === 'content' ? '내용' : '작성자'}
+                {by === 'title' ? t('community.searchByTitle') : by === 'content' ? t('community.searchByContent') : t('community.searchByAuthor')}
               </button>
             ))}
           </div>
           {searchLoading ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">검색 중...</div>
+            <div className="text-center py-8 text-muted-foreground text-sm">{t('community.searching')}</div>
           ) : searchResults.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">검색 결과가 없습니다.</div>
+            <div className="text-center py-8 text-muted-foreground text-sm">{t('community.noSearchResults')}</div>
           ) : (
             searchResults.map(post => (
               <div key={post.id} onClick={() => openPost(post.id)}
@@ -798,7 +800,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
       {!searchQuery && piNews.length > 0 && (
         <div className="rounded-xl border border-violet-200 bg-violet-50 overflow-hidden">
           <div className="px-3 py-2 bg-violet-100 flex items-center gap-1.5">
-            <span className="text-xs font-bold text-violet-700">📢 Pi Core Team 공지 · 뉴스</span>
+            <span className="text-xs font-bold text-violet-700">📢 {t('community.piNews')}</span>
             <span className="text-xs text-violet-400 ml-auto">minepi.com/blog</span>
           </div>
           <ul className="divide-y divide-violet-100">
@@ -824,19 +826,19 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => !isDeleting && setDeletingPost(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative bg-white rounded-2xl p-6 w-72 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
-            <p className="font-semibold text-sm text-center">이 게시글을 삭제하시겠습니까?</p>
-            <p className="text-xs text-muted-foreground text-center">삭제 후 복구할 수 없습니다.</p>
+            <p className="font-semibold text-sm text-center">{t('community.deletePostConfirm')}</p>
+            <p className="text-xs text-muted-foreground text-center">{t('community.deleteIrreversible')}</p>
             <div className="flex gap-2">
               <button onClick={() => setDeletingPost(null)} disabled={isDeleting}
-                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">취소</button>
+                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">{t('community.cancel')}</button>
               <button onClick={() => handleDelete(deletingPost)} disabled={isDeleting}
                 className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-70 flex items-center justify-center gap-2">
                 {isDeleting ? (
                   <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>삭제 중...</>
-                ) : '삭제'}
+                  </svg>{t('community.deleting')}</>
+                ) : t('community.delete')}
               </button>
             </div>
           </div>
@@ -848,19 +850,19 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
         <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => !isDeletingComment && setDeletingCommentId(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative bg-white rounded-2xl p-6 w-72 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
-            <p className="font-semibold text-sm text-center">이 댓글을 삭제하시겠습니까?</p>
-            <p className="text-xs text-muted-foreground text-center">삭제 후 복구할 수 없습니다.</p>
+            <p className="font-semibold text-sm text-center">{t('community.deleteCommentConfirmMsg')}</p>
+            <p className="text-xs text-muted-foreground text-center">{t('community.deleteIrreversible')}</p>
             <div className="flex gap-2">
               <button onClick={() => setDeletingCommentId(null)} disabled={isDeletingComment}
-                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">취소</button>
+                className="flex-1 py-2.5 bg-muted rounded-xl text-sm disabled:opacity-40">{t('community.cancel')}</button>
               <button onClick={handleCommentDelete} disabled={isDeletingComment}
                 className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-70 flex items-center justify-center gap-2">
                 {isDeletingComment ? (
                   <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>삭제 중...</>
-                ) : '삭제'}
+                  </svg>{t('community.deleting')}</>
+                ) : t('community.delete')}
               </button>
             </div>
           </div>
@@ -871,7 +873,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
       {!searchQuery && notices.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-            📢 공지사항
+            📢 {t('community.notices')}
           </p>
           {notices.map(post => (
             <button
@@ -890,7 +892,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
       {!searchQuery && top3.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-            🏆 이번 주 인기 글
+            🏆 {t('community.weeklyTop')}
           </p>
           {top3.map((post, i) => (
             <button
@@ -914,11 +916,11 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
         <div className="flex border rounded-lg overflow-hidden">
           <button onClick={() => setViewMode('list')}
             className={`px-2.5 py-1.5 flex items-center gap-1 text-xs transition-colors ${viewMode === 'list' ? 'bg-violet-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}>
-            <LayoutList size={14} /> 목록
+            <LayoutList size={14} /> {t('community.listView')}
           </button>
           <button onClick={() => setViewMode('card')}
             className={`px-2.5 py-1.5 flex items-center gap-1 text-xs transition-colors ${viewMode === 'card' ? 'bg-violet-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}>
-            <LayoutGrid size={14} /> 카드
+            <LayoutGrid size={14} /> {t('community.cardView')}
           </button>
         </div>
 
@@ -926,13 +928,13 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
         {user && isPremium && !showForm && (
           <button onClick={() => setShowForm(true)}
             className="flex items-center gap-1.5 py-1.5 px-3 border-2 border-dashed border-violet-300 rounded-lg text-violet-600 text-xs font-medium hover:bg-violet-50 transition-colors ml-auto">
-            <PenSquare size={14} /> 글쓰기
+            <PenSquare size={14} /> {t('community.write')}
           </button>
         )}
         {user && !isPremium && (
           <div className="ml-auto flex items-center gap-1 text-xs text-amber-600">
             <Crown size={12} className="text-amber-500" />
-            <span>글쓰기는 프리미엄 전용</span>
+            <span>{t('community.premiumOnlyWrite')}</span>
           </div>
         )}
       </div>}
@@ -942,7 +944,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">새 게시글</span>
+              <span className="text-sm font-semibold">{t('community.newPost')}</span>
               <button onClick={() => setShowForm(false)}><X size={16} className="text-muted-foreground" /></button>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -953,20 +955,20 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                 </button>
               ))}
             </div>
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="제목" maxLength={150} className="w-full border rounded-lg px-3 py-2 text-sm" />
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={t('community.title')} maxLength={150} className="w-full border rounded-lg px-3 py-2 text-sm" />
             <div className="relative">
-              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="내용을 입력하세요..." rows={8} maxLength={10000} className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
+              <textarea value={content} onChange={e => setContent(e.target.value)} placeholder={t('community.contentPlaceholder')} rows={8} maxLength={10000} className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
               <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">{content.length}/10,000</span>
             </div>
             <div>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
                 onChange={e => {
                   const file = e.target.files?.[0]; if (!file) return
-                  if (file.size > 5 * 1024 * 1024) { alert('5MB 이하 이미지만 첨부 가능합니다.'); return }
+                  if (file.size > 5 * 1024 * 1024) { alert(t('community.imageTooLarge')); return }
                   try {
                     setImageFile(file); setImagePreview(URL.createObjectURL(file))
                   } catch (err) {
-                    alert(`이미지 미리보기 오류: ${String(err)}`)
+                    alert(String(err))
                   }
                 }} />
               {imagePreview ? (
@@ -976,14 +978,14 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                 </div>
               ) : (
                 <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 text-xs text-muted-foreground border rounded-lg px-3 py-2 hover:bg-muted transition-colors">
-                  <ImagePlus size={14} /> 사진 첨부 (최대 5MB)
+                  <ImagePlus size={14} /> {t('community.imageAttach')}
                 </button>
               )}
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-muted-foreground">취소</button>
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-muted-foreground">{t('community.cancel')}</button>
               <button onClick={handleSubmit} disabled={submitting} className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50">
-                {submitting ? '등록 중...' : '등록'}
+                {submitting ? t('community.submitting') : t('community.submit')}
               </button>
             </div>
           </CardContent>
@@ -992,7 +994,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
 
       {posts.length === 0 && !showForm && (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          <p>아직 게시글이 없습니다.</p>
+          <p>{t('community.noPosts')}</p>
         </div>
       )}
 
@@ -1001,11 +1003,11 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
         <div className="border rounded-xl overflow-hidden divide-y">
           {/* 헤더 */}
           <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 text-xs text-muted-foreground font-medium">
-            <span className="w-10 shrink-0">분류</span>
-            <span className="flex-1">제목</span>
-            <span className="w-14 text-right shrink-0">작성자</span>
-            <span className="w-10 text-right shrink-0">날짜</span>
-            <span className="w-12 text-right shrink-0 hidden sm:block">조회</span>
+            <span className="w-10 shrink-0">{t('community.category')}</span>
+            <span className="flex-1">{t('community.title')}</span>
+            <span className="w-14 text-right shrink-0">{t('community.author')}</span>
+            <span className="w-10 text-right shrink-0">{t('community.date')}</span>
+            <span className="w-12 text-right shrink-0 hidden sm:block">{t('community.views')}</span>
           </div>
           {posts.map(post => (
             <div key={post.id} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/30 cursor-pointer transition-colors"
@@ -1082,7 +1084,7 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
                 <span className="text-sm font-medium">{post.likes}</span>
               </button>
               {!isPremium && user && (
-                <span className="ml-2 text-xs text-amber-500 flex items-center gap-0.5"><Crown size={10} /> 프리미엄</span>
+                <span className="ml-2 text-xs text-amber-500 flex items-center gap-0.5"><Crown size={10} /> {t('profile.premium')}</span>
               )}
             </div>
 
@@ -1092,8 +1094,8 @@ export default function CommunityTab({ user, isPremium, badgeMap = {}, roleMap =
 
 
       {!searchQuery && <div ref={sentinelRef} className="h-4" />}
-      {!searchQuery && loadingMore && <div className="text-center text-xs text-muted-foreground py-2">불러오는 중...</div>}
-      {!searchQuery && !hasMore && posts.length > 0 && <div className="text-center text-xs text-muted-foreground py-2">모든 게시글을 불러왔습니다.</div>}
+      {!searchQuery && loadingMore && <div className="text-center text-xs text-muted-foreground py-2">{t('profile.loading')}</div>}
+      {!searchQuery && !hasMore && posts.length > 0 && <div className="text-center text-xs text-muted-foreground py-2">{t('community.allLoaded')}</div>}
     </div>
   )
 }

@@ -5,16 +5,36 @@ import { supabaseServer } from '@/lib/supabase-server'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { sendPushToUser } from '@/lib/webpush'
 import { sendExpoToUser } from '@/lib/expopush'
+import { st, getUserLocale, ServerLocale } from '@/lib/i18n/server'
 
-const OFFLINE_THRESHOLD_MS = 15 * 60 * 1000   // 15분 이상 신호 없으면 오프라인
-const REPEAT_INTERVAL_MS   = 60 * 60 * 1000   // 오프라인 지속 시 1시간마다 재알림
+const OFFLINE_THRESHOLD_MS = 15 * 60 * 1000
+const REPEAT_INTERVAL_MS   = 60 * 60 * 1000
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string, locale: ServerLocale) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (diff < 60) return `${diff}초 전`
-  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`
-  return `${Math.floor(diff / 86400)}일 전`
+  if (locale === 'ko') {
+    if (diff < 60) return `${diff}초 전`
+    if (diff < 3600) return `${Math.floor(diff / 60)}분 전`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`
+    return `${Math.floor(diff / 86400)}일 전`
+  }
+  if (locale === 'zh-TW') {
+    if (diff < 60) return `${diff}秒前`
+    if (diff < 3600) return `${Math.floor(diff / 60)}分前`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}小時前`
+    return `${Math.floor(diff / 86400)}天前`
+  }
+  if (locale === 'vi') {
+    if (diff < 60) return `${diff} giây trước`
+    if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`
+    return `${Math.floor(diff / 86400)} ngày trước`
+  }
+  // en
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
 }
 
 export async function GET(req: NextRequest) {
@@ -30,7 +50,6 @@ export async function GET(req: NextRequest) {
     supabaseServer.from('expo_push_tokens').select('pi_uid'),
   ])
 
-  // 두 테이블의 pi_uid 합집합
   const piUidSet = new Set<string>()
   const chatIdMap: Record<string, string> = {}
   for (const s of telegramSubs ?? []) { piUidSet.add(s.pi_uid); chatIdMap[s.pi_uid] = s.chat_id }
@@ -39,6 +58,17 @@ export async function GET(req: NextRequest) {
   const subs = Array.from(piUidSet).map(pi_uid => ({ pi_uid, chat_id: chatIdMap[pi_uid] ?? null }))
 
   if (subs.length === 0) return NextResponse.json({ ok: true, checked: 0 })
+
+  // Fetch user locales
+  const allPiUids = subs.map(s => s.pi_uid)
+  const { data: profiles } = await supabaseServer
+    .from('node_profiles')
+    .select('nickname, locale')
+    .in('nickname', allPiUids)
+  const localeMap: Record<string, ServerLocale> = {}
+  for (const p of profiles ?? []) {
+    localeMap[p.nickname] = getUserLocale(p.locale)
+  }
 
   const now = Date.now()
   const offlineThreshold = new Date(now - OFFLINE_THRESHOLD_MS).toISOString()
@@ -50,17 +80,19 @@ export async function GET(req: NextRequest) {
   const BATCH_DELAY_MS = 200
 
   const processSub = async (sub: { pi_uid: string; chat_id: string | null }) => {
+    const locale = localeMap[sub.pi_uid] ?? 'ko'
+
     const { data: status } = await supabaseServer
       .from('node_status')
       .select('last_seen')
       .eq('pi_uid', sub.pi_uid)
       .maybeSingle()
 
-    if (!status) return  // 노드 가디언 미설치 유저 → 스킵
+    if (!status) return
 
     const isOffline = status.last_seen < offlineThreshold
+    const lastSeen = timeAgo(status.last_seen, locale)
 
-    // 가장 최근 node_offline 이벤트
     const { data: lastOfflineEvent } = await supabaseServer
       .from('node_events')
       .select('id, created_at')
@@ -72,86 +104,63 @@ export async function GET(req: NextRequest) {
 
     if (isOffline) {
       if (!lastOfflineEvent) {
-        // 최초 오프라인 감지
         await supabaseServer.from('node_events').insert({
-          pi_uid: sub.pi_uid,
-          event_type: 'node_offline',
-          severity: 'critical',
-          message: `노드 가디언 응답 없음 — PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`,
+          pi_uid: sub.pi_uid, event_type: 'node_offline', severity: 'critical',
+          message: st('node.offline.event', locale, { lastSeen }),
         })
         await Promise.allSettled([
-          sub.chat_id ? sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
-          sendPushToUser(sub.pi_uid, 'critical', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
-          sendExpoToUser(sub.pi_uid, 'node_offline', `🔴 [@${sub.pi_uid}] 응답 없음`, `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
+          sub.chat_id ? sendTelegramMessage(sub.chat_id, st('node.offline.telegram', locale, { lastSeen })) : Promise.resolve(),
+          sendPushToUser(sub.pi_uid, 'critical', st('node.offline.body', locale, { lastSeen })),
+          sendExpoToUser(sub.pi_uid, 'node_offline', st('push.offline.title', locale, { nickname: sub.pi_uid }), st('node.offline.body', locale, { lastSeen })),
         ])
         offlineAlerts++
       } else {
-        // 이전 node_offline 이후 node_online이 없으면 아직 오프라인 → 재알림 체크
         const { data: recoveredEvent } = await supabaseServer
-          .from('node_events')
-          .select('id')
-          .eq('pi_uid', sub.pi_uid)
-          .eq('event_type', 'node_online')
-          .gt('created_at', lastOfflineEvent.created_at)
-          .limit(1)
-          .maybeSingle()
+          .from('node_events').select('id').eq('pi_uid', sub.pi_uid).eq('event_type', 'node_online')
+          .gt('created_at', lastOfflineEvent.created_at).limit(1).maybeSingle()
 
         if (!recoveredEvent) {
-          // 아직 오프라인 중 — 1시간마다 재알림
           const lastAlertAge = now - new Date(lastOfflineEvent.created_at).getTime()
           if (lastAlertAge >= REPEAT_INTERVAL_MS) {
             await supabaseServer.from('node_events').insert({
-              pi_uid: sub.pi_uid,
-              event_type: 'node_offline',
-              severity: 'critical',
-              message: `노드 가디언 응답 없음 — ${timeAgo(status.last_seen)}째 미복구 중`,
+              pi_uid: sub.pi_uid, event_type: 'node_offline', severity: 'critical',
+              message: st('node.offline.repeat.event', locale, { lastSeen }),
             })
             await Promise.allSettled([
-              sub.chat_id ? sendTelegramMessage(sub.chat_id, `🔴 <b>[재알림] 노드 가디언 응답 없음</b>\n\n마지막 신호: ${timeAgo(status.last_seen)}\n⚠️ 아직 복구되지 않았습니다.\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
-              sendPushToUser(sub.pi_uid, 'critical', `[재알림] 마지막 신호: ${timeAgo(status.last_seen)} — 아직 복구되지 않았습니다.`),
-              sendExpoToUser(sub.pi_uid, 'node_offline', `🔴 [@${sub.pi_uid}] 재알림`, `마지막 신호: ${timeAgo(status.last_seen)} — 아직 복구되지 않았습니다.`),
+              sub.chat_id ? sendTelegramMessage(sub.chat_id, st('node.offline.repeat.telegram', locale, { lastSeen })) : Promise.resolve(),
+              sendPushToUser(sub.pi_uid, 'critical', st('node.offline.repeat.body', locale, { lastSeen })),
+              sendExpoToUser(sub.pi_uid, 'node_offline', st('push.offline.repeat.title', locale, { nickname: sub.pi_uid }), st('node.offline.repeat.body', locale, { lastSeen })),
             ])
             offlineAlerts++
           }
         } else {
-          // 이전 offline → online 복구 이후 다시 오프라인 → 새 알림
           await supabaseServer.from('node_events').insert({
-            pi_uid: sub.pi_uid,
-            event_type: 'node_offline',
-            severity: 'critical',
-            message: `노드 가디언 응답 없음 — PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`,
+            pi_uid: sub.pi_uid, event_type: 'node_offline', severity: 'critical',
+            message: st('node.offline.event', locale, { lastSeen }),
           })
           await Promise.allSettled([
-            sub.chat_id ? sendTelegramMessage(sub.chat_id, `🔴 <b>노드 가디언 응답 없음</b>\n\nPC가 꺼졌거나 앱이 종료된 것 같습니다.\n⏱ 마지막 신호: ${timeAgo(status.last_seen)}\n\n당신의 노드가 멈춰있어요. 얼른 토끼굴로 복귀하세요!\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
-            sendPushToUser(sub.pi_uid, 'critical', `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
-            sendExpoToUser(sub.pi_uid, 'node_offline', `🔴 [@${sub.pi_uid}] 응답 없음`, `PC가 꺼졌거나 앱이 종료된 것 같습니다. (마지막 신호: ${timeAgo(status.last_seen)})`),
+            sub.chat_id ? sendTelegramMessage(sub.chat_id, st('node.offline.telegram', locale, { lastSeen })) : Promise.resolve(),
+            sendPushToUser(sub.pi_uid, 'critical', st('node.offline.body', locale, { lastSeen })),
+            sendExpoToUser(sub.pi_uid, 'node_offline', st('push.offline.title', locale, { nickname: sub.pi_uid }), st('node.offline.body', locale, { lastSeen })),
           ])
           offlineAlerts++
         }
       }
     } else {
-      // 온라인 — 직전에 오프라인이었다면 복구 알림
       if (lastOfflineEvent) {
         const { data: recoveredEvent } = await supabaseServer
-          .from('node_events')
-          .select('id')
-          .eq('pi_uid', sub.pi_uid)
-          .eq('event_type', 'node_online')
-          .gt('created_at', lastOfflineEvent.created_at)
-          .limit(1)
-          .maybeSingle()
+          .from('node_events').select('id').eq('pi_uid', sub.pi_uid).eq('event_type', 'node_online')
+          .gt('created_at', lastOfflineEvent.created_at).limit(1).maybeSingle()
 
         if (!recoveredEvent) {
           await supabaseServer.from('node_events').insert({
-            pi_uid: sub.pi_uid,
-            event_type: 'node_online',
-            severity: 'recovery',
-            message: '노드 가디언 재접속 — 정상 모니터링이 재개됐습니다.',
+            pi_uid: sub.pi_uid, event_type: 'node_online', severity: 'recovery',
+            message: st('node.online.event', locale),
           })
           await Promise.allSettled([
-            sub.chat_id ? sendTelegramMessage(sub.chat_id, `✅ <b>노드 가디언 재접속</b>\n\n정상 모니터링이 재개됐습니다.\n\n다음 중단은 막을 수 있습니다.\n운영자들의 노하우가 커뮤니티에 쌓이고 있어요.\n👉 <a href="https://linkpi.io">linkpi.io</a>`) : Promise.resolve(),
-            sendPushToUser(sub.pi_uid, 'recovery', '노드 가디언 재접속 — 정상 모니터링이 재개됐습니다.'),
-            sendExpoToUser(sub.pi_uid, 'node_online', `✅ [@${sub.pi_uid}] 재접속`, '정상 모니터링이 재개됐습니다.'),
+            sub.chat_id ? sendTelegramMessage(sub.chat_id, st('node.online.telegram', locale)) : Promise.resolve(),
+            sendPushToUser(sub.pi_uid, 'recovery', st('node.online.body', locale)),
+            sendExpoToUser(sub.pi_uid, 'node_online', st('push.online.title', locale, { nickname: sub.pi_uid }), st('node.online.body', locale)),
           ])
           recoveryAlerts++
         }

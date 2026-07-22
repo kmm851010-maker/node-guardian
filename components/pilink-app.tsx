@@ -221,7 +221,10 @@ export default function PiLinkApp() {
                 {LOCALES.map(l => (
                   <button
                     key={l.code}
-                    onClick={() => { setLocale(l.code); setShowLangMenu(false) }}
+                    onClick={() => {
+                      setLocale(l.code); setShowLangMenu(false)
+                      if (user) fetch('/api/locale', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pi_uid: user.uid, locale: l.code }) }).catch(() => {})
+                    }}
                     className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors ${locale === l.code ? 'text-violet-600 font-semibold' : ''}`}
                   >
                     {l.label}

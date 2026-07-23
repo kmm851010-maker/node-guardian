@@ -50,35 +50,6 @@ async function run() {
       .insert(inserts.slice(i, i + 100))
   }
 
-  // Also add to attendance table for XP totals (separate from manual check-in)
-  const attendanceInserts = toGrant.map(pi_uid => ({
-    pi_uid,
-    checked_date: yesterday,
-    xp_earned: UPTIME_XP,
-  }))
-
-  // Use upsert: if user already checked in manually, add uptime XP to existing row
-  for (const row of attendanceInserts) {
-    const { data: existingAtt } = await supabaseServer
-      .from('attendance')
-      .select('xp_earned')
-      .eq('pi_uid', row.pi_uid)
-      .eq('checked_date', row.checked_date)
-      .maybeSingle()
-
-    if (existingAtt) {
-      await supabaseServer
-        .from('attendance')
-        .update({ xp_earned: existingAtt.xp_earned + UPTIME_XP })
-        .eq('pi_uid', row.pi_uid)
-        .eq('checked_date', row.checked_date)
-    } else {
-      await supabaseServer
-        .from('attendance')
-        .insert(row)
-    }
-  }
-
   return { granted: toGrant.length, skipped: alreadyGranted.size }
 }
 

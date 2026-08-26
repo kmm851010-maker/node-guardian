@@ -20,17 +20,15 @@ export async function POST(req: NextRequest) {
   const trimmed = String(text).slice(0, 5000)
 
   try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(trimmed)}`
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmed)}&langpair=auto|${encodeURIComponent(tl)}`
     const res = await fetch(url)
     if (!res.ok) return NextResponse.json({ error: 'Translation service error' }, { status: 502 })
 
     const data = await res.json()
-    // Response format: [[["translated text","original text",null,null,x],...],null,"detected_lang"]
-    const translated = (data[0] as any[])
-      .map((segment: any) => segment[0])
-      .join('')
+    const translated = data?.responseData?.translatedText
+    if (!translated) return NextResponse.json({ error: 'No translation result' }, { status: 502 })
 
-    return NextResponse.json({ translated, detectedLang: data[2] ?? 'unknown' })
+    return NextResponse.json({ translated, detectedLang: 'auto' })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }

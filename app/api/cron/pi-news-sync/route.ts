@@ -5,11 +5,11 @@ import { supabaseServer } from '@/lib/supabase-server'
 
 async function translateToKo(text: string): Promise<string> {
   try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=${encodeURIComponent(text)}`
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ko`
     const res = await fetch(url)
     const json = await res.json()
-    const translated = (json[0] as [string, string][]).map(seg => seg[0]).join('')
-    return translated || text
+    const translated = json?.responseData?.translatedText
+    return (translated && translated !== text) ? translated : text
   } catch {
     return text
   }

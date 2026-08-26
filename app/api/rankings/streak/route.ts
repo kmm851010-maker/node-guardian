@@ -71,6 +71,7 @@ export async function GET() {
     .from('attendance')
     .select('pi_uid, checked_date')
     .order('checked_date', { ascending: true })
+    .limit(500000)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

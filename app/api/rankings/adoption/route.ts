@@ -9,6 +9,7 @@ export async function GET() {
     .from('pilink_posts')
     .select('best_answer_comment_id')
     .not('best_answer_comment_id', 'is', null)
+    .limit(50000)
 
   if (postsError) return NextResponse.json({ error: postsError.message }, { status: 500 })
 

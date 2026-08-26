@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
     .from('node_status')
     .select('pi_uid, nickname, uptime_7d, uptime_30d, uptime_start')
     .not('uptime_7d', 'is', null)
+    .limit(50000)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

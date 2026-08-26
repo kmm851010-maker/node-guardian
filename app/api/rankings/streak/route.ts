@@ -110,5 +110,10 @@ export async function GET() {
     x => x.max, 10
   )
 
-  return NextResponse.json({ currentRanking, maxRanking })
+  // debug
+  const debugUid = '144f74e0-0c65-4328-94b0-330325b46b73'
+  const debugDates = byUid[debugUid] ?? []
+  const debugInfo = { total_rows: rows?.length ?? 0, debugDates: debugDates.slice(-5) }
+
+  return NextResponse.json({ currentRanking, maxRanking, debugInfo })
 }

@@ -82,6 +82,7 @@ const Spinner = () => (
 )
 
 function PremiumRequired({ onGoProfile }: { onGoProfile?: () => void }) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
       <Crown size={13} className="text-amber-500" />

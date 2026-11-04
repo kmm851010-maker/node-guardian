@@ -288,7 +288,7 @@ export default function PiLinkApp() {
       )}
 
       {/* 탭 컨텐츠 */}
-      <main className="pb-[calc(5rem+env(safe-area-inset-bottom))]">
+      <main className="pb-[calc(5rem_+_max(env(safe-area-inset-bottom),48px))]">
         {isPiBrowser === true && activeTab === 'dashboard' && <GuideDrawer />}
         {activeTab === 'dashboard'  && <DashboardTab user={user} />}
         {activeTab === 'community'  && <CommunityTab user={user} isPremium={isPremium} badgeMap={badgeMap} roleMap={roleMap} openPostId={openPostRequest?.postType !== 'qna' ? openPostRequest?.postId : undefined} onPostOpened={() => setOpenPostRequest(null)} />}
@@ -313,7 +313,7 @@ export default function PiLinkApp() {
       )}
 
       {/* 하단 탭 바 */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-background border-t flex pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-background border-t flex pb-[max(env(safe-area-inset-bottom),48px)]">
         {tabIds.map(id => {
           const Icon = TAB_ICONS[id]
           return (

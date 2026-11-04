@@ -172,7 +172,7 @@ export default function GuideDrawer() {
 
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-4 z-40 bg-violet-600 text-white rounded-full shadow-lg flex items-center gap-1.5 px-3 py-2 hover:bg-violet-700 transition-colors active:scale-95"
+        className="fixed bottom-[calc(6rem_+_max(env(safe-area-inset-bottom),48px))] right-4 z-40 bg-violet-600 text-white rounded-full shadow-lg flex items-center gap-1.5 px-3 py-2 hover:bg-violet-700 transition-colors active:scale-95"
       >
         <HelpCircle size={15} />
         <span className="text-xs font-bold">{g.guide}</span>
